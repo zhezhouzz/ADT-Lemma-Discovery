@@ -1,0 +1,32 @@
+(declare-fun spec ((Int) (Int)) Bool)
+(declare-fun post ((Int) (Int)) Bool)
+(declare-fun Member ((Int) (Int)) Bool)
+(declare-fun Link ((Int) (Int) (Int) (Int) (Int)) Bool)
+(declare-fun Next ((Int) (Int) (Int) (Int) (Int)) Bool)
+(declare-const l1 Int)
+(declare-const l2 Int)
+(assert (let ((a!1 (forall ((u Int) (v Int)) (=> (Link l2 0 1 u v) (not (= u v)))))
+               (a!2 (forall ((u Int) (v Int))
+                            (let ((a!1 (=> (and (Link l1 0 1 u v) (not (Link l1 0 1 v u)))
+                                           (Link l2 0 1 u v))))
+                              (and (=> (Link l2 0 1 u v) (Link l1 0 1 u v)) a!1))))
+               (a!3 (not (forall ((u Int) (v Int))
+                                 (=> (Next l1 0 1 u v) (Next l2 0 1 u v))))))
+           (and
+                a!1
+                a!2
+                a!3)))
+
+(define-fun ax ((dt Int)) Bool
+  (forall ((u Int) (v Int))
+          (let ((a!1 (or (Next dt 0 1 u v)
+                         (exists ((w Int))
+                            (and (Next dt 0 1 u w) (Link dt 0 1 w v))))))
+            (= (Link dt 0 1 u v) a!1)))
+  )
+(assert (forall ((dt Int) (u Int) (v Int)) (=> (Next dt 0 1 u v) (not (= u v)))))
+(assert (ax 1))
+(assert (ax 2))
+(assert (= l1 1))
+(assert (= l2 2))
+(check-sat)

@@ -1,0 +1,6 @@
+*.cmi
+*.cmx
+*.cmo
+*.o
+log.txt
+*.out
