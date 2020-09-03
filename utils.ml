@@ -4,12 +4,12 @@ exception ZZExn of string
 module FvMap = Map.Make(String);;
 module IntMap = Map.Make(struct type t = int let compare = compare end);;
 
-let rec contain_i x l =
+let contain_i x l =
   match List.find_opt (fun a -> a == x) l with
   | None -> false
   | _ -> true
 
-let rec contain_l l0 l1 =
+let contain_l l0 l1 =
   List.for_all (fun x -> contain_i x l1) l0
 
 let rec keep_ord l0 l1 =
@@ -60,13 +60,13 @@ let list_foldi f default l =
 let list_first l =
   match l with
   | [] -> raise @@ ZZExn "list_first"
-  | h :: t -> h
+  | h :: _ -> h
 
 let list_last l =
   let l = List.rev l in
   match l with
   | [] -> raise @@ ZZExn "list_last"
-  | h :: t -> h
+  | h :: _ -> h
 
 let ll_in_range_first f l0 l1 =
   ((List.length l0) <= (List.length l1)) &&
@@ -93,7 +93,6 @@ let sublist l s e =
   aux 0 [] l
 
 let map_double f (a, b) = (f a, f b)
-let map_triple f (a, b, c) = (f a, f b, f c)
 let map_triple f (a, b, c) = (f a, f b, f c)
 let map4 f (a, b, c, d) = (f a, f b, f c, f d)
 
