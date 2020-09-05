@@ -58,11 +58,10 @@ end
 let list_order eq l u v =
   let rec aux = function
     | [] -> false
-    | [_] -> false
-    | a::b::t ->
-      if eq u a
-      then List.exists (fun x -> eq x v) l
-      else aux (b::t)
+    | h::t ->
+      if eq u h
+      then List.exists (fun x -> eq x v) t
+      else aux t
   in
   aux l
 

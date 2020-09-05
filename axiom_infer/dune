@@ -1,2 +1,3 @@
-(executable
- (name vectorRep))
+(library
+ (name axiom)
+)
