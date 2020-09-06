@@ -1,7 +1,7 @@
 module P = Axiom.Pred.Pred(Axiom.Elem.Elem)
 open P.E;;
 open Printf;;
-module Tree = Axiom.Utils.Tree;;
+module Tree = Utils.Tree;;
 module A = Axiom.Axiom_syn.AxiomSyn(P);;
 let list_order l u v = "order", l, [I 0; I 1; u; v]
 let tree_left t u v = "order", t, [I 0; I 1; u; v]
