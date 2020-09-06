@@ -5,7 +5,7 @@ module Tree = Utils.Tree;;
 module B = Language.Bexpr.Bexpr(Language.Lit.Lit)
 module Epr = Language.Epr.Epr(B)
 module D = Axiom.Dtree.Dtree(Epr)(P);;
-module A = Axiom.Axiom_syn.AxiomSyn(D);;
+module A = Axiom.Axiom_syn.AxiomSyn(D)(Ml.FastDT.FastDT);;
 open A.D.P.E;;
 module PP = A.D.P;;
 let list_order l u v = "order", l, [I 0; I 1; u; v]

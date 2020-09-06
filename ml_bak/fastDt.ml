@@ -1,16 +1,3 @@
-module type FastDT = sig
-  type int_array = (int, Bigarray.int_elt, Bigarray.c_layout) Bigarray.Array1.t
-  type float_pair = { c_t : float ; c_f : float }
-  type dt_node = { split : int ; if_t : dt ; if_f : dt }
-  and  dt = Node of dt_node | Leaf of float_pair  (* num true, num false *)
-  val make_dt: samples:((bool * (bool array)) array) -> max_d:int -> dt
-  val print_tree': dt -> unit
-  val load_data: int -> string -> (int_array array) * (bool array) * (float array)
-  val predict_file: (float * dt) array -> string -> float * float
-  val load_model: string -> (float * dt) array
-end
-
-module FastDT : FastDT = struct
 open Array
 open Printf
 open Bigarray
@@ -350,7 +337,7 @@ let load_data (minfc : int) (fp : string)  =
   let rec cnt () =
     match mrl () with None -> () | Some l ->
       (match split_white l with
-         (_ :: x) -> ( List.iter (fun z -> let f = get_fid z in add_count f) x; incr _N; cnt () )
+         (y :: x) -> ( List.iter (fun z -> let f = get_fid z in add_count f) x; incr _N; cnt () )
        | [] -> cnt ()) in
   cnt ();
   if minfc > 0 then clean_up_dict fcount minfc;
@@ -433,37 +420,3 @@ let load_model fp =
   done;
   close_in h;
   model
-
-let rec print_tree' = function
-    Leaf p -> printf "L %g %g\n" p.c_t p.c_f
-  | Node n -> ( printf "N %i\n" n.split
-              ; print_tree' n.if_t
-              ; print_tree' n.if_f )
-
-let make_dt ~samples ~max_d =
-  let nfeature = Array.length (snd samples.(0)) in
-  let _Y = Array.map (fun (cla, _) -> cla) samples in
-  let _F = Array.init nfeature (fun _ -> ref []) in
-  let rec update line =
-    if line >= Array.length samples then () else
-      let arr = snd samples.(line) in
-      Array.iteri (fun id b ->
-          if b then _F.(id) := (!(_F.(id))) @ [line] else ()) arr;
-      update (line + 1)
-  in
-  let _ = update 0 in
-  let _F = Array.map (fun l -> A.of_array int c_layout @@ Array.of_list !l) _F in
-  (* let _ = printf "nfeature = %i\n" nfeature in *)
-  let _W = Array.make (Array.length samples) 1.0 in
-  (* let _ = printf "Y:"; Array.iter (fun y -> printf "%b " y) _Y; printf "\n" in
-   * let _ = printf "W:"; Array.iter (fun w -> printf "%f " w) _W; printf "\n" in
-   * let _ = printf "F:\n"; Array.iter (fun vec ->
-   *     printf "dim = %i " (Bigarray.Array1.dim vec);
-   *     printf "vec.{0} = %i " vec.{0};
-   *     printf "vec.{1} = %i " vec.{1};
-   *     (\* printf "vec.{2} = %i " vec.{2}; *\)
-   *   )
-   *     _F; printf "\n" in *)
-  let dt = build_dt max_d 0.0 1e-6 None _F _Y _W in
-  dt
-end

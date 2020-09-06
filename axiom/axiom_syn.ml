@@ -11,7 +11,7 @@ module type AxiomSyn = sig
   val classify: title -> pos: sample list -> neg: sample list -> D.t
 end
 
-module AxiomSyn (D: Dtree.Dtree): AxiomSyn = struct
+module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT): AxiomSyn = struct
   module D = D
   module E = D.P.E
   open Utils
@@ -38,8 +38,23 @@ module AxiomSyn (D: Dtree.Dtree): AxiomSyn = struct
     let ord = List.nth title 2 in
     D.Node (ord, D.Leaf member0, D.T)
 
+  let dt_to_dt title dt =
+    let rec aux = function
+      | F.Leaf {c_t; c_f} ->
+        if (Float.abs c_t) < 1e-3 then D.F
+        else if (Float.abs c_f) < 1e-3 then D.T
+        else raise @@ InterExn (sprintf "Bad Dt Result(%f, %f)" c_t c_f)
+      | F.Node ({split;if_t;if_f}) ->
+        match List.nth_opt title split with
+        | None -> raise @@ InterExn "Bad Dt Result"
+        | Some p -> D.Node (p, aux if_t, aux if_f)
+    in
+    aux dt
+
   let classify title ~pos ~neg =
-    let pos = List.map (fun s -> s.vec) pos in
-    let neg = List.map (fun s -> s.vec) neg in
-    classify_ title pos neg
+    let pos = List.map (fun s -> true, Array.of_list s.vec) pos in
+    let neg = List.map (fun s -> false, Array.of_list s.vec) neg in
+    let dt = F.make_dt ~samples:(Array.of_list (pos @ neg)) ~max_d:10 in
+    let _ = F.print_tree' dt in
+    dt_to_dt title dt
 end

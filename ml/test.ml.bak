@@ -1,0 +1,9 @@
+open FastDT;;
+open Printf;;
+open Array;;
+let samples = [|true, [|true;true|];
+                false, [|true;false|];
+                true, [|false;true|];
+                true, [|false;false|];|] in
+let dt = FastDT.make_dt samples 10 in
+FastDT.print_tree' dt
