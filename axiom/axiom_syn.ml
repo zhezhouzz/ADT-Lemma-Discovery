@@ -1,4 +1,4 @@
-module AxiomSyn (P: Pred.Pred) = struct
+module AxiomSyn (P: Preds.Pred.Pred) = struct
   open Utils
   open Printf
   module E = P.E

@@ -1,7 +1,7 @@
 exception TestFailedException of string
 exception InterExn of string
 
-module FvMap = Map.Make(String);;
+module StrMap = Map.Make(String);;
 module IntMap = Map.Make(struct type t = int let compare = compare end);;
 
 

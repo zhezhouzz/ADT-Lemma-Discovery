@@ -1,4 +1,4 @@
-module P = Axiom.Pred.Pred(Axiom.Elem.Elem)
+module P = Preds.Pred.Pred(Preds.Elem.Elem)
 open P.E;;
 open Printf;;
 module Tree = Utils.Tree;;
