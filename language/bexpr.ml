@@ -54,7 +54,7 @@ let layout_op op args =
   | "<=", [a; b] -> Printf.sprintf "(%s<=%s)" a b
   | ">", [a; b] -> Printf.sprintf "(%s>%s)" a b
   | "<", [a; b] -> Printf.sprintf "(%s<%s)" a b
-  | _ -> raise @@ InterExn "layout_op: undefined"
+  | pred, args -> Printf.sprintf "%s(%s)" pred (list_to_string (fun x -> x) args)
 
 let rec layout = function
   | Literal (_, x) -> L.layout x

@@ -1,8 +1,13 @@
-module P = Preds.Pred.Pred(Preds.Elem.Elem)
-open P.E;;
+module E = Preds.Elem.Elem
+module P = Preds.Pred.Pred(E)
 open Printf;;
 module Tree = Utils.Tree;;
-module A = Axiom.Axiom_syn.AxiomSyn(P);;
+module B = Language.Bexpr.Bexpr(Language.Lit.Lit)
+module Epr = Language.Epr.Epr(B)
+module D = Axiom.Dtree.Dtree(Epr)(P);;
+module A = Axiom.Axiom_syn.AxiomSyn(D);;
+open A.D.P.E;;
+module PP = A.D.P;;
 let list_order l u v = "order", l, [I 0; I 1; u; v]
 let tree_left t u v = "order", t, [I 0; I 1; u; v]
 let tree_right t u v = "order", t, [I 0; I 2; u; v]
@@ -30,11 +35,23 @@ let exp11 = "tree_parallel", t0, [I 2; I 3] in
 let exp12 = "tree_parallel", t0, [I 1; I 3] in
 let exp13 = "tree_parallel", t0, [I 2; I 1] in
 let tests = [exp0;exp1;exp2;exp3;exp4;exp5;exp6;exp7;exp8;exp9;exp10;exp11;exp12;exp13] in
-let _ = List.iter (fun exp -> printf "%s=%b\n" (P.apply_layout exp) (P.apply exp)) tests in
+let _ = List.iter (fun exp -> printf "%s=%b\n" (PP.apply_layout exp) (PP.apply exp)) tests in
 let title = ["member", [0]; "member", [1]; "list_order", [0;1]; "eq", [0;1]] in
-let _ = printf "\t\t%s\n" (A.layout_title title) in
+let _ = printf "  \t\t%s\n" (A.layout_title title) in
 let pos0 = A.make_sample title l0 [I 0; I 1] in
-let _ = printf "%s\n" (A.layout_sample pos0) in
+let pos1 = A.make_sample title (L []) [I 0; I 1] in
+let pos2 = A.make_sample title (L [0]) [I 0; I 1] in
+let pos3 = A.make_sample title (L [1]) [I 0; I 1] in
+let pos4 = A.make_sample title (L [1;0]) [I 0; I 1] in
 let neg0 = A.cex_to_sample [I 0; I 1] [false; false; true; false] in
-let _ = printf "%s\n" (A.layout_sample neg0) in
+let neg1 = A.cex_to_sample [I 0; I 1] [false; true; true; false] in
+let positives = [pos0;pos1;pos2;pos3;pos4] in
+let negatives = [neg0;neg1] in
+let _ = printf "positive:\n%s" @@
+  List.fold_left (fun r s -> sprintf "%s\t%s\n" r (A.layout_sample s)) "" positives in
+let _ = printf "negative:\n%s" @@
+  List.fold_left (fun r s -> sprintf "%s\t%s\n" r (A.layout_sample s)) "" negatives in
+let axiom = A.classify title ~pos:positives ~neg:negatives in
+let axiom_epr = A.D.to_epr axiom in
+let _ = printf "axiom = %s\n" (A.D.Epr.layout axiom_epr) in
 ();;

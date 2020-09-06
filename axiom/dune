@@ -1,4 +1,4 @@
 (library
  (name axiom)
- (libraries utils preds)
+ (libraries utils preds language)
 )
