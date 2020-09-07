@@ -9,7 +9,7 @@ module type Ast = sig
     | Or of t list
     | Iff of t * t
     | SpecApply of string * E.B.t list
-  type spec_table = E.spec Utils.IntMap.t
+  type spec_table = E.spec Utils.StrMap.t
   val layout: t -> string
 end
 
@@ -25,7 +25,7 @@ module Ast (E: Epr.Epr) : Ast = struct
     | Or of t list
     | Iff of t * t
     | SpecApply of string * E.B.t list
-  type spec_table = E.spec Utils.IntMap.t
+  type spec_table = E.spec Utils.StrMap.t
   let rec layout = function
     | Atom bexpr -> Printf.sprintf "(%s)" (E.B.layout bexpr)
     | Implies (p1, p2) -> Printf.sprintf "(%s => %s)" (layout p1) (layout p2)
