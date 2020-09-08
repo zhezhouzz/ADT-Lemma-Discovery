@@ -1,6 +1,10 @@
 module type EprSemantic = sig
   include Epr.Epr
-  type value
+  module BS: BexprSemantic.BexprSemantic
+    with type L.t = B.L.t
+    with type tp = B.tp
+    with type t = B.t
+  type value = BS.value
   val fv: t -> string list
   val type_check : t -> (t * bool)
   val exec: t -> value Utils.StrMap.t -> bool
@@ -8,13 +12,14 @@ module type EprSemantic = sig
   val flatten_forall: value -> int list
 end
 
-module EprSemantic (E: Epr.Epr) (Elem: Preds.Elem.Elem)
+module EprSemantic (E: Epr.Epr)
     (BS: BexprSemantic.BexprSemantic
-     with type value = Elem.t
      with type L.t = E.B.L.t
      with type tp = E.B.tp
      with type t = E.B.t):
-  EprSemantic with type value = BS.value = struct
+  EprSemantic = struct
+  module Elem = BS.LS.E
+  module BS = BS
   include E
   open Utils
   type value = BS.value
@@ -59,10 +64,41 @@ module EprSemantic (E: Epr.Epr) (Elem: Preds.Elem.Elem)
   let forallu e env =
     let dts = extract_dt e env in
     let us = List.concat @@ List.map flatten_forall dts in
+    let us = remove_duplicates (fun x y -> x == y) us in
     match intlist_max us with
     | None -> 0 :: us
     | Some m -> (m + 1) :: us
 
-  (* TODO *)
-  let spec_exec (_, e) env = 0 > (List.length (forallu e env))
+  let spec_exec (fv, e) env =
+    let us = forallu e env in
+    let _ = Printf.printf "%s\n" (intlist_to_string us) in
+    let len = List.length us in
+    let ids = List.init (List.length fv) (fun _ -> 0) in
+    let rec next = function
+      | [] -> None
+      | h :: t ->
+        if len == (h + 1) then
+          match next t with
+          | None -> None
+          | Some t -> Some (0 :: t)
+        else
+          Some ((h + 1) :: t)
+    in
+    let rec aux ids =
+      let us = List.map (fun x -> List.nth us x) ids in
+      let us = List.combine fv us in
+      let env = List.fold_left (fun m (name, value) ->
+          StrMap.add name (Elem.I value) m
+        ) env us in
+      let _ = Printf.printf "assign free variables: %s\n"
+          (List.fold_left (fun str (name, v) ->
+               Printf.sprintf "%s%s=%i;" str name v)
+          "" us) in
+      if exec e env then
+        match next ids with
+        | None -> true
+        | Some ids -> aux ids
+      else false
+    in
+    aux ids
 end

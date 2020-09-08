@@ -1,16 +1,20 @@
 module type BexprSemantic = sig
   include Bexpr.Bexpr
-  type value
+  module LS: LitSemantic.LitSemantic with type t = L.t
+  type value = LS.value
   val fv: t -> string list
   val type_check : t -> (t * bool)
   val exec: t -> value Utils.StrMap.t -> bool
   val extract_dt: t -> value list * string list
 end
 
-module BexprSemantic (B: Bexpr.Bexpr) (P: Preds.Pred.Pred)
-    (LS: LitSemantic.LitSemantic with type t = B.L.t with type value = P.E.t):
-  BexprSemantic with type value = LS.value = struct
+module BexprSemantic (B: Bexpr.Bexpr)
+    (LS: LitSemantic.LitSemantic with type t = B.L.t)
+    (P: Preds.Pred.Pred with type E.t = LS.E.t):
+  BexprSemantic
+  with type LS.E.t = LS.E.t = struct
   include B
+  module LS = LS
   open Utils
   type value = LS.value
   let fv _ = []
@@ -19,7 +23,7 @@ module BexprSemantic (B: Bexpr.Bexpr) (P: Preds.Pred.Pred)
     match op, args with
     | "+", [P.E.I a; P.E.I b] -> Some (P.E.I (a + b))
     | "-", [P.E.I a; P.E.I b] -> Some (P.E.I (a - b))
-    | "=", [P.E.I a; P.E.I b] -> Some (P.E.B (a == b))
+    | "==", [P.E.I a; P.E.I b] -> Some (P.E.B (a == b))
     | "<>", [P.E.I a; P.E.I b] -> Some (P.E.B (a <> b))
     | ">=", [P.E.I a; P.E.I b] -> Some (P.E.B (a >= b))
     | "<=", [P.E.I a; P.E.I b] -> Some (P.E.B (a <= b))

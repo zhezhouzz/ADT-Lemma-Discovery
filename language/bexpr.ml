@@ -48,7 +48,7 @@ let layout_op op args =
   match op, args with
   | "+", [a; b] -> Printf.sprintf "(%s+%s)" a b
   | "-", [a; b] -> Printf.sprintf "%s-%s" a b
-  | "=", [a; b] -> Printf.sprintf "(%s==%s)" a b
+  | "==", [a; b] -> Printf.sprintf "(%s==%s)" a b
   | "<>", [a; b] -> Printf.sprintf "(%s<>%s)" a b
   | ">=", [a; b] -> Printf.sprintf "(%s>=%s)" a b
   | "<=", [a; b] -> Printf.sprintf "(%s<=%s)" a b
