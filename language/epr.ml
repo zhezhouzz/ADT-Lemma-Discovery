@@ -61,7 +61,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
 
   let forallformula_exec (fv, e) env =
     let us = forallu e env in
-    let _ = Printf.printf "%s\n" (intlist_to_string us) in
+    (* let _ = Printf.printf "%s\n" (intlist_to_string us) in *)
     let len = List.length us in
     let ids = List.init (List.length fv) (fun _ -> 0) in
     let rec next = function

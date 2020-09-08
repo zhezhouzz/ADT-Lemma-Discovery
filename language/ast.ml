@@ -10,6 +10,7 @@ end
 module Ast (A: AstTree.AstTree): Ast = struct
   include A
   open Utils
+  open Printf
   type value = E.value
   let fv _ = []
   let type_check bexpr = (bexpr, true)
@@ -29,7 +30,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Iff (e1, e2) -> (aux e1) == (aux e2)
       | SpecApply (spec_name, args) ->
         (match StrMap.find_opt spec_name stable with
-         | None -> raise @@ InterExn "Ast::not such spec"
+         | None -> raise @@ InterExn (sprintf "Ast::not such spec(%s)" spec_name)
          | Some spec -> spec_exec spec args env
         )
     in
