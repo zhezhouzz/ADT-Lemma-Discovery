@@ -17,7 +17,7 @@ module type Bexpr = sig
   val layout: t -> string
 end
 
-module Bexpr (L: Lit.Lit) : Bexpr = struct
+module Bexpr (L: Lit.Lit) : Bexpr with type L.t = L.t = struct
   module L = L
   type tp =
     | Bool

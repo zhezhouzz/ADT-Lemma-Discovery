@@ -15,7 +15,10 @@ module type Epr = sig
   val layout_spec: spec -> string
 end
 
-module Epr(B: Bexpr.Bexpr) : Epr = struct
+module Epr(B: Bexpr.Bexpr) : Epr
+  with type B.L.t = B.L.t
+  with type B.tp = B.tp
+  with type B.t = B.t = struct
   module B = B
   open Utils
 

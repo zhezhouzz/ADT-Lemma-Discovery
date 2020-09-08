@@ -1,7 +1,7 @@
 module type Ast = sig
   module E: Epr.Epr
   type t =
-    | Atom of E.B.t
+    (* | Atom of E.B.t *)
     | Implies of t * t
     | Ite of t * t * t
     | Not of t
@@ -17,7 +17,7 @@ module Ast (E: Epr.Epr) : Ast = struct
   module E = E
   open Utils
   type t =
-    | Atom of E.B.t
+    (* | Atom of E.B.t *)
     | Implies of t * t
     | Ite of t * t * t
     | Not of t
@@ -27,7 +27,7 @@ module Ast (E: Epr.Epr) : Ast = struct
     | SpecApply of string * E.B.t list
   type spec_table = E.spec Utils.StrMap.t
   let rec layout = function
-    | Atom bexpr -> Printf.sprintf "(%s)" (E.B.layout bexpr)
+    (* | Atom bexpr -> Printf.sprintf "(%s)" (E.B.layout bexpr) *)
     | Implies (p1, p2) -> Printf.sprintf "(%s => %s)" (layout p1) (layout p2)
     | And ps -> inner_list_layout (List.map layout ps) "/\\" "true"
     | Or ps -> inner_list_layout (List.map layout ps) "\\/" "true"

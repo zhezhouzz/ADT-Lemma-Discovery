@@ -56,3 +56,6 @@ module Pred (E: Elem.Elem) : Pred = struct
     let (pred, dt, args) = desugar (pred, dt, args) in
     apply_ (pred, dt, args)
 end
+
+module Predicate = Pred(Elem.Elem);;
+module Element = Predicate.E;;

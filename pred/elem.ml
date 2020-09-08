@@ -6,6 +6,7 @@ module type Elem = sig
     | B of bool
     | NotADt
   val layout : t -> string
+  val eq : t -> t -> bool
 end
 
 module Elem: Elem = struct
@@ -23,4 +24,13 @@ module Elem: Elem = struct
     | I i -> string_of_int i
     | B b -> string_of_bool b
     | NotADt -> "_"
+  let eq x y =
+    let aux = function
+      | (I x, I y) -> x == y
+      | (B x, B y) -> x == y
+      | (L x, L y) -> list_eq (fun x y -> x == y) x y
+      | (T x, T y) -> Tree.eq (fun x y -> x == y) x y
+      | (_, _) -> false
+    in
+    aux (x, y)
 end

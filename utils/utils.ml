@@ -4,6 +4,13 @@ exception InterExn of string
 module StrMap = Map.Make(String);;
 module IntMap = Map.Make(struct type t = int let compare = compare end);;
 
+let list_eq compare l1 l2 =
+  let rec aux = function
+    | ([], []) -> true
+    | (h1 :: t1, h2 :: t2) -> if compare h1 h2 then aux (t1, t2) else false
+    | (_, _) -> false
+  in
+  aux (l1, l2)
 
 module Tree = struct
   type 'a t =
@@ -53,6 +60,23 @@ module Tree = struct
         ((exists (fun x -> eq x u) l) && (exists (fun x -> eq x v) r)) || (aux l) || (aux r)
     in
     aux t
+
+  let eq compare t1 t2 =
+    let rec aux = function
+      | (Leaf, Leaf) -> true
+      | (Node (a1, l1, r1), Node (a2, l2, r2)) ->
+        if compare a1 a2 then
+          if aux (l1, l2)
+          then aux (r1, r2)
+          else false
+        else false
+      | (_, _) -> false
+    in
+    aux (t1, t2)
+
+  let rec flatten = function
+    | Leaf -> []
+    | Node (a, l, r) -> a::((flatten l) @ (flatten r))
 end
 
 let list_order eq l u v =
@@ -187,3 +211,14 @@ let inner_list_layout l split default =
   match l with
   | [] -> default
   | h :: t -> List.fold_left (fun res x -> res ^ split ^ x) h t
+
+let list_flatten_forall = remove_duplicates
+let tree_flatten_forall compare t = remove_duplicates compare (Tree.flatten t)
+let intlist_max l =
+  let rec aux m = function
+    | [] -> m
+    | h :: t -> if h > m then aux h t else aux m t
+  in
+  match l with
+  | [] -> None
+  | h :: t -> Some (aux h t)
