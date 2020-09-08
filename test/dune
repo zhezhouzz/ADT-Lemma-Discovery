@@ -1,4 +1,4 @@
 (tests
- (names abduction_test pred_test language_test)
+ (names language_test abduction_test pred_test)
  (libraries axiom)
 )

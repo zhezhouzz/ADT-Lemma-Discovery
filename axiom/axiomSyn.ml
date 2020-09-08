@@ -1,19 +1,19 @@
 module type AxiomSyn = sig
   module D: Dtree.Dtree
-  module E: Preds.Elem.Elem with type t = D.P.E.t
   type vec = bool list
-  type sample = {dt: E.t; args: E.t list; vec: vec}
+  type et = Preds.Pred.Element.t
+  type sample = {dt: et; args: et list; vec: vec}
   type title = D.feature list
   val layout_title: title -> string
-  val make_sample: title -> E.t -> E.t list -> sample
-  val cex_to_sample: E.t list -> vec -> sample
+  val make_sample: title -> et -> et list -> sample
+  val cex_to_sample: et list -> vec -> sample
   val layout_sample: sample -> string
   val classify: title -> pos: sample list -> neg: sample list -> D.t
 end
 
-module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT): AxiomSyn = struct
+module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   module D = D
-  module E = D.P.E
+  module E = Preds.Pred.Element
   open Utils
   open Printf
   type vec = bool list
@@ -58,3 +58,5 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT): AxiomSyn = struct
     let _ = F.print_tree' dt in
     dt_to_dt title dt
 end
+
+module Syn = AxiomSyn(Dtree.Dtree)(Ml.FastDT.FastDT)

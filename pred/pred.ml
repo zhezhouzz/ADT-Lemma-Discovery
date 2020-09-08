@@ -6,7 +6,7 @@ module type Pred = sig
   val apply: (t * E.t * E.t list) -> bool
 end
 
-module Pred (E: Elem.Elem) : Pred = struct
+module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   module E = E
   open Utils
   open Printf

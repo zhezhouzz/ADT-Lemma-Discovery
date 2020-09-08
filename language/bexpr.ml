@@ -1,72 +1,63 @@
 module type Bexpr = sig
-  module L: Lit.Lit
-  type tp =
-    | Bool
-    | Int
-    | IntList
-    | IntTree
-  type op = string
-
-  type t =
-    | Literal of tp * L.t
-    | Var of tp * string
-    | Op of tp * op * t list
-
-  val eq_tp: tp * tp -> bool
-  val layout_tp: tp -> string
-  val layout: t -> string
+  include BexprTree.BexprTree
+  type value = L.value
+  val fv: t -> string list
+  val type_check : t -> (t * bool)
+  val exec: t -> value Utils.StrMap.t -> bool
+  val extract_dt: t -> value list * string list
 end
 
-module Bexpr (L: Lit.Lit) : Bexpr with type L.t = L.t = struct
-  module L = L
-  type tp =
-    | Bool
-    | Int
-    | IntList
-    | IntTree
-  type op = string
-
-  type t =
-    | Literal of tp * L.t
-    | Var of tp * string
-    | Op of tp * op * t list
+module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
+  module P = Preds.Pred.Predicate
+  include B
   open Utils
-  let layout_tp = function
-    | Bool -> "bool"
-    | Int -> "int"
-    | IntList -> "int list"
-    | IntTree -> "int tree"
-
-  let eq_tp = function
-    | (Int, Int) -> true
-    | (Bool, Bool) -> true
-    | (IntList, IntList) -> true
-    | (IntTree, IntTree) -> true
-    | _ -> false
-
-let layout_op op args =
-  match op, args with
-  | "+", [a; b] -> Printf.sprintf "(%s+%s)" a b
-  | "-", [a; b] -> Printf.sprintf "%s-%s" a b
-  | "==", [a; b] -> Printf.sprintf "(%s==%s)" a b
-  | "<>", [a; b] -> Printf.sprintf "(%s<>%s)" a b
-  | ">=", [a; b] -> Printf.sprintf "(%s>=%s)" a b
-  | "<=", [a; b] -> Printf.sprintf "(%s<=%s)" a b
-  | ">", [a; b] -> Printf.sprintf "(%s>%s)" a b
-  | "<", [a; b] -> Printf.sprintf "(%s<%s)" a b
-  | pred, args -> Printf.sprintf "%s(%s)" pred (list_to_string (fun x -> x) args)
-
-let rec layout = function
-  | Literal (_, x) -> L.layout x
-  | Var (_, name) -> name
-  | Op (_, op, args) -> layout_op op (List.map layout args)
-
-
-(* let rec layout_bexpr = function
- *   | Bop (op, args) -> layout_bop op (List.map layout_aexpr args)
- * 	| Member (dt, varname) -> Printf.sprintf "(member %s %s)" (layout_aexpr dt) varname
- * 	| Link (dt, uidx, vidx, u, v) ->
- *     Printf.sprintf "(link %s (%i:%s) (%i:%s))" (layout_aexpr dt) uidx u vidx v
- *   | Next (dt, uidx, vidx, u, v) ->
- *     Printf.sprintf "(next %s (%i:%s) (%i:%s))" (layout_aexpr dt) uidx u vidx v *)
+  type value = L.value
+  let fv _ = []
+  let type_check bexpr = (bexpr, true)
+  let non_dt_op op args =
+    match op, args with
+    | "+", [P.E.I a; P.E.I b] -> Some (P.E.I (a + b))
+    | "-", [P.E.I a; P.E.I b] -> Some (P.E.I (a - b))
+    | "==", [P.E.I a; P.E.I b] -> Some (P.E.B (a == b))
+    | "<>", [P.E.I a; P.E.I b] -> Some (P.E.B (a <> b))
+    | ">=", [P.E.I a; P.E.I b] -> Some (P.E.B (a >= b))
+    | "<=", [P.E.I a; P.E.I b] -> Some (P.E.B (a <= b))
+    | ">", [P.E.I a; P.E.I b] -> Some (P.E.B (a > b))
+    | "<", [P.E.I a; P.E.I b] -> Some (P.E.B (a < b))
+    | _, _ -> None
+  let exec bexpr env =
+    let rec aux = function
+      | Literal (_, lit) -> L.exec lit
+      | Var (_, name) ->
+        (match StrMap.find_opt name env with
+         | None -> raise @@ InterExn "Bexpr::exec"
+         | Some v -> v
+        )
+      | Op (_, op, args) ->
+        let args = List.map aux args in
+        (match non_dt_op op args with
+         | Some v -> v
+         | None -> match args with
+           | [] -> raise @@ InterExn "Bexpr::exec"
+           | dt :: args -> P.E.B (P.apply (op, dt, args))
+        )
+    in
+    match aux bexpr with
+    | P.E.B b -> b
+    | _ -> raise @@ InterExn "Bexpr::exec not a bool result"
+  let extract_dt bexpr =
+    let rec aux = function
+      | Literal (_, L.IntList lit) -> [P.E.L lit]
+      | Literal (_, L.IntTree lit) -> [P.E.T lit]
+      | Op (_, _, args) -> List.concat @@ List.map aux args
+      | _ -> []
+    in
+    let consts = remove_duplicates P.E.eq (aux bexpr) in
+    let rec aux = function
+      | Var (IntList, name) | Var (IntTree, name) -> [name]
+      | Op (_, _, args) -> List.concat @@ List.map aux args
+      | _ -> []
+    in
+    let vars = remove_duplicates String.equal (aux bexpr) in
+    consts, vars
 end

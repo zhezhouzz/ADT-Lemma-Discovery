@@ -1,32 +1,17 @@
 module type Lit = sig
-  type t =
-    | Int of int
-    | Bool of bool
-    | IntList of int list
-    | IntTree of int Utils.Tree.t
-  val layout : t -> string
-  val eq : t -> t -> bool
+  include LitTree.LitTree
+  type value = Preds.Pred.Element.t
+  val exec: t -> value
 end
 
-module Lit : Lit = struct
-  open Utils
-  type t =
-    | Int of int
-    | Bool of bool
-    | IntList of int list
-    | IntTree of int Utils.Tree.t
-  let layout = function
-    | Int x -> string_of_int x
-    | Bool b -> string_of_bool b
-    | IntList l -> Utils.intlist_to_string l
-    | IntTree t -> Utils.Tree.layout string_of_int t
-  let eq x y =
-    let aux = function
-      | (Int x, Int y) -> x == y
-      | (Bool x, Bool y) -> x == y
-      | (IntList x, IntList y) -> list_eq (fun x y -> x == y) x y
-      | (IntTree x, IntTree y) -> Tree.eq (fun x y -> x == y) x y
-      | (_, _) -> false
-    in
-    aux (x, y)
+module Lit (L: LitTree.LitTree): Lit = struct
+  module P = Preds.Pred.Predicate
+  module E = P.E
+  include L
+  type value = E.t
+  let exec = function
+    | Int i -> E.I i
+    | Bool b -> E.B b
+    | IntList il -> E.L il
+    | IntTree it -> E.T it
 end

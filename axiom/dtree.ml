@@ -1,22 +1,21 @@
 module type Dtree = sig
-  module P: Preds.Pred.Pred
-  module Epr: Language.Epr.Epr
-  type feature = P.t * int list
+  type et = Preds.Pred.Element.t
+  type feature = Preds.Pred.Predicate.t * int list
   type t =
     | T
     | F
     | Leaf of feature
     | Node of feature * t * t
-  val exec: t -> P.E.t list -> bool
-  val exec_feature: feature -> P.E.t -> P.E.t list -> bool
+  val exec: t -> et list -> bool
+  val exec_feature: feature -> et -> et list -> bool
   val layout_feature: feature -> string
   val layout: t -> string
-  val to_epr: t -> Epr.t
+  val to_epr: t -> Language.Ast.SpecAst.E.t
 end
 
-module Dtree (Epr: Language.Epr.Epr) (P: Preds.Pred.Pred) : Dtree = struct
-  module Epr = Epr
-  module P = P
+module Dtree : Dtree = struct
+  module Epr = Language.Ast.SpecAst.E
+  module P = Preds.Pred.Predicate
   open Utils
   open Printf
   type et = P.E.t

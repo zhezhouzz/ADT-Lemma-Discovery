@@ -1,38 +1,41 @@
 module type Ast = sig
-  module E: Epr.Epr
-  type t =
-    | Implies of t * t
-    | Ite of t * t * t
-    | Not of t
-    | And of t list
-    | Or of t list
-    | Iff of t * t
-    | SpecApply of string * string list
-  type spec_table = ((string list) * E.spec) Utils.StrMap.t
-  val layout: t -> string
+  include AstTree.AstTree
+  type value = E.value
+  val fv: t -> string list
+  val type_check : t -> (t * bool)
+  val spec_exec: spec -> string list -> value Utils.StrMap.t -> bool
+  val exec: t -> spec Utils.StrMap.t -> value Utils.StrMap.t -> bool
 end
 
-module Ast (E: Epr.Epr) : Ast = struct
-  module E = E
+module Ast (A: AstTree.AstTree): Ast = struct
+  include A
   open Utils
-  type t =
-    | Implies of t * t
-    | Ite of t * t * t
-    | Not of t
-    | And of t list
-    | Or of t list
-    | Iff of t * t
-    | SpecApply of string * string list
-  type spec_table = ((string list) * E.spec) Utils.StrMap.t
-  let rec layout = function
-    (* | Atom bexpr -> Printf.sprintf "(%s)" (E.B.layout bexpr) *)
-    | Implies (p1, p2) -> Printf.sprintf "(%s => %s)" (layout p1) (layout p2)
-    | And ps -> inner_list_layout (List.map layout ps) "/\\" "true"
-    | Or ps -> inner_list_layout (List.map layout ps) "\\/" "true"
-    | Not p -> "~"^(layout p)
-    | Iff (p1, p2) -> Printf.sprintf "(%s <=> %s)" (layout p1) (layout p2)
-    | Ite (p1, p2, p3) ->
-      Printf.sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
-    | SpecApply (specname, args) ->
-      Printf.sprintf "%s(%s)" specname (list_to_string (fun x ->x) args)
- end
+  type value = E.value
+  let fv _ = []
+  let type_check bexpr = (bexpr, true)
+  let spec_exec (args, forallf) args' env =
+    let argsmap = List.combine args args' in
+    let new_env = List.fold_left (fun m (name, name') ->
+        StrMap.add name (StrMap.find name' env) m
+      ) StrMap.empty argsmap in
+    E.forallformula_exec forallf new_env
+  let exec ast stable env =
+    let rec aux = function
+      | Implies (e1, e2) -> if aux e1 then aux e2 else true
+      | Ite (e1, e2, e3) -> if aux e1 then aux e2 else aux e3
+      | Not e -> not (aux e)
+      | And l -> List.for_all (fun x -> x) @@ List.map aux l
+      | Or l -> List.exists (fun x -> x) @@ List.map aux l
+      | Iff (e1, e2) -> (aux e1) == (aux e2)
+      | SpecApply (spec_name, args) ->
+        (match StrMap.find_opt spec_name stable with
+         | None -> raise @@ InterExn "Ast::not such spec"
+         | Some spec -> spec_exec spec args env
+        )
+    in
+    aux ast
+end
+module Lit = Lit.Lit(LitTree.LitTree)
+module Bexpr = Bexpr.Bexpr(BexprTree.BexprTree(Lit))
+module Epr = Epr.Epr(EprTree.EprTree(Bexpr))
+module SpecAst = Ast(AstTree.AstTree(Epr))
