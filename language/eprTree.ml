@@ -46,6 +46,7 @@ module EprTree(B: Bexpr.Bexpr) : EprTree
       Printf.sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
 
   let layout_forallformula (forallvars, body) =
+    if (List.length forallvars) == 0 then layout body else
     Printf.sprintf "forall %s,%s" (inner_list_layout forallvars " " "") (layout body)
 
   (* let t_eq a b = Atom (Bop ("=", [a; b]))

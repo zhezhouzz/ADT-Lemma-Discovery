@@ -6,6 +6,8 @@ module type Epr = sig
   val exec: t -> value Utils.StrMap.t -> bool
   val forallformula_exec: forallformula -> value Utils.StrMap.t -> bool
   val flatten_forall: value -> int list
+  val to_z3: Z3.context -> t -> Z3.Expr.expr
+  val forallformula_to_z3: Z3.context -> forallformula -> Z3.Expr.expr
 end
 
 module Epr (E: EprTree.EprTree): Epr = struct
@@ -91,4 +93,23 @@ module Epr (E: EprTree.EprTree): Epr = struct
       else false
     in
     aux ids
+
+  open Z3
+  open Arithmetic
+  open Z3aux
+
+  let to_z3 ctx epr =
+    let rec aux = function
+      | True -> Boolean.mk_true ctx
+      | Atom bexpr -> B.to_z3 ctx bexpr
+      | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
+      | Ite (p1, p2, p3) -> Boolean.mk_ite ctx (aux p1) (aux p2) (aux p3)
+      | Not p -> Boolean.mk_not ctx (aux p)
+      | And ps -> Boolean.mk_and ctx (List.map aux ps)
+      | Or ps -> Boolean.mk_or ctx (List.map aux ps)
+      | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2) in
+    aux epr
+  let forallformula_to_z3 ctx (fv, epr) =
+    let fv = List.map (fun name -> Integer.mk_const_s ctx name) fv in
+    make_forall ctx fv (to_z3 ctx epr)
 end

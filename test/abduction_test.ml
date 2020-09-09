@@ -36,6 +36,19 @@ let value_l2 = Value.L [2;1;2] in
 let env = List.fold_left (fun m (name, v) -> StrMap.add name v m) StrMap.empty
     ["l0", value_l0; "l1", value_l1; "l2", value_l2] in
 let _ = printf "eval([1;2],[2],[2;1;2]): %b\n" (exec vc spec_tab env) in
+let _ = printf "z3 form:\n" in
+let cfg = [("model", "true");
+           ("proof", "false");
+           ("timeout", "9999")] in
+let ctx = (Z3.mk_context cfg) in
+let _ = printf "%s:\n\t%s\n"
+    (E.layout_forallformula post_forallfomula)
+    (Z3.Expr.to_string (E.forallformula_to_z3 ctx post_forallfomula))
+in
+let _ = printf "%s:\n\t%s\n"
+    (layout vc)
+    (Z3.Expr.to_string (to_z3 ctx vc spec_tab))
+in
 ();;
 
 (* negation of vc should be unsat, pre should be satisfiable. *)

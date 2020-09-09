@@ -4,6 +4,8 @@ module type Pred = sig
   val layout : t -> string
   val apply_layout: (t * E.t * E.t list) -> string
   val apply: (t * E.t * E.t list) -> bool
+  val desugar: t -> t * int list
+  val preds_info: (t * int) list
 end
 
 module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
@@ -11,6 +13,7 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   open Utils
   open Printf
   type t = string
+  let preds_info = ["member", 2; "order", 5]
   let apply_layout (pred, dt, args) =
     sprintf "%s(%s, %s)" pred (E.layout dt) (list_to_string E.layout args)
 
@@ -36,14 +39,26 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
     | (E.I e0, E.I e1) -> e0 == e1
     | _ -> raise @@ InterExn "eq_apply"
 
-  let desugar (pred, dt, args) =
+  let desugar pred =
     match pred with
-    | "member" | "eq" | "order" -> (pred, dt, args)
-    | "list_order" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
-    | "tree_left" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
-    | "tree_right" -> ("order", dt, (E.I 0) :: (E.I 2) :: args)
-    | "tree_parallel" -> ("order", dt, (E.I 1) :: (E.I 2) :: args)
+    | "member" | "eq" | "order" -> pred, []
+    | "list_order" -> "order", [0;1]
+    | "tree_left" -> "order", [0;1]
+    | "tree_right" -> "order", [0;2]
+    | "tree_parallel" -> "order", [1;2]
     | _ -> raise @@ InterExn "desugar"
+
+  let desugar_ (pred, dt, args) =
+    let pred, args' = desugar pred in
+    let args' = List.map (fun x -> E.I x) args' in
+    (pred, dt, args' @ args)
+    (* match pred with
+     * | "member" | "eq" | "order" -> (pred, dt, args)
+     * | "list_order" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
+     * | "tree_left" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
+     * | "tree_right" -> ("order", dt, (E.I 0) :: (E.I 2) :: args)
+     * | "tree_parallel" -> ("order", dt, (E.I 1) :: (E.I 2) :: args)
+     * | _ -> raise @@ InterExn "desugar_" *)
 
   let apply_ ((pred, dt, args) : t * E.t * E.t list) : bool =
     match pred, args with
@@ -53,8 +68,9 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
     | _ -> raise @@ InterExn "apply"
 
   let apply ((pred, dt, args) : t * E.t * E.t list) : bool =
-    let (pred, dt, args) = desugar (pred, dt, args) in
+    let (pred, dt, args) = desugar_ (pred, dt, args) in
     apply_ (pred, dt, args)
+
 end
 
 module Predicate = Pred(Elem.Elem);;

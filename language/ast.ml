@@ -5,6 +5,8 @@ module type Ast = sig
   val type_check : t -> (t * bool)
   val spec_exec: spec -> string list -> value Utils.StrMap.t -> bool
   val exec: t -> spec Utils.StrMap.t -> value Utils.StrMap.t -> bool
+  val spec_to_z3: Z3.context -> string -> spec -> Z3.FuncDecl.func_decl * Z3.Expr.expr
+  val to_z3: Z3.context -> t -> spec Utils.StrMap.t -> Z3.Expr.expr
 end
 
 module Ast (A: AstTree.AstTree): Ast = struct
@@ -35,6 +37,34 @@ module Ast (A: AstTree.AstTree): Ast = struct
         )
     in
     aux ast
+  open Z3
+  open Arithmetic
+  open Z3aux
+  let spec_to_z3 ctx name (args, forallf) =
+    let fdecl = FuncDecl.mk_func_decl_s ctx name
+        (List.init (List.length args) (fun _ -> Integer.mk_sort ctx))
+        (Boolean.mk_sort ctx) in
+    let args = List.map (fun name -> Integer.mk_const_s ctx name) args in
+    let body = make_forall ctx args (
+        Boolean.mk_iff ctx (FuncDecl.apply fdecl args) (E.forallformula_to_z3 ctx forallf)) in
+    fdecl, body
+  let to_z3 ctx a spec_tab =
+    let ptab, bodys = StrMap.fold (fun name spec (m, bodys) ->
+        let fdecl, body = spec_to_z3 ctx name spec in
+        StrMap.add name fdecl m, body :: bodys
+      ) spec_tab (StrMap.empty, []) in
+    let rec aux = function
+      | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
+      | Ite (p1, p2, p3) -> Boolean.mk_ite ctx (aux p1) (aux p2) (aux p3)
+      | Not p -> Boolean.mk_not ctx (aux p)
+      | And ps -> Boolean.mk_and ctx (List.map aux ps)
+      | Or ps -> Boolean.mk_or ctx (List.map aux ps)
+      | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2)
+      | SpecApply (spec_name, args) ->
+        let args = List.map (fun name -> Integer.mk_const_s ctx name) args in
+        FuncDecl.apply (StrMap.find spec_name ptab) args
+    in
+    Boolean.mk_and ctx ((aux a) :: bodys)
 end
 module Lit = Lit.Lit(LitTree.LitTree)
 module Bexpr = Bexpr.Bexpr(BexprTree.BexprTree(Lit))

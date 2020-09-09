@@ -1,10 +1,10 @@
 open Z3
 open Z3.Expr
+open Z3.Boolean
 open Z3.Arithmetic
-open Z3.Z3Array
 
 let int_to_z3 ctx i = mk_numeral_int ctx i (Integer.mk_sort ctx)
-let bool_to_z3 ctx b = if b then Boolean.mk_true ctx else Boolean.mk_false
+let bool_to_z3 ctx b = if b then mk_true ctx else mk_false ctx
 
 let arrname_arr arrname = arrname ^ "_a"
 let arrname_length arrname = arrname ^ "_length"
