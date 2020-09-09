@@ -28,6 +28,11 @@ order([1;2], 2, 1) && order([1;2], 2, 2) && order([1;2], 2, 3) &&
 order([1;2], 3, 1) && order([1;2], 3, 2) && order([1;2], 3, 3)
 ```
 
+## Dependency
+
+- ocaml version: ocaml-base-compiler.4.08.1
+- z3 version: z3.4.7.1 (It seems has a bug in z3 4.8.x: https://github.com/Z3Prover/z3/issues/2305)
+
 ## Test
 
 run `dune runtest`.
