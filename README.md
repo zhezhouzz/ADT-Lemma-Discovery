@@ -18,11 +18,15 @@ Algebraic data type specification inference
 
 As the specification(in EPR representation) is quantified by forall quantifier, the evaluation over epr tests finite assignments.
 
-Assume l := [1;2], eval(forall u v, order(l, u, v)) will be treated as:
+- Assume l := [1;2], eval(forall u v, order(l, u, v)) will be treated as:
+ 
  And (order([1;2], u, v)) where u v = 1, 2 or 3(3 can be any element which is not contained in the datatype instance), or:
- order([1;2], 1, 1) && order([1;2], 1, 2) && order([1;2], 1, 3) &&
- order([1;2], 2, 1) && order([1;2], 2, 2) && order([1;2], 2, 3) &&
- order([1;2], 3, 1) && order([1;2], 3, 2) && order([1;2], 3, 3)
+ 
+```
+order([1;2], 1, 1) && order([1;2], 1, 2) && order([1;2], 1, 3) &&
+order([1;2], 2, 1) && order([1;2], 2, 2) && order([1;2], 2, 3) &&
+order([1;2], 3, 1) && order([1;2], 3, 2) && order([1;2], 3, 3)
+```
 
 ## Test
 
