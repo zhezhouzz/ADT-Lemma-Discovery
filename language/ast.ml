@@ -7,6 +7,7 @@ module type Ast = sig
   val exec: t -> spec Utils.StrMap.t -> value Utils.StrMap.t -> bool
   val spec_to_z3: Z3.context -> string -> spec -> Z3.FuncDecl.func_decl * Z3.Expr.expr
   val to_z3: Z3.context -> t -> spec Utils.StrMap.t -> Z3.Expr.expr
+  val neg_to_z3: Z3.context -> t -> spec Utils.StrMap.t -> string list * Z3.Expr.expr
 end
 
 module Ast (A: AstTree.AstTree): Ast = struct
@@ -48,11 +49,14 @@ module Ast (A: AstTree.AstTree): Ast = struct
     let body = make_forall ctx args (
         Boolean.mk_iff ctx (FuncDecl.apply fdecl args) (E.forallformula_to_z3 ctx forallf)) in
     fdecl, body
+
+  let make_spec_def ctx spec_tab =
+    StrMap.fold (fun name spec (m, bodys) ->
+      let fdecl, body = spec_to_z3 ctx name spec in
+      StrMap.add name fdecl m, body :: bodys
+    ) spec_tab (StrMap.empty, [])
   let to_z3 ctx a spec_tab =
-    let ptab, bodys = StrMap.fold (fun name spec (m, bodys) ->
-        let fdecl, body = spec_to_z3 ctx name spec in
-        StrMap.add name fdecl m, body :: bodys
-      ) spec_tab (StrMap.empty, []) in
+    let ptab, bodys = make_spec_def ctx spec_tab in
     let rec aux = function
       | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
       | Ite (p1, p2, p3) -> Boolean.mk_ite ctx (aux p1) (aux p2) (aux p3)
@@ -65,6 +69,14 @@ module Ast (A: AstTree.AstTree): Ast = struct
         FuncDecl.apply (StrMap.find spec_name ptab) args
     in
     Boolean.mk_and ctx ((aux a) :: bodys)
+  let neg_to_z3 ctx a spec_tab =
+    match a with
+    | Implies (p, SpecApply (name, args)) ->
+      let (specargs, forallf) = StrMap.find name spec_tab in
+      let fv, forallf = E.neg_forallf forallf in
+      let spec_tab = StrMap.add name (specargs, forallf) spec_tab in
+      fv, to_z3 ctx (And [p;SpecApply (name, args)]) spec_tab
+    | _ -> raise @@ InterExn "neg_to_z3"
 end
 module Lit = Lit.Lit(LitTree.LitTree)
 module Bexpr = Bexpr.Bexpr(BexprTree.BexprTree(Lit))

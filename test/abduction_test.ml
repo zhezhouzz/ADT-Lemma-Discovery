@@ -49,6 +49,11 @@ let _ = printf "%s:\n\t%s\n"
     (layout vc)
     (Z3.Expr.to_string (to_z3 ctx vc spec_tab))
 in
+let _, neg_vc = neg_to_z3 ctx vc spec_tab in
+let _ = printf "neg_vc:\n\t%s\n"
+    (Z3.Expr.to_string neg_vc) in
+let valid, _ = Solver.check ctx neg_vc in
+let _ = if valid then printf "valid\n" else printf "not valid\n" in
 ();;
 
 (* negation of vc should be unsat, pre should be satisfiable. *)

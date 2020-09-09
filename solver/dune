@@ -1,0 +1,4 @@
+(library
+ (name solver)
+ (libraries utils z3)
+)

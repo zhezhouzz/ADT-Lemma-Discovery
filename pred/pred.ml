@@ -13,11 +13,19 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   open Utils
   open Printf
   type t = string
+  (* type pred_info = {name:string; num_dt:int; num_int: int}
+   * let preds = [{name="member"; num_dt=1; num_int=2};
+   *              {name="eq"; num_dt=0; num_int=2};
+   *              {name="list_order"; num_dt=1; num_int=2};] *)
+  (* desugared *)
   let preds_info = ["member", 2; "order", 5]
   let apply_layout (pred, dt, args) =
     sprintf "%s(%s, %s)" pred (E.layout dt) (list_to_string E.layout args)
 
   let layout name = name
+
+  (* let make_title dts fvs =
+   *   let aux (pred, num_dt, ) *)
 
   let member_apply (dt: E.t) (e: E.t) =
     match (dt, e) with

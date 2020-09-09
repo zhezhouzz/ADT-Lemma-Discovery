@@ -8,6 +8,7 @@ module type Epr = sig
   val flatten_forall: value -> int list
   val to_z3: Z3.context -> t -> Z3.Expr.expr
   val forallformula_to_z3: Z3.context -> forallformula -> Z3.Expr.expr
+  val neg_forallf: forallformula -> string list * forallformula
 end
 
 module Epr (E: EprTree.EprTree): Epr = struct
@@ -112,4 +113,5 @@ module Epr (E: EprTree.EprTree): Epr = struct
   let forallformula_to_z3 ctx (fv, epr) =
     let fv = List.map (fun name -> Integer.mk_const_s ctx name) fv in
     make_forall ctx fv (to_z3 ctx epr)
+  let neg_forallf (fv, epr) = fv, ([], Not epr)
 end
