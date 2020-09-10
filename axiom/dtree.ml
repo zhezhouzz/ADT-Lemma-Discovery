@@ -57,7 +57,7 @@ module Dtree : Dtree = struct
 
   let layout_feature (pred, ids) =
     let args = List.map (fun id -> IntMap.find id vartable) ids in
-    sprintf "%s(%s)" (P.layout pred) (list_to_string (fun x -> x) args)
+    sprintf "%s(%s)" (P.layout pred) (List.to_string (fun x -> x) args)
 
   let rec layout = function
     | T -> "⊥"

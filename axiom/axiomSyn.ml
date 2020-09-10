@@ -5,6 +5,7 @@ module type AxiomSyn = sig
   type sample = {dt: et; args: et list; vec: vec}
   type title = D.feature list
   val layout_title: title -> string
+  val make_title: int -> title
   val make_sample: title -> et -> et list -> sample
   val cex_to_sample: et list -> vec -> sample
   val layout_sample: sample -> string
@@ -14,11 +15,20 @@ end
 module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   module D = D
   module E = Preds.Pred.Element
+  module P = Preds.Pred.Predicate
   open Utils
   open Printf
   type vec = bool list
   type sample = {dt: E.t; args: E.t list; vec: vec}
   type title = D.feature list
+
+  let make_title fvs_num =
+    let aux info =
+      let _ = printf "%s(arglen = %i)\n" info.P.name info.P.num_int in
+      let fvs_c = List.combination fvs_num info.P.num_int in
+      List.map (fun fv_c -> (info.P.name, fv_c)) fvs_c
+    in
+    List.fold_left (fun r info -> r @ (aux info)) [] P.preds_info
 
   let layout_title (title: title) =
     List.fold_left (fun r pred -> sprintf "%s [%s]" r (D.layout_feature pred)) "" title
@@ -31,7 +41,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     {dt = E.NotADt; args; vec}
 
   let layout_sample {dt; args; vec} =
-    sprintf "%s(%s) [%s]" (E.layout dt) (list_to_string E.layout args) (boollist_to_string vec)
+    sprintf "%s(%s) [%s]" (E.layout dt) (List.to_string E.layout args) (boollist_to_string vec)
 
   let classify_ (title: title) (_:vec list) (_:vec list) : D.t =
     let member0 = List.nth title 0 in

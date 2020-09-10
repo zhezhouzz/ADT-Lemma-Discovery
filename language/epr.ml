@@ -46,19 +46,19 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Ite (p1, p2, p3) -> concat @@ List.map aux [p1;p2;p3]
     in
     let dts, names = aux e in
-    let names = remove_duplicates String.equal names in
+    let names = List.remove_duplicates String.equal names in
     dts @ (List.map (fun n -> StrMap.find n env) names)
 
   let flatten_forall = function
     | Elem.I _ | Elem.B _ | Elem.NotADt -> raise @@ InterExn "flatten_forall: not a datatype"
-    | Elem.L il -> list_flatten_forall (fun x y -> x == y) il
-    | Elem.T it -> tree_flatten_forall (fun x y -> x == y) it
+    | Elem.L il -> List.flatten_forall (fun x y -> x == y) il
+    | Elem.T it -> Tree.flatten_forall (fun x y -> x == y) it
 
   let forallu e env =
     let dts = extract_dt e env in
     let us = List.concat @@ List.map flatten_forall dts in
-    let us = remove_duplicates (fun x y -> x == y) us in
-    match intlist_max us with
+    let us = List.remove_duplicates (fun x y -> x == y) us in
+    match IntList.max_opt us with
     | None -> 0 :: us
     | Some m -> (m + 1) :: us
 

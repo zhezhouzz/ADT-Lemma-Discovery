@@ -5,7 +5,9 @@ module type Pred = sig
   val apply_layout: (t * E.t * E.t list) -> string
   val apply: (t * E.t * E.t list) -> bool
   val desugar: t -> t * int list
-  val preds_info: (t * int) list
+  type pred_info = {name:string; num_dt:int; num_int: int; permu: bool}
+  val raw_preds_info: pred_info list
+  val preds_info: pred_info list
 end
 
 module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
@@ -13,19 +15,17 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   open Utils
   open Printf
   type t = string
-  (* type pred_info = {name:string; num_dt:int; num_int: int}
-   * let preds = [{name="member"; num_dt=1; num_int=2};
-   *              {name="eq"; num_dt=0; num_int=2};
-   *              {name="list_order"; num_dt=1; num_int=2};] *)
+  type pred_info = {name:string; num_dt:int; num_int: int; permu: bool}
+  let preds_info = [{name="member"; num_dt=1; num_int=1; permu=false};
+                    {name="eq"; num_dt=0; num_int=2; permu=false};
+                    {name="list_order"; num_dt=1; num_int=2; permu=true};]
   (* desugared *)
-  let preds_info = ["member", 2; "order", 5]
+  let raw_preds_info = [{name="member"; num_dt=1; num_int=1; permu=false};
+                        {name="order"; num_dt=1; num_int=4; permu=false};]
   let apply_layout (pred, dt, args) =
-    sprintf "%s(%s, %s)" pred (E.layout dt) (list_to_string E.layout args)
+    sprintf "%s(%s, %s)" pred (E.layout dt) (List.to_string E.layout args)
 
   let layout name = name
-
-  (* let make_title dts fvs =
-   *   let aux (pred, num_dt, ) *)
 
   let member_apply (dt: E.t) (e: E.t) =
     match (dt, e) with
@@ -36,7 +36,7 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   let order_apply (dt: E.t) i0 i1 (e0: E.t) (e1: E.t) =
     let eq x y = x == y in
     match (dt, i0, i1, e0, e1) with
-    | (E.L l, 0, 1, E.I e0, E.I e1) -> list_order eq l e0 e1
+    | (E.L l, 0, 1, E.I e0, E.I e1) -> List.order eq l e0 e1
     | (E.T t, 0, 1, E.I e0, E.I e1) -> Tree.left_child eq t e0 e1
     | (E.T t, 0, 2, E.I e0, E.I e1) -> Tree.right_child eq t e0 e1
     | (E.T t, 1, 2, E.I e0, E.I e1) -> Tree.parallel_child eq t e0 e1

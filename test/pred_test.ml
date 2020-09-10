@@ -59,4 +59,7 @@ let _ = printf "negative:\n%s" @@
 let axiom = A.classify title ~pos:positives ~neg:negatives in
 let axiom_epr = A.D.to_epr axiom in
 let _ = printf "axiom = %s\n" (Epr.layout axiom_epr) in
+let title2 = A.make_title 2 in
+let _ = printf "length(title2) = %i\n" (List.length title2) in
+let _ = printf "  \t\t%s\n" (A.layout_title title2) in
 ();;

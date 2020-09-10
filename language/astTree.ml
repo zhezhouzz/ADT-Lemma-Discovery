@@ -33,14 +33,14 @@ module AstTree (E: Epr.Epr) : AstTree
   let rec layout = function
     (* | Atom bexpr -> sprintf "(%s)" (E.B.layout bexpr) *)
     | Implies (p1, p2) -> sprintf "(%s => %s)" (layout p1) (layout p2)
-    | And ps -> inner_list_layout (List.map layout ps) "/\\" "true"
-    | Or ps -> inner_list_layout (List.map layout ps) "\\/" "true"
+    | And ps -> List.inner_layout (List.map layout ps) "/\\" "true"
+    | Or ps -> List.inner_layout (List.map layout ps) "\\/" "true"
     | Not p -> "~"^(layout p)
     | Iff (p1, p2) -> sprintf "(%s <=> %s)" (layout p1) (layout p2)
     | Ite (p1, p2, p3) ->
       sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
     | SpecApply (specname, args) ->
-      sprintf "%s(%s)" specname (list_to_string (fun x ->x) args)
+      sprintf "%s(%s)" specname (List.to_string (fun x ->x) args)
   let layout_spec (args, formula) =
-    sprintf "fun %s -> %s" (list_to_string (fun x -> x) args) (E.layout_forallformula formula)
+    sprintf "fun %s -> %s" (List.to_string (fun x -> x) args) (E.layout_forallformula formula)
  end

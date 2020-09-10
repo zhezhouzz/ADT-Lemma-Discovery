@@ -53,13 +53,13 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
       | Op (_, _, args) -> List.concat @@ List.map aux args
       | _ -> []
     in
-    let consts = remove_duplicates P.E.eq (aux bexpr) in
+    let consts = List.remove_duplicates P.E.eq (aux bexpr) in
     let rec aux = function
       | Var (IntList, name) | Var (IntTree, name) -> [name]
       | Op (_, _, args) -> List.concat @@ List.map aux args
       | _ -> []
     in
-    let vars = remove_duplicates String.equal (aux bexpr) in
+    let vars = List.remove_duplicates String.equal (aux bexpr) in
     consts, vars
 
   open Z3aux
@@ -97,13 +97,13 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
 
   let predefined_predicates_table ctx =
     let m = StrMap.empty in
-    List.fold_left (fun m (name, args_num) ->
-        StrMap.add name
-          (FuncDecl.mk_func_decl_s ctx name
-             (List.init args_num (fun _ -> Integer.mk_sort ctx))
+    List.fold_left (fun m info ->
+        StrMap.add info.P.name
+        (FuncDecl.mk_func_decl_s ctx info.P.name
+             (List.init (info.P.num_dt + info.P.num_int ) (fun _ -> Integer.mk_sort ctx))
              (Boolean.mk_sort ctx))
           m
-      ) m P.preds_info
+      ) m P.raw_preds_info
 
   let to_z3 ctx b =
     let ptable = predefined_predicates_table ctx in

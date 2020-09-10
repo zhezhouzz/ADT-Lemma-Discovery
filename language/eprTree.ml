@@ -38,8 +38,8 @@ module EprTree(B: Bexpr.Bexpr) : EprTree
     | True -> "true"
     | Atom bexpr -> Printf.sprintf "(%s)" (B.layout bexpr)
     | Implies (p1, p2) -> Printf.sprintf "(%s => %s)" (layout p1) (layout p2)
-    | And ps -> inner_list_layout (List.map layout ps) "/\\" "true"
-    | Or ps -> inner_list_layout (List.map layout ps) "\\/" "true"
+    | And ps -> List.inner_layout (List.map layout ps) "/\\" "true"
+    | Or ps -> List.inner_layout (List.map layout ps) "\\/" "true"
     | Not p -> "~"^(layout p)
     | Iff (p1, p2) -> Printf.sprintf "(%s <=> %s)" (layout p1) (layout p2)
     | Ite (p1, p2, p3) ->
@@ -47,7 +47,7 @@ module EprTree(B: Bexpr.Bexpr) : EprTree
 
   let layout_forallformula (forallvars, body) =
     if (List.length forallvars) == 0 then layout body else
-    Printf.sprintf "forall %s,%s" (inner_list_layout forallvars " " "") (layout body)
+    Printf.sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (layout body)
 
   (* let t_eq a b = Atom (Bop ("=", [a; b]))
    * let t_neq a b = Atom (Bop ("<>", [a; b]))

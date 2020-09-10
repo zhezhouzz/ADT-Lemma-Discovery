@@ -1,4 +1,4 @@
 (tests
- (names language_test abduction_test pred_test)
+ (names language_test abduction_test pred_test utils_test)
  (libraries axiom solver)
 )
