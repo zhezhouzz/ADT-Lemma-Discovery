@@ -92,6 +92,22 @@ module List = struct
     in
     let elems = List.init num_all (fun x -> x) in
     aux [] num_choose elems
+
+  let permutation l =
+    let insert_all_positions x l =
+      let rec aux prev acc l =
+        match l with
+        | [] -> (prev @ [x]) :: acc |> List.rev
+        | hd::tl as l -> aux (prev @ [hd]) ((prev @ [x] @ l) :: acc) tl
+      in aux [] [] l
+    in
+    let rec aux = function
+      | [] -> []
+      | hd::[] -> [[hd]]
+      | hd::tl -> List.fold_left (fun acc p -> acc @ insert_all_positions hd p) [] (aux tl)
+    in
+    aux l
+
 end
 
 module Tree = struct

@@ -26,6 +26,11 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     let aux info =
       let _ = printf "%s(arglen = %i)\n" info.P.name info.P.num_int in
       let fvs_c = List.combination fvs_num info.P.num_int in
+      let fvs_c =
+        if info.P.permu then
+        List.concat (List.map (fun l -> List.permutation l) fvs_c)
+        else fvs_c
+      in
       List.map (fun fv_c -> (info.P.name, fv_c)) fvs_c
     in
     List.fold_left (fun r info -> r @ (aux info)) [] P.preds_info
