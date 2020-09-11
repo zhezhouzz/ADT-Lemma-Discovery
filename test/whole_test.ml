@@ -4,6 +4,16 @@ open Printf;;
 open Utils;;
 module Value = Preds.Pred.Element;;
 let module B = E.B in
+let libcode_cons a l = a :: l in
+let libcode_sort l = List.sort (fun a b -> -(compare a b)) l in
+let clientcode a l0 =
+  let b = a + 1 in
+  let l1 = libcode_cons a l0 in
+  let l2 = libcode_sort l1 in
+  let l3 = libcode_cons b l2 in
+  let l4 = libcode_sort l3 in
+  a,b,l0,l1,l2,l3,l4
+in
 let vc = Implies (And [SpecApply ("Cons", ["a"; "l0"; "l1"]);
                        SpecApply ("Sort", ["l1"; "l2"]);
                        SpecApply ("Plus1", ["a"; "b"]);
@@ -65,4 +75,16 @@ let _ = printf "axiom:\n\t%s\n" (Z3.Expr.to_string axz3) in
 let neg_vc_with_ax = Z3.Boolean.mk_and ctx [neg_vc; axz3] in
 let valid, _ = Solver.check ctx neg_vc_with_ax in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
+let va,vb,vl0,vl1,vl2,vl3,vl4 = clientcode 1 [] in
+let _ = printf "positive sample\n" in
+let print_group (va,vb,vl0,vl1,vl2,vl3,vl4) =
+  let vl0,vl1,vl2,vl3,vl4 = map5 IntList.to_string (vl0,vl1,vl2,vl3,vl4) in
+  printf "a = %i; b = %i\nl0 = [%s]\nl1 = [%s]\nl2 = [%s]\nl3 = [%s]\nl4 = [%s]\n"
+    va vb vl0 vl1 vl2 vl3 vl4 in
+let _ = print_group (va,vb,vl0,vl1,vl2,vl3,vl4) in
+let _ = printf "sample constraint:\n" in
+let c = E.B.fixed_dt_to_z3 ctx "list_order" "l3" (Value.L [1;2]) in
+let _ = printf "list_order([1;2], x_0, x_1):\n\t%s\n" (Z3.Expr.to_string c) in
+let c = E.B.fixed_dt_to_z3 ctx "member" "l3" (Value.L [1;2]) in
+let _ = printf "member([1;2], x_0):\n\t%s\n" (Z3.Expr.to_string c) in
 ();;

@@ -8,6 +8,7 @@ module type Pred = sig
   type pred_info = {name:string; num_dt:int; num_int: int; permu: bool}
   val raw_preds_info: pred_info list
   val preds_info: pred_info list
+  val fixed_dt_truth_tab: t -> E.t -> int list list
 end
 
 module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
@@ -78,7 +79,16 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   let apply ((pred, dt, args) : t * E.t * E.t list) : bool =
     let (pred, dt, args) = desugar_ (pred, dt, args) in
     apply_ (pred, dt, args)
-
+  let fixed_dt_truth_tab pred dt =
+    let forallu = E.flatten_forall dt in
+    match dt, pred with
+    | (_, "member") -> List.map (fun i -> [i]) forallu
+    | (E.L l, "list_order") ->
+      let args_list = List.cross forallu forallu in
+      let args_list =
+        List.filter (fun (u, v) -> List.order (fun x y -> x == y) l u v) args_list in
+      List.map (fun (u, v) -> [u;v]) args_list
+    | _ -> raise @@ InterExn "fixed_dt_truth_tab"
 end
 
 module Predicate = Pred(Elem.Elem);;

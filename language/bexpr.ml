@@ -6,12 +6,14 @@ module type Bexpr = sig
   val exec: t -> value Utils.StrMap.t -> bool
   val extract_dt: t -> value list * string list
   val to_z3: Z3.context -> t -> Z3.Expr.expr
+  val fixed_dt_to_z3: Z3.context -> string -> string -> value -> Z3.Expr.expr
 end
 
 module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
   module P = Preds.Pred.Predicate
   include B
   open Utils
+  open Printf
   type value = L.value
   let fv _ = []
   let type_check bexpr = (bexpr, true)
@@ -95,6 +97,10 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
     | Bool -> Boolean.mk_const_s ctx name
     | IntList | IntTree -> Integer.mk_const_s ctx name
 
+  let bvar_to_z3 ctx = function
+    | Var (tp, name) -> var_to_z3 ctx tp name
+    | _ -> raise @@ InterExn "bvar_to_z3"
+
   let predefined_predicates_table ctx =
     let m = StrMap.empty in
     List.fold_left (fun m info ->
@@ -127,4 +133,26 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
          | None -> raise @@ InterExn "no such op")
     in
     aux b
+
+  let mk_eq_int ctx u i =
+    Boolean.mk_eq ctx u (int_to_z3 ctx i)
+  let mk_eq_ints ctx us is =
+    if (List.length us) != (List.length is) then raise @@ InterExn "mk_eq_ints"
+    else Boolean.mk_and ctx (List.map (fun (u, i) -> mk_eq_int ctx u i) (List.combine us is))
+  let fixed_dt_to_z3_ ctx pred dt num_int =
+    let args = P.fixed_dt_truth_tab pred dt in
+    let fv = List.init num_int (fun i -> Var (Int, sprintf "x_%i" i)) in
+    let fvz3 = List.map (fun u -> bvar_to_z3 ctx u) fv in
+    fv, Boolean.mk_or ctx (List.map (fun arg -> mk_eq_ints ctx fvz3 arg) args)
+
+  let fixed_dt_to_z3 ctx pred dtname dt =
+    match List.find_opt (fun info -> String.equal info.P.name pred) P.preds_info with
+    | Some info ->
+      if info.P.num_dt != 1 then raise @@ InterExn "not a dt pred" else
+        let fv, right = fixed_dt_to_z3_ ctx pred dt info.P.num_int in
+        let argdt = Var (IntList, dtname) in
+        let left = to_z3 ctx (Op (Bool, pred, argdt :: fv)) in
+        make_forall ctx (List.map (fun u -> bvar_to_z3 ctx u) fv)
+          (Boolean.mk_iff ctx left right)
+    | None -> raise @@ InterExn "no such pred"
 end

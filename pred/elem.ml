@@ -7,6 +7,7 @@ module type Elem = sig
     | NotADt
   val layout : t -> string
   val eq : t -> t -> bool
+  val flatten_forall: t -> int list
 end
 
 module Elem: Elem = struct
@@ -33,4 +34,8 @@ module Elem: Elem = struct
       | (_, _) -> false
     in
     aux (x, y)
+  let flatten_forall = function
+    | I _ | B _ | NotADt -> raise @@ InterExn "flatten_forall: not a datatype"
+    | L il -> List.flatten_forall (fun x y -> x == y) il
+    | T it -> Tree.flatten_forall (fun x y -> x == y) it
 end

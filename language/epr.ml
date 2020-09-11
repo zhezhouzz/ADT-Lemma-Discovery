@@ -5,7 +5,6 @@ module type Epr = sig
   val type_check : t -> (t * bool)
   val exec: t -> value Utils.StrMap.t -> bool
   val forallformula_exec: forallformula -> value Utils.StrMap.t -> bool
-  val flatten_forall: value -> int list
   val to_z3: Z3.context -> t -> Z3.Expr.expr
   val forallformula_to_z3: Z3.context -> forallformula -> Z3.Expr.expr
   val neg_forallf: forallformula -> string list * forallformula
@@ -49,14 +48,9 @@ module Epr (E: EprTree.EprTree): Epr = struct
     let names = List.remove_duplicates String.equal names in
     dts @ (List.map (fun n -> StrMap.find n env) names)
 
-  let flatten_forall = function
-    | Elem.I _ | Elem.B _ | Elem.NotADt -> raise @@ InterExn "flatten_forall: not a datatype"
-    | Elem.L il -> List.flatten_forall (fun x y -> x == y) il
-    | Elem.T it -> Tree.flatten_forall (fun x y -> x == y) it
-
   let forallu e env =
     let dts = extract_dt e env in
-    let us = List.concat @@ List.map flatten_forall dts in
+    let us = List.concat @@ List.map Elem.flatten_forall dts in
     let us = List.remove_duplicates (fun x y -> x == y) us in
     match IntList.max_opt us with
     | None -> 0 :: us

@@ -108,6 +108,13 @@ module List = struct
     in
     aux l
 
+  let cross l0 l1 =
+    let rec aux i j res =
+      if j >= (List.length l1) then aux (i + 1) 0 res
+      else if i >= (List.length l0) then res
+      else aux i (j+1) ((List.nth l0 i, List.nth l1 j) :: res)
+    in
+    aux 0 0 []
 end
 
 module Tree = struct
@@ -239,3 +246,4 @@ let sublist l s e =
 let map_double f (a, b) = (f a, f b)
 let map_triple f (a, b, c) = (f a, f b, f c)
 let map4 f (a, b, c, d) = (f a, f b, f c, f d)
+let map5 f (a, b, c, d, e) = (f a, f b, f c, f d, f e)
