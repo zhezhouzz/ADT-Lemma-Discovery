@@ -109,12 +109,14 @@ module List = struct
     aux l
 
   let cross l0 l1 =
-    let rec aux i j res =
-      if j >= (List.length l1) then aux (i + 1) 0 res
-      else if i >= (List.length l0) then res
-      else aux i (j+1) ((List.nth l0 i, List.nth l1 j) :: res)
-    in
-    aux 0 0 []
+    if ((List.length l0) == 0) || ((List.length l1) == 0) then []
+    else
+      let rec aux i j res =
+        if j >= (List.length l1) then aux (i + 1) 0 res
+        else if i >= (List.length l0) then res
+        else aux i (j+1) ((List.nth l0 i, List.nth l1 j) :: res)
+      in
+      aux 0 0 []
 end
 
 module Tree = struct

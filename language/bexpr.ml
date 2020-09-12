@@ -143,7 +143,9 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
     let args = P.fixed_dt_truth_tab pred dt in
     let fv = List.init num_int (fun i -> Var (Int, sprintf "x_%i" i)) in
     let fvz3 = List.map (fun u -> bvar_to_z3 ctx u) fv in
-    fv, Boolean.mk_or ctx (List.map (fun arg -> mk_eq_ints ctx fvz3 arg) args)
+    let right = if (List.length args) == 0 then Boolean.mk_false ctx
+      else Boolean.mk_or ctx (List.map (fun arg -> mk_eq_ints ctx fvz3 arg) args) in
+    fv, right
 
   let fixed_dt_to_z3 ctx pred dtname dt =
     match List.find_opt (fun info -> String.equal info.P.name pred) P.preds_info with

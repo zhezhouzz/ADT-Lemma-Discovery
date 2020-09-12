@@ -11,6 +11,7 @@ module type Dtree = sig
   val layout_feature: feature -> string
   val layout: t -> string
   val to_epr: t -> Language.Ast.SpecAst.E.t
+  val feature_to_epr: feature -> string list -> Language.Ast.SpecAst.E.B.t
 end
 
 module Dtree : Dtree = struct
@@ -78,4 +79,7 @@ module Dtree : Dtree = struct
       | Node (feature, l, r) -> Epr.Ite (feature_to_bexpr feature, aux l, aux r)
     in
     aux dtree
+  let feature_to_epr (pred, argsid) fv =
+    let args = List.map (fun id -> Epr.B.Var (Epr.B.Int, List.nth fv id)) argsid in
+    Epr.B.Op (Epr.B.Bool, pred, args)
 end
