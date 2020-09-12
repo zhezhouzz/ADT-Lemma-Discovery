@@ -25,6 +25,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
     E.forallformula_exec forallf new_env
   let exec ast stable env =
     let rec aux = function
+      | ForAll ff -> E.forallformula_exec ff env
       | Implies (e1, e2) -> if aux e1 then aux e2 else true
       | Ite (e1, e2, e3) -> if aux e1 then aux e2 else aux e3
       | Not e -> not (aux e)
@@ -32,10 +33,11 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Or l -> List.exists (fun x -> x) @@ List.map aux l
       | Iff (e1, e2) -> (aux e1) == (aux e2)
       | SpecApply (spec_name, args) ->
-        (match StrMap.find_opt spec_name stable with
-         | None -> raise @@ InterExn (sprintf "Ast::not such spec(%s)" spec_name)
-         | Some spec -> spec_exec spec args env
-        )
+        let argsvalue = List.map (fun b -> E.B.exec b env) args in
+        let args', body = StrMap.find spec_name stable in
+        let env = List.fold_left (fun env (k, v) -> StrMap.add k v env) env
+            (List.combine args' argsvalue) in
+        E.forallformula_exec body env
     in
     aux ast
   open Z3
@@ -56,26 +58,27 @@ module Ast (A: AstTree.AstTree): Ast = struct
       StrMap.add name fdecl m, body :: bodys
     ) spec_tab (StrMap.empty, [])
   let to_z3 ctx a spec_tab =
-    let ptab, bodys = make_spec_def ctx spec_tab in
+    (* let ptab, bodys = make_spec_def ctx spec_tab in *)
     let rec aux = function
+      | ForAll ff -> E.forallformula_to_z3 ctx ff
       | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
       | Ite (p1, p2, p3) -> Boolean.mk_ite ctx (aux p1) (aux p2) (aux p3)
       | Not p -> Boolean.mk_not ctx (aux p)
       | And ps -> Boolean.mk_and ctx (List.map aux ps)
       | Or ps -> Boolean.mk_or ctx (List.map aux ps)
       | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2)
-      | SpecApply (spec_name, args) ->
-        let args = List.map (fun name -> Integer.mk_const_s ctx name) args in
-        FuncDecl.apply (StrMap.find spec_name ptab) args
+      | SpecApply (spec_name, argsvalue) ->
+        let args, body = StrMap.find spec_name spec_tab in
+        E.forallformula_to_z3 ctx @@ E.subst_forallformula body args argsvalue
     in
-    Boolean.mk_and ctx ((aux a) :: bodys)
+    aux a
   let neg_to_z3 ctx a spec_tab =
     match a with
-    | Implies (p, SpecApply (name, args)) ->
-      let (specargs, forallf) = StrMap.find name spec_tab in
-      let fv, forallf = E.neg_forallf forallf in
-      let spec_tab = StrMap.add name (specargs, forallf) spec_tab in
-      fv, to_z3 ctx (And [p;SpecApply (name, args)]) spec_tab
+    | Implies (p, SpecApply (name, argsvalue)) ->
+      let args, body = StrMap.find name spec_tab in
+      let body = E.subst_forallformula body args argsvalue in
+      let fv, body = E.neg_forallf body in
+      fv, to_z3 ctx (And [p;ForAll body]) spec_tab
     | _ -> raise @@ InterExn "neg_to_z3"
 end
 module Lit = Lit.Lit(LitTree.LitTree)

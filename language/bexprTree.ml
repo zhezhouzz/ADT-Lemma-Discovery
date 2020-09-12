@@ -15,6 +15,7 @@ module type BexprTree = sig
   val eq_tp: tp * tp -> bool
   val layout_tp: tp -> string
   val layout: t -> string
+  val subst: t -> string list -> t list -> t
 end
 
 module BexprTree (L: Lit.Lit) : BexprTree
@@ -63,11 +64,17 @@ let rec layout = function
   | Op (_, op, args) -> layout_op op (List.map layout args)
 
 
-(* let rec layout_bexpr = function
- *   | Bop (op, args) -> layout_bop op (List.map layout_aexpr args)
- * 	| Member (dt, varname) -> Printf.sprintf "(member %s %s)" (layout_aexpr dt) varname
- * 	| Link (dt, uidx, vidx, u, v) ->
- *     Printf.sprintf "(link %s (%i:%s) (%i:%s))" (layout_aexpr dt) uidx u vidx v
- *   | Next (dt, uidx, vidx, u, v) ->
- *     Printf.sprintf "(next %s (%i:%s) (%i:%s))" (layout_aexpr dt) uidx u vidx v *)
+let subst bexpr args argsvalue =
+  let l = List.combine args argsvalue in
+  let rec aux bexpr =
+    match bexpr with
+    | Literal _ -> bexpr
+    | Var (_, name) ->
+      (match List.find_opt (fun (name', _) -> String.equal name name') l with
+       | None -> bexpr
+       | Some (_, b) -> b
+      )
+    | Op (tp, op, args) -> Op (tp, op, List.map aux args)
+  in
+  aux bexpr
 end

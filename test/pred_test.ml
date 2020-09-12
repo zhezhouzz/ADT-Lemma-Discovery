@@ -41,7 +41,7 @@ let exp12 = "tree_parallel", t0, [I 1; I 3] in
 let exp13 = "tree_parallel", t0, [I 2; I 1] in
 let tests = [exp0;exp1;exp2;exp3;exp4;exp5;exp6;exp7;exp8;exp9;exp10;exp11;exp12;exp13] in
 let _ = List.iter (fun exp -> printf "%s=%b\n" (P.apply_layout exp) (P.apply exp)) tests in
-let title = ["member", [0]; "member", [1]; "list_order", [0;1]; "eq", [0;1]] in
+let title = ["member", [0]; "member", [1]; "list_order", [0;1]; "==", [0;1]] in
 let _ = printf "  \t\t%s\n" (A.layout_title title) in
 let pos0 = A.make_sample title l0 [I 0; I 1] in
 let pos1 = A.make_sample title (L []) [I 0; I 1] in

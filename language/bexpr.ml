@@ -3,7 +3,7 @@ module type Bexpr = sig
   type value = L.value
   val fv: t -> string list
   val type_check : t -> (t * bool)
-  val exec: t -> value Utils.StrMap.t -> bool
+  val exec: t -> value Utils.StrMap.t -> value
   val extract_dt: t -> value list * string list
   val to_z3: Z3.context -> t -> Z3.Expr.expr
   val fixed_dt_to_z3: Z3.context -> string -> string -> value -> Z3.Expr.expr
@@ -45,9 +45,7 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
            | dt :: args -> P.E.B (P.apply (op, dt, args))
         )
     in
-    match aux bexpr with
-    | P.E.B b -> b
-    | _ -> raise @@ InterExn "Bexpr::exec not a bool result"
+    aux bexpr
   let extract_dt bexpr =
     let rec aux = function
       | Literal (_, L.IntList lit) -> [P.E.L lit]
@@ -105,7 +103,7 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
     let m = StrMap.empty in
     List.fold_left (fun m info ->
         StrMap.add info.P.name
-        (FuncDecl.mk_func_decl_s ctx info.P.name
+          (FuncDecl.mk_func_decl_s ctx info.P.name
              (List.init (info.P.num_dt + info.P.num_int ) (fun _ -> Integer.mk_sort ctx))
              (Boolean.mk_sort ctx))
           m
@@ -120,17 +118,18 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
       | Var (tp, name) -> var_to_z3 ctx tp name
       | Op (_, op, args) ->
         let eargs = List.map aux args in
-        if List.exists (fun arg -> is_dt @@ get_tp arg) args
-        then
-          let pred, args' = P.desugar op in
-          let args' = List.map (fun x -> int_to_z3 ctx x) args' in
-          match eargs with
-          | [] -> raise @@ InterExn "never happend"
-          | dt :: args -> FuncDecl.apply (StrMap.find pred ptable) (dt :: (args' @ args))
-        else
-          (match non_dt_op_to_z3 ctx op eargs with
-         | Some e -> e
-         | None -> raise @@ InterExn "no such op")
+        match non_dt_op_to_z3 ctx op eargs with
+        | Some e -> e
+        | None ->
+          (match List.find_opt
+                   (fun info -> String.equal info.P.name op) P.preds_info with
+          | Some _ ->
+            let pred, args' = P.desugar op in
+            let args' = List.map (fun x -> int_to_z3 ctx x) args' in
+            (match eargs with
+             | [] -> raise @@ InterExn "never happend"
+             | dt :: args -> FuncDecl.apply (StrMap.find pred ptable) (dt :: (args' @ args)))
+          | None -> raise @@ InterExn (sprintf "no such op(%s)" op))
     in
     aux b
 

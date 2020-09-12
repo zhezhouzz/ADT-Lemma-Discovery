@@ -18,7 +18,7 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   type t = string
   type pred_info = {name:string; num_dt:int; num_int: int; permu: bool}
   let preds_info = [{name="member"; num_dt=1; num_int=1; permu=false};
-                    {name="eq"; num_dt=0; num_int=2; permu=false};
+                    {name="=="; num_dt=0; num_int=2; permu=false};
                     {name="list_order"; num_dt=1; num_int=2; permu=true};]
   (* desugared *)
   let raw_preds_info = [{name="member"; num_dt=1; num_int=1; permu=false};
@@ -50,7 +50,7 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
 
   let desugar pred =
     match pred with
-    | "member" | "eq" | "order" -> pred, []
+    | "member" | "==" | "order" -> pred, []
     | "list_order" -> "order", [0;1]
     | "tree_left" -> "order", [0;1]
     | "tree_right" -> "order", [0;2]
@@ -62,7 +62,7 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
     let args' = List.map (fun x -> E.I x) args' in
     (pred, dt, args' @ args)
     (* match pred with
-     * | "member" | "eq" | "order" -> (pred, dt, args)
+     * | "member" | "==" | "order" -> (pred, dt, args)
      * | "list_order" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
      * | "tree_left" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
      * | "tree_right" -> ("order", dt, (E.I 0) :: (E.I 2) :: args)
@@ -73,7 +73,7 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
     match pred, args with
     | "member", [arg] -> member_apply dt arg
     | "order", [E.I i0; E.I i1; arg0; arg1] -> order_apply dt i0 i1 arg0 arg1
-    | "eq", [arg0; arg1] -> eq_apply arg0 arg1
+    | "==", [arg0; arg1] -> eq_apply arg0 arg1
     | _ -> raise @@ InterExn "apply"
 
   let apply ((pred, dt, args) : t * E.t * E.t list) : bool =

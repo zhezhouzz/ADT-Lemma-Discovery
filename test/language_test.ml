@@ -10,7 +10,7 @@ let l2 = B.Var (B.IntList, "l2") in
 let v1 = B.Literal (B.Int, B.L.Int 1) in
 let v2 = B.Literal (B.Int, B.L.Int 2) in
 let b0 = B.Op (B.Bool, "==", [v1;v2]) in
-let _ = printf "eval(%s) = %b\n" (B.layout b0) (B.exec b0 StrMap.empty) in
+let _ = printf "eval(%s) = %s\n" (B.layout b0) (Elem.layout @@ B.exec b0 StrMap.empty) in
 let post_forallf =
   [],E.And
     [E.Not (E.Atom (B.Op (B.Bool, "member", [l1; v1])));

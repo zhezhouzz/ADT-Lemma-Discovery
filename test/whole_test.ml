@@ -17,21 +17,14 @@ let clientcode a l0 =
   a,b,l0,l1,l2,l3,l4
 in
 let _ = printf "whole test\n" in
-let vc = Implies (And [SpecApply ("Cons", ["a"; "l0"; "l1"]);
-                       SpecApply ("Sort", ["l1"; "l2"]);
-                       SpecApply ("Plus1", ["a"; "b"]);
-                       SpecApply ("Cons", ["b"; "l2"; "l3"]);
-                       SpecApply ("Sort", ["l3"; "l4"]);
-                      ], SpecApply ("Post", ["a"; "b"; "l0"; "l4"])) in
 let a = B.Var (B.Int, "a") in
-let b = B.Var (B.Int, "b") in
 let u = B.Var (B.Int, "u") in
 let v = B.Var (B.Int, "v") in
 let l0 = B.Var (B.IntList, "l0") in
 let l1 = B.Var (B.IntList, "l1") in
-(* let l2 = B.Var (B.IntList, "l2") in
- * let l3 = B.Var (B.IntList, "l3") in *)
-(* let l4 = B.Var (B.IntList, "l4") in *)
+let l2 = B.Var (B.IntList, "l2") in
+let l3 = B.Var (B.IntList, "l3") in
+let l4 = B.Var (B.IntList, "l4") in
 let v0 = B.Literal (B.Int, B.L.Int 0) in
 let v1 = B.Literal (B.Int, B.L.Int 1) in
 let v2 = B.Literal (B.Int, B.L.Int 2) in
@@ -42,14 +35,18 @@ let gtE a b = E.Atom (B.Op (B.Bool, ">", [a; b])) in
 let ltE a b = E.Atom (B.Op (B.Bool, "<", [a; b])) in
 let memberE l u = E.Atom (B.Op (B.Bool, "member", [l; u])) in
 let listorderE l u v = E.Atom (B.Op (B.Bool, "list_order", [l; u; v])) in
+let vc = Implies (And [SpecApply ("Cons", [a; l0; l1]);
+                       SpecApply ("Sort", [l1; l2]);
+                       SpecApply ("Cons", [intplus a v1; l2; l3]);
+                       SpecApply ("Sort", [l3; l4]);
+                      ], SpecApply ("Post", [a; l0; l4])) in
 let specs = [
-  "Plus1", (["a";"b"], ([], inteqE b (intplus a v1)));
-  "Post", (["a"; "b"; "l0";"l1"],
+  "Post", (["a"; "l0";"l1"],
            (["u"; "v"],
             E.And [
               E.Implies (memberE l0 u, memberE l1 u);
               E.Implies (listorderE l1 u v, geE u v);
-              listorderE l1 b a]));
+              listorderE l1 (intplus a v1) a]));
   (* The following specs are the result of abduction. *)
   "Cons", (["a";"l0";"l1"],
            (["u"], E.Implies (E.Or [inteqE u a; memberE l0 u], memberE l1 u);)
@@ -91,8 +88,8 @@ let print_group (va,vb,vl0,vl1,vl2,vl3,vl4) =
 let _ = print_group (va,vb,vl0,vl1,vl2,vl3,vl4) in
 let _ = printf "sample constraint:\n" in
 (* let cs = ["l0", vl0; "l1", vl1; "l2", vl2; "l3", vl3; "l4", vl4] in *)
-(* let cs = ["l0", vl0; "l1", vl1; "l2", vl2; "l3", vl3;] in *)
-let cs = ["l0", vl0] in
+let cs = ["l0", vl0; "l1", vl1; "l2", vl2; "l3", vl3;] in
+(* let cs = ["l0", vl0] in *)
 let z3u = Z3.Arithmetic.Integer.mk_const_s ctx "u" in
 let z3v = Z3.Arithmetic.Integer.mk_const_s ctx "v" in
 let z30 = Z3.Arithmetic.Integer.mk_numeral_i ctx 0 in
@@ -109,18 +106,8 @@ let uvc = ["u";"v";"l0"], (
   ) in
 let uvc = E.forallformula_to_z3 ctx uvc in
 let uvc2 = Z3.Boolean.mk_and ctx [
-    Z3.Arithmetic.mk_ge ctx z3u z30; Z3.Arithmetic.mk_le ctx z32 z3u;
-    Z3.Arithmetic.mk_ge ctx z3v z30; Z3.Arithmetic.mk_le ctx z32 z3v;
-    Z3.Boolean.mk_eq ctx (Z3.Arithmetic.Integer.mk_const_s ctx "l0")
-      (Z3.Arithmetic.Integer.mk_numeral_i ctx 0);
-    Z3.Boolean.mk_eq ctx (Z3.Arithmetic.Integer.mk_const_s ctx "l1")
-      (Z3.Arithmetic.Integer.mk_numeral_i ctx 1);
-    Z3.Boolean.mk_eq ctx (Z3.Arithmetic.Integer.mk_const_s ctx "l2")
-      (Z3.Arithmetic.Integer.mk_numeral_i ctx 2);
-    Z3.Boolean.mk_eq ctx (Z3.Arithmetic.Integer.mk_const_s ctx "l3")
-      (Z3.Arithmetic.Integer.mk_numeral_i ctx 3);
-    Z3.Boolean.mk_eq ctx (Z3.Arithmetic.Integer.mk_const_s ctx "l4")
-      (Z3.Arithmetic.Integer.mk_numeral_i ctx 4);
+    Z3.Arithmetic.mk_ge ctx z3u z30; Z3.Arithmetic.mk_ge ctx z32 z3u;
+    Z3.Arithmetic.mk_ge ctx z3v z30; Z3.Arithmetic.mk_ge ctx z32 z3v;
   ] in
 let cs = List.map (fun (name, v) ->
     Z3.Boolean.mk_and ctx [

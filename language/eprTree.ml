@@ -13,6 +13,8 @@ module type EprTree = sig
   type forallformula = free_variable list * t
   val layout: t -> string
   val layout_forallformula: forallformula -> string
+  val subst: t -> string list -> B.t list -> t
+  val subst_forallformula: forallformula -> string list -> B.t list -> forallformula
 end
 
 module EprTree(B: Bexpr.Bexpr) : EprTree
@@ -47,11 +49,21 @@ module EprTree(B: Bexpr.Bexpr) : EprTree
 
   let layout_forallformula (forallvars, body) =
     if (List.length forallvars) == 0 then layout body else
-    Printf.sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (layout body)
+      Printf.sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (layout body)
 
-  (* let t_eq a b = Atom (Bop ("=", [a; b]))
-   * let t_neq a b = Atom (Bop ("<>", [a; b]))
-   * let t_and a b = And [a;b]
-   * let list_order lname u v = Link (AVar lname, 0, 1, u, v)
-   * let list_next lname u v = Next (AVar lname, 0, 1, u, v) *)
+  let subst body args argsvalue =
+    let rec aux = function
+      | True -> True
+      | Atom bexpr -> Atom (B.subst bexpr args argsvalue)
+      | Implies (p1, p2) -> Implies (aux p1, aux p2)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Not p -> Not (aux p)
+      | Iff (p1, p2) -> Iff (aux p1, aux p2)
+      | Ite (p1, p2, p3) -> Ite (aux p1, aux p2, aux p3)
+    in
+    aux body
+
+  let subst_forallformula (fv, body) args argsvalue =
+   fv, subst body args argsvalue
 end

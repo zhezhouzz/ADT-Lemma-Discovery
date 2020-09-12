@@ -80,6 +80,10 @@ module Dtree : Dtree = struct
     in
     aux dtree
   let feature_to_epr (pred, argsid) fv =
+    let info = List.find (fun info -> String.equal info.P.name pred) P.preds_info in
     let args = List.map (fun id -> Epr.B.Var (Epr.B.Int, List.nth fv id)) argsid in
-    Epr.B.Op (Epr.B.Bool, pred, args)
+    if info.num_dt == 0 then
+      Epr.B.Op (Epr.B.Bool, pred, args)
+    else
+      Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, "l")) ::args)
 end

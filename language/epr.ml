@@ -20,7 +20,11 @@ module Epr (E: EprTree.EprTree): Epr = struct
   let exec e env =
     let rec aux = function
       | True -> true
-      | Atom bexpr -> B.exec bexpr env
+      | Atom bexpr ->
+        (match B.exec bexpr env with
+         | Elem.B b -> b
+         | _ -> raise @@ InterExn "not a bool value in epr"
+        )
       | Implies (e1, e2) -> if aux e1 then aux e2 else true
       | Ite (e1, e2, e3) -> if aux e1 then aux e2 else aux e3
       | Not e -> not (aux e)
