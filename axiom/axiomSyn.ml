@@ -14,7 +14,7 @@ module type AxiomSyn = sig
   val randomgen: int list -> et list
   val sample_constraint: Z3.context ->
     Ast.E.B.t list -> (string * et) list -> (int * int) -> Z3.Expr.expr
-  val interp_to_axiom: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> prog:(et list -> (string * et) list) -> Ast.E.forallformula
+  val axiom_infer: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> prog:(et list -> (string * et) list) -> Ast.E.forallformula
 end
 
 module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
@@ -104,7 +104,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
         (Epr.And (List.fold_left (fun l u -> l @ [geE u sz3; geE ez3 u]) [] fv)) in
     Boolean.mk_and ctx [interval;c]
   module B = Epr.B
-  let interp_to_axiom ~ctx ~vc ~spectable ~prog =
+  let axiom_infer ~ctx ~vc ~spectable ~prog =
     let interp = prog [E.I 0; E.L []] in
     let negfv, negvc = Ast.neg_to_z3 ctx vc spectable in
     let rec aux positives negatives axiom =
