@@ -10,8 +10,9 @@ module type Dtree = sig
   val exec_feature: feature -> et -> et list -> bool
   val layout_feature: feature -> string
   val layout: t -> string
-  val to_epr: t -> dtname:string -> Language.Ast.SpecAst.E.t
-  val feature_to_epr: feature -> dtname:string -> fv:string list -> Language.Ast.SpecAst.E.t
+  val to_forallformula: t -> dtname:string -> Language.Ast.SpecAst.E.forallformula
+  val feature_to_epr: feature -> dtname:string ->
+    fv:Language.Ast.SpecAst.E.B.t list -> Language.Ast.SpecAst.E.t
 end
 
 module Dtree : Dtree = struct
@@ -74,11 +75,20 @@ module Dtree : Dtree = struct
     else
       Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, dtname)) ::args))
 
-  let to_epr (dtree: t) ~dtname : Epr.t =
+  let used_ids (dtree: t) =
+    let rec aux = function
+      | T | F -> []
+      | Leaf (_, ids) -> ids
+      | Node ((_, ids), l, r) ->
+        List.remove_duplicates (fun x y -> x == y) (ids @ (aux l) @ (aux r))
+    in
+    aux dtree
+
+  let to_forallformula (dtree: t) ~dtname : Epr.forallformula =
+    let ids = used_ids dtree in
     let feature_to_bexpr (pred, ids) =
       let args = List.map (fun id -> Epr.B.Var (Epr.B.Int, IntMap.find id vartable)) ids in
       to_epr_ pred dtname args
-      (* Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, dtname))::args)) *)
     in
     let rec aux = function
       | T -> Epr.True
@@ -86,8 +96,8 @@ module Dtree : Dtree = struct
       | Leaf feature -> feature_to_bexpr feature
       | Node (feature, l, r) -> Epr.Ite (feature_to_bexpr feature, aux l, aux r)
     in
-    aux dtree
+    dtname::(List.map (fun id ->IntMap.find id vartable) ids), aux dtree
   let feature_to_epr (pred, argsid) ~dtname ~fv =
-    let args = List.map (fun id -> Epr.B.Var (Epr.B.Int, List.nth fv id)) argsid in
+    let args = List.map (fun id -> List.nth fv id) argsid in
     to_epr_ pred dtname args
 end

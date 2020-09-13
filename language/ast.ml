@@ -13,7 +13,7 @@ end
 module Ast (A: AstTree.AstTree): Ast = struct
   include A
   open Utils
-  open Printf
+  (* open Printf *)
   type value = E.value
   let fv _ = []
   let type_check bexpr = (bexpr, true)
@@ -52,11 +52,11 @@ module Ast (A: AstTree.AstTree): Ast = struct
         Boolean.mk_iff ctx (FuncDecl.apply fdecl args) (E.forallformula_to_z3 ctx forallf)) in
     fdecl, body
 
-  let make_spec_def ctx spec_tab =
-    StrMap.fold (fun name spec (m, bodys) ->
-      let fdecl, body = spec_to_z3 ctx name spec in
-      StrMap.add name fdecl m, body :: bodys
-    ) spec_tab (StrMap.empty, [])
+  (* let make_spec_def ctx spec_tab =
+   *   StrMap.fold (fun name spec (m, bodys) ->
+   *     let fdecl, body = spec_to_z3 ctx name spec in
+   *     StrMap.add name fdecl m, body :: bodys
+   *   ) spec_tab (StrMap.empty, []) *)
   let to_z3 ctx a spec_tab =
     (* let ptab, bodys = make_spec_def ctx spec_tab in *)
     let rec aux = function

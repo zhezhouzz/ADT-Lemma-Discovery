@@ -1,5 +1,6 @@
 module type AxiomSyn = sig
   module D: Dtree.Dtree
+  module Ast = Language.Ast.SpecAst
   type vec = bool list
   type et = Preds.Pred.Element.t
   type sample = {dt: et; args: et list; vec: vec}
@@ -11,12 +12,18 @@ module type AxiomSyn = sig
   val layout_sample: sample -> string
   val classify: title -> pos: sample list -> neg: sample list -> D.t
   val randomgen: int list -> et list
+  val sample_constraint: Z3.context ->
+    Ast.E.B.t list -> (string * et) list -> (int * int) -> Z3.Expr.expr
+  val interp_to_axiom: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> prog:(et list -> (string * et) list) -> Ast.E.forallformula
 end
 
 module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   module D = D
   module E = Preds.Pred.Element
   module P = Preds.Pred.Predicate
+  module Ast = Language.Ast.SpecAst
+  module Epr = Ast.E
+  module S = Solver
   open Utils
   open Printf
   type vec = bool list
@@ -77,6 +84,58 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     let dt = F.make_dt ~samples:(Array.of_list (pos @ neg)) ~max_d:10 in
     let _ = F.print_tree' dt in
     dt_to_dt title dt
+
+  open Z3
+
+  let sample_constraint ctx fv l (s, e) =
+    let c = Boolean.mk_and ctx (
+        List.fold_left (fun cs (dtname, dt) ->
+            match dt with
+            | E.I _ | E.B _ -> cs
+            | _ ->
+              (Epr.B.fixed_dt_to_z3 ctx "member" dtname dt)::
+              (Epr.B.fixed_dt_to_z3 ctx "list_order" dtname dt)::
+              cs
+          ) [] l
+      ) in
+    let geE a b = Epr.Atom (Epr.B.Op (Epr.B.Bool, ">=", [a; b])) in
+    let sz3, ez3 = map_double (fun x -> Epr.B.Literal (Epr.B.Int, Epr.B.L.Int x)) (s, e) in
+    let interval = Epr.to_z3 ctx
+        (Epr.And (List.fold_left (fun l u -> l @ [geE u sz3; geE ez3 u]) [] fv)) in
+    Boolean.mk_and ctx [interval;c]
+  module B = Epr.B
+  let interp_to_axiom ~ctx ~vc ~spectable ~prog =
+    let interp = prog [E.I 0; E.L []] in
+    let negfv, negvc = Ast.neg_to_z3 ctx vc spectable in
+    let rec aux positives negatives axiom =
+      let neg_vc_with_ax =
+        Boolean.mk_and ctx [negvc; Epr.forallformula_to_z3 ctx axiom] in
+      let valid, _ = S.check ctx neg_vc_with_ax in
+      if valid then axiom else
+        let cs, (dtname, _) = List.match_snoc interp in
+        let negfv = List.map (fun u -> B.Var (B.Int, u)) negfv in
+        let constraints = sample_constraint ctx negfv cs (0, 2) in
+        let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; negvc] in
+        let _, m = S.check ctx neg_vc_fixed_dt in
+        let m = match m with None -> raise @@ InterExn "bad" | Some m -> m in
+        let get_interpretation ctx m title fv =
+          let title_b = List.map
+              (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:fv) title in
+          let title_z3 = List.map (fun b -> Epr.to_z3 ctx b) title_b in
+          List.map (fun fv -> S.get_int m (B.to_z3 ctx fv)) fv,
+          List.map (fun z -> S.get_pred m z) title_z3
+        in
+        let title = make_title (List.length negfv) in
+        let fvv, predv = get_interpretation ctx m title negfv in
+        let dts = randomgen fvv in
+        let fvv_exp = List.map (fun x -> E.I x) fvv in
+        let positives = positives @ (List.map (fun dt -> make_sample title dt fvv_exp) dts) in
+        let negatives = (cex_to_sample fvv_exp predv) :: negatives in
+        let axiom = classify title ~pos:positives ~neg:negatives in
+        let axiom = D.to_forallformula axiom ~dtname:"l" in
+        aux positives negatives axiom
+    in
+    aux [] [] ([], Epr.True)
 end
 
 module Syn = AxiomSyn(Dtree.Dtree)(Ml.FastDT.FastDT)

@@ -1,4 +1,4 @@
 (library
  (name axiom)
- (libraries utils preds language ml)
+ (libraries utils preds language ml solver)
 )

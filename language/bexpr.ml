@@ -78,16 +78,16 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
     | "<", [a; b] -> Some (mk_lt ctx a b)
     | _, _ -> None
 
-  let is_dt = function
-    | Int -> false
-    | Bool -> false
-    | IntList -> true
-    | IntTree -> true
-
-  let get_tp = function
-    | Literal (tp, _) -> tp
-    | Var (tp, _) -> tp
-    | Op (tp, _, _) -> tp
+  (* let is_dt = function
+   *   | Int -> false
+   *   | Bool -> false
+   *   | IntList -> true
+   *   | IntTree -> true
+   * 
+   * let get_tp = function
+   *   | Literal (tp, _) -> tp
+   *   | Var (tp, _) -> tp
+   *   | Op (tp, _, _) -> tp *)
 
   let var_to_z3 ctx tp name =
     match tp with

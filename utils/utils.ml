@@ -129,6 +129,14 @@ module List = struct
         else aux i (j+1) ((List.nth l0 i, List.nth l1 j) :: res)
       in
       aux 0 0 []
+
+  let match_snoc l =
+    let l = List.rev l in
+    match l with
+    | [] -> raise @@ InterExn "match_snoc: []"
+    | h :: t -> List.rev t, h
+
+  let union compare l0 l1 = remove_duplicates compare (l0 @ l1)
 end
 
 module Tree = struct
@@ -198,6 +206,7 @@ module Tree = struct
     | Node (a, l, r) -> a::((flatten l) @ (flatten r))
   let flatten_forall compare t =
     List.remove_duplicates compare (flatten t)
+  let union l0 l1 = List.union (fun x y -> x == y) l0 l1
 end
 
 module IntList = struct
