@@ -46,7 +46,8 @@ let specs = [
             E.And [
               E.Implies (memberE l0 u, memberE l1 u);
               E.Implies (listorderE l1 u v, geE u v);
-              listorderE l1 (intplus a v1) a]));
+              E.Implies (
+                E.And [inteqE u (intplus a v1); inteqE v a], listorderE l1 u v)]));
   (* The following specs are the result of abduction. *)
   "Cons", (["a";"l0";"l1"],
            (["u"], E.Implies (E.Or [inteqE u a; memberE l0 u], memberE l1 u);)
@@ -90,25 +91,7 @@ let _ = printf "sample constraint:\n" in
 (* let cs = ["l0", vl0; "l1", vl1; "l2", vl2; "l3", vl3; "l4", vl4] in *)
 let cs = ["l0", vl0; "l1", vl1; "l2", vl2; "l3", vl3;] in
 (* let cs = ["l0", vl0] in *)
-let z3u = Z3.Arithmetic.Integer.mk_const_s ctx "u" in
-let z3v = Z3.Arithmetic.Integer.mk_const_s ctx "v" in
-let z30 = Z3.Arithmetic.Integer.mk_numeral_i ctx 0 in
-let z32 = Z3.Arithmetic.Integer.mk_numeral_i ctx 2 in
-let uvc = ["u";"v";"l0"], (
-    E.And [
-      E.Implies (
-        E.Or [ltE u v0; gtE u v2; ltE u v0; gtE u v2],
-        E.Not (listorderE l0 u v));
-      E.Implies (
-        E.Or [ltE u v0; gtE u v2],
-        E.Not (memberE l0 u))
-    ]
-  ) in
-let uvc = E.forallformula_to_z3 ctx uvc in
-let uvc2 = Z3.Boolean.mk_and ctx [
-    Z3.Arithmetic.mk_ge ctx z3u z30; Z3.Arithmetic.mk_ge ctx z32 z3u;
-    Z3.Arithmetic.mk_ge ctx z3v z30; Z3.Arithmetic.mk_ge ctx z32 z3v;
-  ] in
+let uvc2 = E.to_z3 ctx (E.And [geE u v0; geE v2 u; geE v v0; geE v2 v;]) in
 let cs = List.map (fun (name, v) ->
     Z3.Boolean.mk_and ctx [
       E.B.fixed_dt_to_z3 ctx "member" name (Value.L v);
@@ -124,14 +107,34 @@ let valid, m = Solver.check ctx neg_vc_fixed_dt in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
 let m = match m with None -> raise @@ InterExn "bad" | Some m -> m in
 let get_interpretation ctx m title fv =
-  let fv_z3 = List.map (fun fv ->  Z3.Arithmetic.Integer.mk_const_s ctx fv) fv in
-  let title_b = List.map (fun feature -> A.D.feature_to_epr feature fv) title in
-  let title_z3 = List.map (fun b -> E.B.to_z3 ctx b) title_b in
+  let fv_z3 = List.map (fun fv -> Z3.Arithmetic.Integer.mk_const_s ctx fv) fv in
+  let title_b = List.map
+      (fun feature -> A.D.feature_to_epr feature ~dtname:"l4" ~fv:fv) title in
+  let title_z3 = List.map (fun b -> E.to_z3 ctx b) title_b in
+  let _ = List.iter (fun predz -> printf "%s " (Z3.Expr.to_string predz)) title_z3;
+    printf "\n" in
   List.map (fun z -> S.get_int m z) fv_z3, List.map (fun z -> S.get_pred m z) title_z3
 in
 let title2 = A.make_title 2 in
 let _ = printf "  \t\t%s\n" (A.layout_title title2) in
 let fvv, predv = get_interpretation ctx m title2 ["u"; "v"] in
-let _ = printf "fv:[%s] pred:[%s]"
+let _ = printf "fv:[%s] pred:[%s]\n"
     (IntList.to_string fvv) (List.to_string string_of_bool predv) in
+let dts = A.randomgen fvv in
+let fvv = List.map (fun x -> Value.I x) fvv in
+let positives = List.map (fun dt -> A.make_sample title2 dt fvv) dts in
+let negsample = A.cex_to_sample fvv predv in
+let negatives = [negsample] in
+let _ = printf "positive:\n%s" @@
+  List.fold_left (fun r s -> sprintf "%s\t%s\n" r (A.layout_sample s)) "" positives in
+let _ = printf "negative:\n%s" @@
+  List.fold_left (fun r s -> sprintf "%s\t%s\n" r (A.layout_sample s)) "" negatives in
+let axiom = A.classify title2 ~pos:positives ~neg:negatives in
+let axiom_epr = A.D.to_epr axiom ~dtname:"l0" in
+let _ = printf "axiom = %s\n" (E.layout axiom_epr) in
+let axiom_z3 = E.forallformula_to_z3 ctx (["l0";"u";"v"], axiom_epr) in
+let _ = printf "axiom = %s\n" (Z3.Expr.to_string axiom_z3) in
+let neg_vc_with_ax = Z3.Boolean.mk_and ctx [neg_vc; axiom_z3] in
+let valid, _ = Solver.check ctx neg_vc_with_ax in
+let _ = if valid then printf "valid\n" else printf "not valid\n" in
 ();;

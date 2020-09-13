@@ -10,6 +10,7 @@ module type AxiomSyn = sig
   val cex_to_sample: et list -> vec -> sample
   val layout_sample: sample -> string
   val classify: title -> pos: sample list -> neg: sample list -> D.t
+  val randomgen: int list -> et list
 end
 
 module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
@@ -37,6 +38,10 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
 
   let layout_title (title: title) =
     List.fold_left (fun r pred -> sprintf "%s [%s]" r (D.layout_feature pred)) "" title
+
+  let randomgen (fv: int list) =
+    List.map (fun l -> E.L l) @@
+    List.remove_duplicates IntList.eq @@ List.combination_l_all (fv @ fv)
 
   let make_sample (title:title) (dt: E.t) (args: E.t list) =
     let vec = List.map (fun feature -> D.exec_feature feature dt args) title in

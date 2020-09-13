@@ -10,8 +10,8 @@ module type Dtree = sig
   val exec_feature: feature -> et -> et list -> bool
   val layout_feature: feature -> string
   val layout: t -> string
-  val to_epr: t -> Language.Ast.SpecAst.E.t
-  val feature_to_epr: feature -> string list -> Language.Ast.SpecAst.E.B.t
+  val to_epr: t -> dtname:string -> Language.Ast.SpecAst.E.t
+  val feature_to_epr: feature -> dtname:string -> fv:string list -> Language.Ast.SpecAst.E.t
 end
 
 module Dtree : Dtree = struct
@@ -67,10 +67,18 @@ module Dtree : Dtree = struct
     | Node (feature, l, r) ->
       sprintf "[%s](%s,%s)" (layout_feature feature) (layout l) (layout r)
 
-  let to_epr (dtree: t) : Epr.t =
+  let to_epr_ pred dtname args =
+    let info = List.find (fun info -> String.equal info.P.name pred) P.preds_info in
+    if info.num_dt == 0 then
+      Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, args))
+    else
+      Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, dtname)) ::args))
+
+  let to_epr (dtree: t) ~dtname : Epr.t =
     let feature_to_bexpr (pred, ids) =
       let args = List.map (fun id -> Epr.B.Var (Epr.B.Int, IntMap.find id vartable)) ids in
-      Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, "l"))::args))
+      to_epr_ pred dtname args
+      (* Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, dtname))::args)) *)
     in
     let rec aux = function
       | T -> Epr.True
@@ -79,11 +87,7 @@ module Dtree : Dtree = struct
       | Node (feature, l, r) -> Epr.Ite (feature_to_bexpr feature, aux l, aux r)
     in
     aux dtree
-  let feature_to_epr (pred, argsid) fv =
-    let info = List.find (fun info -> String.equal info.P.name pred) P.preds_info in
+  let feature_to_epr (pred, argsid) ~dtname ~fv =
     let args = List.map (fun id -> Epr.B.Var (Epr.B.Int, List.nth fv id)) argsid in
-    if info.num_dt == 0 then
-      Epr.B.Op (Epr.B.Bool, pred, args)
-    else
-      Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, "l")) ::args)
+    to_epr_ pred dtname args
 end

@@ -93,6 +93,18 @@ module List = struct
     let elems = List.init num_all (fun x -> x) in
     aux [] num_choose elems
 
+  let combination_l l num_choose =
+    let c = combination (List.length l) num_choose in
+    List.map (fun ids -> List.map (fun id -> List.nth l id) ids) c
+
+  let combination_l_all l =
+    let len = List.length l in
+    let rec aux num_choose result =
+      if num_choose > len then result else
+        aux (num_choose + 1) (result @ (combination_l l num_choose))
+    in
+    aux 0 []
+
   let permutation l =
     let insert_all_positions x l =
       let rec aux prev acc l =

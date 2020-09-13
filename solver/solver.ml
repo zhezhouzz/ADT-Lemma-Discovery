@@ -23,6 +23,11 @@ let get_int m i =
     (* printf "get_int(%s)\n" (Expr.to_string i); *)
     int_of_string @@ Arithmetic.Integer.numeral_to_string v
 
+let get_bool_str m i =
+  match Model.eval m i true with
+  | None -> "none"
+  | Some v -> Expr.to_string v
+
 let get_int_name ctx m name =
   get_int m @@ Z3.Arithmetic.Integer.mk_const_s ctx name
 

@@ -11,4 +11,7 @@ open Printf;;
  * let _ = printf "permutation of ([1;1;2;3])(%i):\n" (List.length p) in
  * let _ = List.iter (fun l -> printf "\t[%s]\n" (IntList.to_string l)) p in *)
 let _ = printf "List.cross [] [] = (%i)\n" (List.length (List.cross [] [])) in
+let c = List.combination_l_all [0;2;0;2] in
+let c = List.remove_duplicates IntList.eq c in
+let _ = List.iter (fun l -> printf "\t[%s]\n" (IntList.to_string l)) c in
 ();;

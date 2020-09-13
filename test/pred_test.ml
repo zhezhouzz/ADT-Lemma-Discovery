@@ -57,7 +57,7 @@ let _ = printf "positive:\n%s" @@
 let _ = printf "negative:\n%s" @@
   List.fold_left (fun r s -> sprintf "%s\t%s\n" r (A.layout_sample s)) "" negatives in
 let axiom = A.classify title ~pos:positives ~neg:negatives in
-let axiom_epr = A.D.to_epr axiom in
+let axiom_epr = A.D.to_epr axiom ~dtname:"l0" in
 let _ = printf "axiom = %s\n" (Epr.layout axiom_epr) in
 let title2 = A.make_title 2 in
 let _ = printf "length(title2) = %i\n" (List.length title2) in
