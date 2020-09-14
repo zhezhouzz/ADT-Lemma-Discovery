@@ -1,0 +1,4 @@
+(library
+ (name abduction)
+ (libraries language utils)
+)

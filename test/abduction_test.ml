@@ -1,9 +1,100 @@
-module Ast = Language.Ast.SpecAst;;
-open Ast;;
-open Printf;;
-open Utils;;
-module Value = Preds.Pred.Value;;
-let module Sexpr = E.SE in
+module Ast = Language.Ast.SpecAst
+module Value = Preds.Pred.Value
+
+open Ast
+open OUnit2
+open Utils
+open Z3
+open Z3.Arithmetic
+
+module SE = E.SE
+
+(* Some simple literals to aid in test construction. *)
+let x    = SE.Var (SE.Int, "x")
+let y    = SE.Var (SE.Int, "y")
+let zero = SE.Literal (SE.Int, SE.L.Int 0)
+let five = SE.Literal (SE.Int, SE.L.Int 5)
+let ten  = SE.Literal (SE.Int, SE.L.Int 10)
+
+(* Helper functions. *)
+let set_simple_spec (name: string) (params: string list) (spec: E.t) (map: Ast.spec StrMap.t) =
+  StrMap.add name (params, ([], spec)) map
+let set_atomic_spec (name: string) (params: string list) (spec: SE.t) (map: Ast.spec StrMap.t) =
+  set_simple_spec name params (E.Atom spec) map
+let z3_context =
+  Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")]
+
+(**
+ * QE does not always yield the most parsimonious specifications.
+ * Instead of checking for specific spec wordings, just make sure the result
+ * is equivalent to the right thing.
+ *)
+let assert_spec_equiv ctx expected actual =
+  let iff = Boolean.mk_iff ctx expected actual in
+  let neg = Boolean.mk_not ctx iff in
+  let solver = Solver.mk_simple_solver ctx in
+  let status = Solver.check solver [neg] in
+  match status with
+    | Solver.UNSATISFIABLE -> () (* OK *)
+    | _ -> assert_failure "specs are not equivalent"
+
+(*** Begin test suite. ***)
+
+(**
+ * If the precondition is not satisfiable, abduction should fail.
+ *)
+let test_unsat_precondition _ =
+  let unsat = E.And [
+    (E.Atom (SE.Op (SE.Bool, "==", [x; five])));
+    (E.Atom ((SE.Op (SE.Bool, "==", [x; ten]))))
+  ] in
+  let specs = set_simple_spec "pre" ["x"] unsat StrMap.empty in
+  let specs = set_simple_spec "post" [] E.True specs in
+  let result = Abduction.abduce z3_context specs (SpecApply ("pre", [x])) (SpecApply ("post", [])) in
+  assert_equal (Result.Error "Unsatisfiable Precondition") result
+
+(**
+ * No uninterpreted function symbols in pre or post means no abduction needed.
+ *)
+let test_no_abduction _ =
+  let specs = set_atomic_spec "pre"  ["x"] (SE.Op (SE.Bool, "==", [x; five])) StrMap.empty in
+  let specs = set_atomic_spec "post" ["x"] (SE.Op (SE.Bool, "<=", [x; ten]))  specs in
+  let result = Abduction.abduce z3_context specs (SpecApply ("pre", [x])) (SpecApply ("post", [x])) in
+  assert_equal (Result.Ok StrMap.empty) result
+
+(**
+ * An abduction problem with one uninterpreted function.
+ *)
+let test_single_abduction _ =
+  let xMinus5 = SE.Op (SE.Bool, "-", [x; five]) in
+  let specs = set_atomic_spec "pre"  ["x"] (SE.Op (SE.Bool, "<=", [x; ten])) StrMap.empty in
+  let specs = set_atomic_spec "post" ["x"] (SE.Op (SE.Bool, "==", [xMinus5; zero]))  specs in
+  (* Query: x <= 10 /\ ??  |=  (x - 5) == 0 *)
+  let ctx = z3_context in
+  let result = Abduction.abduce ctx specs
+                 (And [SpecApply ("pre", [x]); SpecApply ("A", [x])])
+                 (SpecApply ("post", [x])) in
+  match result with
+    | Result.Ok spec_map ->
+       (* Expected: Single interpretation, A -> x = 5 *)
+       let _ = assert_equal 1 (StrMap.cardinal spec_map) in
+       let expected = Boolean.mk_eq ctx (Integer.mk_const_s ctx "x") (Integer.mk_numeral_i ctx 5) in
+       let interp = StrMap.find "A" spec_map in
+       assert_spec_equiv ctx expected interp
+    | Result.Error reason -> assert_failure reason
+
+(**
+ * An abduction problem with multiple uninterpreted functions.
+ *)
+let test_multiple_abduction _ =
+  assert_equal true false (* TODO: Implement *)
+
+(**
+ * The original test Zhe provided.
+ * Commented out for now until the necessary abduction mechanics are in place.
+ *)
+let test_full _ = ()
+(*
 let l0 = Sexpr.Var (Sexpr.IntList, "l0") in
 let l1 = Sexpr.Var (Sexpr.IntList, "l1") in
 let l2 = Sexpr.Var (Sexpr.IntList, "l2") in
@@ -57,3 +148,17 @@ let _ = if valid then printf "valid\n" else printf "not valid\n" in
 ();;
 
 (* negation of vc should be unsat, pre should be satisfiable. *)
+*)
+
+
+let suite =
+  "AbductionTest" >::: [
+      "test_unsat_precondition" >:: test_unsat_precondition;
+      "test_no_abduction" >:: test_no_abduction;
+      "test_single_abduction" >:: test_single_abduction;
+      "test_multiple_abduction" >:: test_multiple_abduction;
+      "test_full" >:: test_full
+  ]
+
+let () =
+  run_test_tt_main suite

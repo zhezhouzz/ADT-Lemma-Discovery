@@ -83,7 +83,7 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
    *   | Bool -> false
    *   | IntList -> true
    *   | IntTree -> true
-   * 
+   *
    * let get_tp = function
    *   | Literal (tp, _) -> tp
    *   | Var (tp, _) -> tp
