@@ -12,7 +12,7 @@ module type Dtree = sig
   val layout: t -> string
   val to_forallformula: t -> dtname:string -> Language.Ast.SpecAst.E.forallformula
   val feature_to_epr: feature -> dtname:string ->
-    fv:Language.Ast.SpecAst.E.B.t list -> Language.Ast.SpecAst.E.t
+    fv:Language.Ast.SpecAst.E.SE.t list -> Language.Ast.SpecAst.E.t
 end
 
 module Dtree : Dtree = struct
@@ -71,9 +71,9 @@ module Dtree : Dtree = struct
   let to_epr_ pred dtname args =
     let info = List.find (fun info -> String.equal info.P.name pred) P.preds_info in
     if info.num_dt == 0 then
-      Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, args))
+      Epr.Atom (Epr.SE.Op (Epr.SE.Bool, pred, args))
     else
-      Epr.Atom (Epr.B.Op (Epr.B.Bool, pred, (Epr.B.Var (Epr.B.IntList, dtname)) ::args))
+      Epr.Atom (Epr.SE.Op (Epr.SE.Bool, pred, (Epr.SE.Var (Epr.SE.IntList, dtname)) ::args))
 
   let used_ids (dtree: t) =
     let rec aux = function
@@ -87,7 +87,7 @@ module Dtree : Dtree = struct
   let to_forallformula (dtree: t) ~dtname : Epr.forallformula =
     let ids = used_ids dtree in
     let feature_to_bexpr (pred, ids) =
-      let args = List.map (fun id -> Epr.B.Var (Epr.B.Int, IntMap.find id vartable)) ids in
+      let args = List.map (fun id -> Epr.SE.Var (Epr.SE.Int, IntMap.find id vartable)) ids in
       to_epr_ pred dtname args
     in
     let rec aux = function

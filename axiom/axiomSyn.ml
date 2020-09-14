@@ -13,7 +13,7 @@ module type AxiomSyn = sig
   val classify: title -> pos: sample list -> neg: sample list -> D.t
   val randomgen: int list -> et list
   val sample_constraint: Z3.context ->
-    Ast.E.B.t list -> (string * et) list -> (int * int) -> Z3.Expr.expr
+    Ast.E.SE.t list -> (string * et) list -> (int * int) -> Z3.Expr.expr
   val axiom_infer: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> prog:(et list -> (string * et) list) -> Ast.E.forallformula
 end
 
@@ -93,17 +93,17 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
             match dt with
             | E.I _ | E.B _ -> cs
             | _ ->
-              (Epr.B.fixed_dt_to_z3 ctx "member" dtname dt)::
-              (Epr.B.fixed_dt_to_z3 ctx "list_order" dtname dt)::
+              (Epr.SE.fixed_dt_to_z3 ctx "member" dtname dt)::
+              (Epr.SE.fixed_dt_to_z3 ctx "list_order" dtname dt)::
               cs
           ) [] l
       ) in
-    let geE a b = Epr.Atom (Epr.B.Op (Epr.B.Bool, ">=", [a; b])) in
-    let sz3, ez3 = map_double (fun x -> Epr.B.Literal (Epr.B.Int, Epr.B.L.Int x)) (s, e) in
+    let geE a b = Epr.Atom (Epr.SE.Op (Epr.SE.Bool, ">=", [a; b])) in
+    let sz3, ez3 = map_double (fun x -> Epr.SE.Literal (Epr.SE.Int, Epr.SE.L.Int x)) (s, e) in
     let interval = Epr.to_z3 ctx
         (Epr.And (List.fold_left (fun l u -> l @ [geE u sz3; geE ez3 u]) [] fv)) in
     Boolean.mk_and ctx [interval;c]
-  module B = Epr.B
+  module SE = Epr.SE
   let axiom_infer ~ctx ~vc ~spectable ~prog =
     let interp = prog [E.I 0; E.L []] in
     let negfv, negvc = Ast.neg_to_z3 ctx vc spectable in
@@ -113,7 +113,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
       let valid, _ = S.check ctx neg_vc_with_ax in
       if valid then axiom else
         let cs, (dtname, _) = List.match_snoc interp in
-        let negfv = List.map (fun u -> B.Var (B.Int, u)) negfv in
+        let negfv = List.map (fun u -> SE.Var (SE.Int, u)) negfv in
         let constraints = sample_constraint ctx negfv cs (0, 2) in
         let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; negvc] in
         let _, m = S.check ctx neg_vc_fixed_dt in
@@ -122,7 +122,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
           let title_b = List.map
               (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:fv) title in
           let title_z3 = List.map (fun b -> Epr.to_z3 ctx b) title_b in
-          List.map (fun fv -> S.get_int m (B.to_z3 ctx fv)) fv,
+          List.map (fun fv -> S.get_int m (SE.to_z3 ctx fv)) fv,
           List.map (fun z -> S.get_pred m z) title_z3
         in
         let title = make_title (List.length negfv) in

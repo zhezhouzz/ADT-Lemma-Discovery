@@ -1,5 +1,5 @@
-module type Bexpr = sig
-  include BexprTree.BexprTree
+module type SimpleExpr = sig
+  include SimpleExprTree.SimpleExprTree
   type value = L.value
   val fv: t -> string list
   val type_check : t -> (t * bool)
@@ -9,14 +9,14 @@ module type Bexpr = sig
   val fixed_dt_to_z3: Z3.context -> string -> string -> value -> Z3.Expr.expr
 end
 
-module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
+module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
   module P = Preds.Pred.Predicate
   include B
   open Utils
   open Printf
   type value = L.value
   let fv _ = []
-  let type_check bexpr = (bexpr, true)
+  let type_check expr = (expr, true)
   let non_dt_op op args =
     match op, args with
     | "+", [P.E.I a; P.E.I b] -> Some (P.E.I (a + b))
@@ -28,12 +28,12 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
     | ">", [P.E.I a; P.E.I b] -> Some (P.E.B (a > b))
     | "<", [P.E.I a; P.E.I b] -> Some (P.E.B (a < b))
     | _, _ -> None
-  let exec bexpr env =
+  let exec expr env =
     let rec aux = function
       | Literal (_, lit) -> L.exec lit
       | Var (_, name) ->
         (match StrMap.find_opt name env with
-         | None -> raise @@ InterExn "Bexpr::exec"
+         | None -> raise @@ InterExn "SimpleExpr::exec"
          | Some v -> v
         )
       | Op (_, op, args) ->
@@ -41,25 +41,25 @@ module Bexpr (B: BexprTree.BexprTree): Bexpr = struct
         (match non_dt_op op args with
          | Some v -> v
          | None -> match args with
-           | [] -> raise @@ InterExn "Bexpr::exec"
+           | [] -> raise @@ InterExn "SimpleExpr::exec"
            | dt :: args -> P.E.B (P.apply (op, dt, args))
         )
     in
-    aux bexpr
-  let extract_dt bexpr =
+    aux expr
+  let extract_dt expr =
     let rec aux = function
       | Literal (_, L.IntList lit) -> [P.E.L lit]
       | Literal (_, L.IntTree lit) -> [P.E.T lit]
       | Op (_, _, args) -> List.concat @@ List.map aux args
       | _ -> []
     in
-    let consts = List.remove_duplicates P.E.eq (aux bexpr) in
+    let consts = List.remove_duplicates P.E.eq (aux expr) in
     let rec aux = function
       | Var (IntList, name) | Var (IntTree, name) -> [name]
       | Op (_, _, args) -> List.concat @@ List.map aux args
       | _ -> []
     in
-    let vars = List.remove_duplicates String.equal (aux bexpr) in
+    let vars = List.remove_duplicates String.equal (aux expr) in
     consts, vars
 
   open Z3aux

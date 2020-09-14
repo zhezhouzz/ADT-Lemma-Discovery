@@ -8,16 +8,16 @@ module type AstTree = sig
     | And of t list
     | Or of t list
     | Iff of t * t
-    | SpecApply of string * E.B.t list
+    | SpecApply of string * E.SE.t list
   type spec = (string list) * E.forallformula
   val layout: t -> string
   val layout_spec: spec -> string
 end
 
 module AstTree (E: Epr.Epr) : AstTree
-  with type E.B.L.t = E.B.L.t
-  with type E.B.tp = E.B.tp
-  with type E.B.t = E.B.t
+  with type E.SE.L.t = E.SE.L.t
+  with type E.SE.tp = E.SE.tp
+  with type E.SE.t = E.SE.t
   with type E.t = E.t = struct
   module E = E
   open Utils
@@ -30,7 +30,7 @@ module AstTree (E: Epr.Epr) : AstTree
     | And of t list
     | Or of t list
     | Iff of t * t
-    | SpecApply of string * E.B.t list
+    | SpecApply of string * E.SE.t list
   type spec = (string list) * E.forallformula
   let rec layout = function
     | ForAll ff -> E.layout_forallformula ff
@@ -42,7 +42,7 @@ module AstTree (E: Epr.Epr) : AstTree
     | Ite (p1, p2, p3) ->
       sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
     | SpecApply (specname, args) ->
-      sprintf "%s(%s)" specname (List.to_string E.B.layout args)
+      sprintf "%s(%s)" specname (List.to_string E.SE.layout args)
   let layout_spec (args, formula) =
     sprintf "fun %s -> %s" (List.to_string (fun x -> x) args) (E.layout_forallformula formula)
  end

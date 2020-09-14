@@ -1,4 +1,4 @@
-module type BexprTree = sig
+module type SimpleExprTree = sig
   module L: Lit.Lit
   type tp =
     | Bool
@@ -18,7 +18,7 @@ module type BexprTree = sig
   val subst: t -> string list -> t list -> t
 end
 
-module BexprTree (L: Lit.Lit) : BexprTree
+module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
   with type L.t = L.t = struct
   module L = L
   type tp =
@@ -64,17 +64,17 @@ let rec layout = function
   | Op (_, op, args) -> layout_op op (List.map layout args)
 
 
-let subst bexpr args argsvalue =
+let subst expr args argsvalue =
   let l = List.combine args argsvalue in
-  let rec aux bexpr =
-    match bexpr with
-    | Literal _ -> bexpr
+  let rec aux expr =
+    match expr with
+    | Literal _ -> expr
     | Var (_, name) ->
       (match List.find_opt (fun (name', _) -> String.equal name name') l with
-       | None -> bexpr
+       | None -> expr
        | Some (_, b) -> b
       )
     | Op (tp, op, args) -> Op (tp, op, List.map aux args)
   in
-  aux bexpr
+  aux expr
 end

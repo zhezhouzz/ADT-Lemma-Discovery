@@ -1,6 +1,6 @@
 module type Epr = sig
   include EprTree.EprTree
-  type value = B.value
+  type value = SE.value
   val fv: t -> string list
   val type_check : t -> (t * bool)
   val exec: t -> value Utils.StrMap.t -> bool
@@ -13,7 +13,7 @@ end
 module Epr (E: EprTree.EprTree): Epr = struct
   include E
   open Utils
-  type value = B.value
+  type value = SE.value
   module Elem = Preds.Pred.Element
   let fv _ = []
   let type_check bexpr = (bexpr, true)
@@ -21,7 +21,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
     let rec aux = function
       | True -> true
       | Atom bexpr ->
-        (match B.exec bexpr env with
+        (match SE.exec bexpr env with
          | Elem.B b -> b
          | _ -> raise @@ InterExn "not a bool value in epr"
         )
@@ -40,7 +40,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
     in
     let rec aux = function
       | True -> [], []
-      | Atom b -> B.extract_dt b
+      | Atom b -> SE.extract_dt b
       | Implies (p1, p2) -> concat @@ List.map aux [p1;p2]
       | And ps -> concat @@ List.map aux ps
       | Or ps -> concat @@ List.map aux ps
@@ -100,7 +100,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
   let to_z3 ctx epr =
     let rec aux = function
       | True -> Boolean.mk_true ctx
-      | Atom bexpr -> B.to_z3 ctx bexpr
+      | Atom bexpr -> SE.to_z3 ctx bexpr
       | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
       | Ite (p1, p2, p3) -> Boolean.mk_ite ctx (aux p1) (aux p2) (aux p3)
       | Not p -> Boolean.mk_not ctx (aux p)

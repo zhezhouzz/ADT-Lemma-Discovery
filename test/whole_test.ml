@@ -5,7 +5,7 @@ open Utils;;
 module Value = Preds.Pred.Element;;
 module A = Axiom.AxiomSyn.Syn;;
 module S = Solver;;
-let module B = E.B in
+let module Sexpr = E.SE in
 let libcode_cons a l = a :: l in
 let libcode_sort l = List.sort (fun a b -> -(compare a b)) l in
 let clientcode inps =
@@ -21,20 +21,20 @@ let clientcode inps =
   | _ -> raise @@ TestFailedException "bad clientcode"
 in
 let _ = printf "whole test\n" in
-let a = B.Var (B.Int, "a") in
-let u = B.Var (B.Int, "u") in
-let v = B.Var (B.Int, "v") in
-let l0 = B.Var (B.IntList, "l0") in
-let l1 = B.Var (B.IntList, "l1") in
-let l2 = B.Var (B.IntList, "l2") in
-let l3 = B.Var (B.IntList, "l3") in
-let l4 = B.Var (B.IntList, "l4") in
-let v1 = B.Literal (B.Int, B.L.Int 1) in
-let intplus a b = B.Op (B.Int, "+", [a; b]) in
-let inteqE a b = E.Atom (B.Op (B.Bool, "==", [a; b])) in
-let geE a b = E.Atom (B.Op (B.Bool, ">=", [a; b])) in
-let memberE l u = E.Atom (B.Op (B.Bool, "member", [l; u])) in
-let listorderE l u v = E.Atom (B.Op (B.Bool, "list_order", [l; u; v])) in
+let a = Sexpr.Var (Sexpr.Int, "a") in
+let u = Sexpr.Var (Sexpr.Int, "u") in
+let v = Sexpr.Var (Sexpr.Int, "v") in
+let l0 = Sexpr.Var (Sexpr.IntList, "l0") in
+let l1 = Sexpr.Var (Sexpr.IntList, "l1") in
+let l2 = Sexpr.Var (Sexpr.IntList, "l2") in
+let l3 = Sexpr.Var (Sexpr.IntList, "l3") in
+let l4 = Sexpr.Var (Sexpr.IntList, "l4") in
+let v1 = Sexpr.Literal (Sexpr.Int, Sexpr.L.Int 1) in
+let intplus a b = Sexpr.Op (Sexpr.Int, "+", [a; b]) in
+let inteqE a b = E.Atom (Sexpr.Op (Sexpr.Bool, "==", [a; b])) in
+let geE a b = E.Atom (Sexpr.Op (Sexpr.Bool, ">=", [a; b])) in
+let memberE l u = E.Atom (Sexpr.Op (Sexpr.Bool, "member", [l; u])) in
+let listorderE l u v = E.Atom (Sexpr.Op (Sexpr.Bool, "list_order", [l; u; v])) in
 let vc = Implies (And [SpecApply ("Cons", [a; l0; l1]);
                        SpecApply ("Sort", [l1; l2]);
                        SpecApply ("Cons", [intplus a v1; l2; l3]);

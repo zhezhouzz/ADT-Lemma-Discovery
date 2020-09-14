@@ -1,8 +1,8 @@
 module type EprTree = sig
-  module B: Bexpr.Bexpr
+  module SE: SimpleExpr.SimpleExpr
   type t =
     | True
-    | Atom of B.t
+    | Atom of SE.t
     | Implies of t * t
     | Ite of t * t * t
     | Not of t
@@ -13,20 +13,20 @@ module type EprTree = sig
   type forallformula = free_variable list * t
   val layout: t -> string
   val layout_forallformula: forallformula -> string
-  val subst: t -> string list -> B.t list -> t
-  val subst_forallformula: forallformula -> string list -> B.t list -> forallformula
+  val subst: t -> string list -> SE.t list -> t
+  val subst_forallformula: forallformula -> string list -> SE.t list -> forallformula
 end
 
-module EprTree(B: Bexpr.Bexpr) : EprTree
-  with type B.L.t = B.L.t
-  with type B.tp = B.tp
-  with type B.t = B.t = struct
-  module B = B
+module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
+  with type SE.L.t = SE.L.t
+  with type SE.tp = SE.tp
+  with type SE.t = SE.t = struct
+  module SE = SE
   open Utils
 
   type t =
     | True
-    | Atom of B.t
+    | Atom of SE.t
     | Implies of t * t
     | Ite of t * t * t
     | Not of t
@@ -38,7 +38,7 @@ module EprTree(B: Bexpr.Bexpr) : EprTree
 
   let rec layout = function
     | True -> "true"
-    | Atom bexpr -> Printf.sprintf "(%s)" (B.layout bexpr)
+    | Atom bexpr -> Printf.sprintf "(%s)" (SE.layout bexpr)
     | Implies (p1, p2) -> Printf.sprintf "(%s => %s)" (layout p1) (layout p2)
     | And ps -> List.inner_layout (List.map layout ps) "/\\" "true"
     | Or ps -> List.inner_layout (List.map layout ps) "\\/" "true"
@@ -54,7 +54,7 @@ module EprTree(B: Bexpr.Bexpr) : EprTree
   let subst body args argsvalue =
     let rec aux = function
       | True -> True
-      | Atom bexpr -> Atom (B.subst bexpr args argsvalue)
+      | Atom bexpr -> Atom (SE.subst bexpr args argsvalue)
       | Implies (p1, p2) -> Implies (aux p1, aux p2)
       | And ps -> And (List.map aux ps)
       | Or ps -> Or (List.map aux ps)

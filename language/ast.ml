@@ -33,7 +33,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Or l -> List.exists (fun x -> x) @@ List.map aux l
       | Iff (e1, e2) -> (aux e1) == (aux e2)
       | SpecApply (spec_name, args) ->
-        let argsvalue = List.map (fun b -> E.B.exec b env) args in
+        let argsvalue = List.map (fun b -> E.SE.exec b env) args in
         let args', body = StrMap.find spec_name stable in
         let env = List.fold_left (fun env (k, v) -> StrMap.add k v env) env
             (List.combine args' argsvalue) in
@@ -82,6 +82,6 @@ module Ast (A: AstTree.AstTree): Ast = struct
     | _ -> raise @@ InterExn "neg_to_z3"
 end
 module Lit = Lit.Lit(LitTree.LitTree)
-module Bexpr = Bexpr.Bexpr(BexprTree.BexprTree(Lit))
-module Epr = Epr.Epr(EprTree.EprTree(Bexpr))
+module SimpleExpr = SimpleExpr.SimpleExpr(SimpleExprTree.SimpleExprTree(Lit))
+module Epr = Epr.Epr(EprTree.EprTree(SimpleExpr))
 module SpecAst = Ast(AstTree.AstTree(Epr))
