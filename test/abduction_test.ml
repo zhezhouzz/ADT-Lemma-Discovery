@@ -2,7 +2,7 @@ module Ast = Language.Ast.SpecAst;;
 open Ast;;
 open Printf;;
 open Utils;;
-module Value = Preds.Pred.Element;;
+module Value = Preds.Pred.Value;;
 let module Sexpr = E.SE in
 let l0 = Sexpr.Var (Sexpr.IntList, "l0") in
 let l1 = Sexpr.Var (Sexpr.IntList, "l1") in

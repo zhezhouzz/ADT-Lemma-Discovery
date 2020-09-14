@@ -1,4 +1,4 @@
-module type Elem = sig
+module type Value = sig
   type t =
     | L of int list
     | T of int Utils.Tree.t
@@ -10,7 +10,7 @@ module type Elem = sig
   val flatten_forall: t -> int list
 end
 
-module Elem: Elem = struct
+module Value: Value = struct
   open Utils
   open Printf
   type t =

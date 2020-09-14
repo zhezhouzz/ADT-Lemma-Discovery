@@ -2,24 +2,24 @@ module type AxiomSyn = sig
   module D: Dtree.Dtree
   module Ast = Language.Ast.SpecAst
   type vec = bool list
-  type et = Preds.Pred.Element.t
-  type sample = {dt: et; args: et list; vec: vec}
+  type value = Preds.Pred.Value.t
+  type sample = {dt: value; args: value list; vec: vec}
   type title = D.feature list
   val layout_title: title -> string
   val make_title: int -> title
-  val make_sample: title -> et -> et list -> sample
-  val cex_to_sample: et list -> vec -> sample
+  val make_sample: title -> value -> value list -> sample
+  val cex_to_sample: value list -> vec -> sample
   val layout_sample: sample -> string
   val classify: title -> pos: sample list -> neg: sample list -> D.t
-  val randomgen: int list -> et list
+  val randomgen: int list -> value list
   val sample_constraint: Z3.context ->
-    Ast.E.SE.t list -> (string * et) list -> (int * int) -> Z3.Expr.expr
-  val axiom_infer: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> prog:(et list -> (string * et) list) -> Ast.E.forallformula
+    Ast.E.SE.t list -> (string * value) list -> (int * int) -> Z3.Expr.expr
+  val axiom_infer: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> prog:(value list -> (string * value) list) -> Ast.E.forallformula
 end
 
 module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   module D = D
-  module E = Preds.Pred.Element
+  module V = Preds.Pred.Value
   module P = Preds.Pred.Predicate
   module Ast = Language.Ast.SpecAst
   module Epr = Ast.E
@@ -27,7 +27,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   open Utils
   open Printf
   type vec = bool list
-  type sample = {dt: E.t; args: E.t list; vec: vec}
+  type sample = {dt: V.t; args: V.t list; vec: vec}
   type title = D.feature list
 
   let make_title fvs_num =
@@ -47,18 +47,18 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     List.fold_left (fun r pred -> sprintf "%s [%s]" r (D.layout_feature pred)) "" title
 
   let randomgen (fv: int list) =
-    List.map (fun l -> E.L l) @@
+    List.map (fun l -> V.L l) @@
     List.remove_duplicates IntList.eq @@ List.combination_l_all (fv @ fv)
 
-  let make_sample (title:title) (dt: E.t) (args: E.t list) =
+  let make_sample (title:title) (dt: V.t) (args: V.t list) =
     let vec = List.map (fun feature -> D.exec_feature feature dt args) title in
     {dt; args; vec}
 
-  let cex_to_sample (args: E.t list) (vec: bool list) =
-    {dt = E.NotADt; args; vec}
+  let cex_to_sample (args: V.t list) (vec: bool list) =
+    {dt = V.NotADt; args; vec}
 
   let layout_sample {dt; args; vec} =
-    sprintf "%s(%s) [%s]" (E.layout dt) (List.to_string E.layout args) (boollist_to_string vec)
+    sprintf "%s(%s) [%s]" (V.layout dt) (List.to_string V.layout args) (boollist_to_string vec)
 
   let classify_ (title: title) (_:vec list) (_:vec list) : D.t =
     let member0 = List.nth title 0 in
@@ -91,7 +91,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     let c = Boolean.mk_and ctx (
         List.fold_left (fun cs (dtname, dt) ->
             match dt with
-            | E.I _ | E.B _ -> cs
+            | V.I _ | V.B _ -> cs
             | _ ->
               (Epr.SE.fixed_dt_to_z3 ctx "member" dtname dt)::
               (Epr.SE.fixed_dt_to_z3 ctx "list_order" dtname dt)::
@@ -105,7 +105,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     Boolean.mk_and ctx [interval;c]
   module SE = Epr.SE
   let axiom_infer ~ctx ~vc ~spectable ~prog =
-    let interp = prog [E.I 0; E.L []] in
+    let interp = prog [V.I 0; V.L []] in
     let negfv, negvc = Ast.neg_to_z3 ctx vc spectable in
     let rec aux positives negatives axiom =
       let neg_vc_with_ax =
@@ -128,7 +128,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
         let title = make_title (List.length negfv) in
         let fvv, predv = get_interpretation ctx m title negfv in
         let dts = randomgen fvv in
-        let fvv_exp = List.map (fun x -> E.I x) fvv in
+        let fvv_exp = List.map (fun x -> V.I x) fvv in
         let positives = positives @ (List.map (fun dt -> make_sample title dt fvv_exp) dts) in
         let negatives = (cex_to_sample fvv_exp predv) :: negatives in
         let axiom = classify title ~pos:positives ~neg:negatives in

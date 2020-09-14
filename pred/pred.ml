@@ -1,18 +1,18 @@
 module type Pred = sig
-  module E: Elem.Elem
+  module V: Value.Value
   type t = string
   val layout : t -> string
-  val apply_layout: (t * E.t * E.t list) -> string
-  val apply: (t * E.t * E.t list) -> bool
+  val apply_layout: (t * V.t * V.t list) -> string
+  val apply: (t * V.t * V.t list) -> bool
   val desugar: t -> t * int list
   type pred_info = {name:string; num_dt:int; num_int: int; permu: bool}
   val raw_preds_info: pred_info list
   val preds_info: pred_info list
-  val fixed_dt_truth_tab: t -> E.t -> int list list
+  val fixed_dt_truth_tab: t -> V.t -> int list list
 end
 
-module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
-  module E = E
+module Pred (V: Value.Value) : Pred with type V.t = V.t = struct
+  module V = V
   open Utils
   open Printf
   type t = string
@@ -24,28 +24,28 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
   let raw_preds_info = [{name="member"; num_dt=1; num_int=1; permu=false};
                         {name="order"; num_dt=1; num_int=4; permu=false};]
   let apply_layout (pred, dt, args) =
-    sprintf "%s(%s, %s)" pred (E.layout dt) (List.to_string E.layout args)
+    sprintf "%s(%s, %s)" pred (V.layout dt) (List.to_string V.layout args)
 
   let layout name = name
 
-  let member_apply (dt: E.t) (e: E.t) =
+  let member_apply (dt: V.t) (e: V.t) =
     match (dt, e) with
-    | (E.L l, E.I e) -> List.exists (fun x -> x == e) l
-    | (E.T t, E.I e) -> Tree.exists (fun x -> x == e) t
+    | (V.L l, V.I e) -> List.exists (fun x -> x == e) l
+    | (V.T t, V.I e) -> Tree.exists (fun x -> x == e) t
     | _ -> raise @@ InterExn "member_apply"
 
-  let order_apply (dt: E.t) i0 i1 (e0: E.t) (e1: E.t) =
+  let order_apply (dt: V.t) i0 i1 (e0: V.t) (e1: V.t) =
     let eq x y = x == y in
     match (dt, i0, i1, e0, e1) with
-    | (E.L l, 0, 1, E.I e0, E.I e1) -> List.order eq l e0 e1
-    | (E.T t, 0, 1, E.I e0, E.I e1) -> Tree.left_child eq t e0 e1
-    | (E.T t, 0, 2, E.I e0, E.I e1) -> Tree.right_child eq t e0 e1
-    | (E.T t, 1, 2, E.I e0, E.I e1) -> Tree.parallel_child eq t e0 e1
+    | (V.L l, 0, 1, V.I e0, V.I e1) -> List.order eq l e0 e1
+    | (V.T t, 0, 1, V.I e0, V.I e1) -> Tree.left_child eq t e0 e1
+    | (V.T t, 0, 2, V.I e0, V.I e1) -> Tree.right_child eq t e0 e1
+    | (V.T t, 1, 2, V.I e0, V.I e1) -> Tree.parallel_child eq t e0 e1
     | _ -> raise @@ InterExn "order_apply"
 
-  let eq_apply (e0: E.t) (e1: E.t) =
+  let eq_apply (e0: V.t) (e1: V.t) =
     match e0, e1 with
-    | (E.I e0, E.I e1) -> e0 == e1
+    | (V.I e0, V.I e1) -> e0 == e1
     | _ -> raise @@ InterExn "eq_apply"
 
   let desugar pred =
@@ -59,31 +59,31 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
 
   let desugar_ (pred, dt, args) =
     let pred, args' = desugar pred in
-    let args' = List.map (fun x -> E.I x) args' in
+    let args' = List.map (fun x -> V.I x) args' in
     (pred, dt, args' @ args)
     (* match pred with
      * | "member" | "==" | "order" -> (pred, dt, args)
-     * | "list_order" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
-     * | "tree_left" -> ("order", dt, (E.I 0) :: (E.I 1) :: args)
-     * | "tree_right" -> ("order", dt, (E.I 0) :: (E.I 2) :: args)
-     * | "tree_parallel" -> ("order", dt, (E.I 1) :: (E.I 2) :: args)
+     * | "list_order" -> ("order", dt, (V.I 0) :: (V.I 1) :: args)
+     * | "tree_left" -> ("order", dt, (V.I 0) :: (V.I 1) :: args)
+     * | "tree_right" -> ("order", dt, (V.I 0) :: (V.I 2) :: args)
+     * | "tree_parallel" -> ("order", dt, (V.I 1) :: (V.I 2) :: args)
      * | _ -> raise @@ InterExn "desugar_" *)
 
-  let apply_ ((pred, dt, args) : t * E.t * E.t list) : bool =
+  let apply_ ((pred, dt, args) : t * V.t * V.t list) : bool =
     match pred, args with
     | "member", [arg] -> member_apply dt arg
-    | "order", [E.I i0; E.I i1; arg0; arg1] -> order_apply dt i0 i1 arg0 arg1
+    | "order", [V.I i0; V.I i1; arg0; arg1] -> order_apply dt i0 i1 arg0 arg1
     | "==", [arg0; arg1] -> eq_apply arg0 arg1
     | _ -> raise @@ InterExn "apply"
 
-  let apply ((pred, dt, args) : t * E.t * E.t list) : bool =
+  let apply ((pred, dt, args) : t * V.t * V.t list) : bool =
     let (pred, dt, args) = desugar_ (pred, dt, args) in
     apply_ (pred, dt, args)
   let fixed_dt_truth_tab pred dt =
-    let forallu = E.flatten_forall dt in
+    let forallu = V.flatten_forall dt in
     match dt, pred with
     | (_, "member") -> List.map (fun i -> [i]) forallu
-    | (E.L l, "list_order") ->
+    | (V.L l, "list_order") ->
       let args_list = List.cross forallu forallu in
       let args_list =
         List.filter (fun (u, v) -> List.order (fun x y -> x == y) l u v) args_list in
@@ -91,5 +91,5 @@ module Pred (E: Elem.Elem) : Pred with type E.t = E.t = struct
     | _ -> raise @@ InterExn "fixed_dt_truth_tab"
 end
 
-module Predicate = Pred(Elem.Elem);;
-module Element = Predicate.E;;
+module Predicate = Pred(Value.Value);;
+module Value = Predicate.V;;

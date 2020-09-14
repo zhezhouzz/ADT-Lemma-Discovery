@@ -14,7 +14,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
   include E
   open Utils
   type value = SE.value
-  module Elem = Preds.Pred.Element
+  module V = Preds.Pred.Value
   let fv _ = []
   let type_check bexpr = (bexpr, true)
   let exec e env =
@@ -22,7 +22,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | True -> true
       | Atom bexpr ->
         (match SE.exec bexpr env with
-         | Elem.B b -> b
+         | V.B b -> b
          | _ -> raise @@ InterExn "not a bool value in epr"
         )
       | Implies (e1, e2) -> if aux e1 then aux e2 else true
@@ -54,7 +54,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
 
   let forallu e env =
     let dts = extract_dt e env in
-    let us = List.concat @@ List.map Elem.flatten_forall dts in
+    let us = List.concat @@ List.map V.flatten_forall dts in
     let us = List.remove_duplicates (fun x y -> x == y) us in
     match IntList.max_opt us with
     | None -> 0 :: us
@@ -79,7 +79,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
       let us = List.map (fun x -> List.nth us x) ids in
       let us = List.combine fv us in
       let env = List.fold_left (fun m (name, value) ->
-          StrMap.add name (Elem.I value) m
+          StrMap.add name (V.I value) m
         ) env us in
       let _ = Printf.printf "assign free variables: %s\n"
           (List.fold_left (fun str (name, v) ->

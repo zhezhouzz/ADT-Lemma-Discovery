@@ -1,15 +1,6 @@
-(* module E = Preds.Elem.Elem
- * module P = Preds.Pred.Pred(E)
- * module Tree = Utils.Tree;;
- * module B = Language.Bexpr.Bexpr(Language.Lit.Lit)
- * module Epr = Language.Epr.Epr(B)
- * module D = Axiom.Dtree.Dtree(Epr)(P);;
- * module A = Axiom.Axiom_syn.AxiomSyn(D)(Ml.FastDT.FastDT);;
- * open A.D.P.E;;
- * module PP = A.D.P;; *)
 open Printf;;
 open Utils;;
-open Preds.Pred.Element;;
+open Preds.Pred.Value;;
 module P = Preds.Pred.Predicate;;
 module A = Axiom.AxiomSyn.Syn;;
 module Epr = Language.Ast.SpecAst.E;;

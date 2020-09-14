@@ -1,13 +1,13 @@
 module type Dtree = sig
-  type et = Preds.Pred.Element.t
+  type value = Preds.Pred.Value.t
   type feature = Preds.Pred.Predicate.t * int list
   type t =
     | T
     | F
     | Leaf of feature
     | Node of feature * t * t
-  val exec: t -> et list -> bool
-  val exec_feature: feature -> et -> et list -> bool
+  val exec: t -> value list -> bool
+  val exec_feature: feature -> value -> value list -> bool
   val layout_feature: feature -> string
   val layout: t -> string
   val to_forallformula: t -> dtname:string -> Language.Ast.SpecAst.E.forallformula
@@ -20,7 +20,7 @@ module Dtree : Dtree = struct
   module P = Preds.Pred.Predicate
   open Utils
   open Printf
-  type et = P.E.t
+  type value = P.V.t
   type feature = P.t * int list
   type t =
     | T
@@ -28,7 +28,7 @@ module Dtree : Dtree = struct
     | Leaf of feature
     | Node of feature * t * t
 
-  let exec_feature (pred, ids) (dt: et) (args: et list) =
+  let exec_feature (pred, ids) (dt: value) (args: value list) =
     let lookup i =
       match List.nth_opt args i with
       | None -> raise @@ InterExn "exec_feature::lookup"
@@ -36,12 +36,12 @@ module Dtree : Dtree = struct
     in
     P.apply (pred, dt, (List.map lookup ids))
 
-  let leaf_apply (pred, ids) (args: et list) =
+  let leaf_apply (pred, ids) (args: value list) =
     match args with
     | [] -> raise @@ InterExn "dtree leaf_apply"
     | dt :: args -> (exec_feature (pred, ids) dt args)
 
-  let exec (dt: t) (args: et list) : bool =
+  let exec (dt: t) (args: value list) : bool =
     let rec aux = function
       | T -> true
       | F -> false
@@ -96,7 +96,7 @@ module Dtree : Dtree = struct
       | Leaf feature -> feature_to_bexpr feature
       | Node (feature, l, r) -> Epr.Ite (feature_to_bexpr feature, aux l, aux r)
     in
-    dtname::(List.map (fun id ->IntMap.find id vartable) ids), aux dtree
+    dtname::(List.map (fun id -> IntMap.find id vartable) ids), aux dtree
   let feature_to_epr (pred, argsid) ~dtname ~fv =
     let args = List.map (fun id -> List.nth fv id) argsid in
     to_epr_ pred dtname args

@@ -19,14 +19,14 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
   let type_check expr = (expr, true)
   let non_dt_op op args =
     match op, args with
-    | "+", [P.E.I a; P.E.I b] -> Some (P.E.I (a + b))
-    | "-", [P.E.I a; P.E.I b] -> Some (P.E.I (a - b))
-    | "==", [P.E.I a; P.E.I b] -> Some (P.E.B (a == b))
-    | "<>", [P.E.I a; P.E.I b] -> Some (P.E.B (a <> b))
-    | ">=", [P.E.I a; P.E.I b] -> Some (P.E.B (a >= b))
-    | "<=", [P.E.I a; P.E.I b] -> Some (P.E.B (a <= b))
-    | ">", [P.E.I a; P.E.I b] -> Some (P.E.B (a > b))
-    | "<", [P.E.I a; P.E.I b] -> Some (P.E.B (a < b))
+    | "+", [P.V.I a; P.V.I b] -> Some (P.V.I (a + b))
+    | "-", [P.V.I a; P.V.I b] -> Some (P.V.I (a - b))
+    | "==", [P.V.I a; P.V.I b] -> Some (P.V.B (a == b))
+    | "<>", [P.V.I a; P.V.I b] -> Some (P.V.B (a <> b))
+    | ">=", [P.V.I a; P.V.I b] -> Some (P.V.B (a >= b))
+    | "<=", [P.V.I a; P.V.I b] -> Some (P.V.B (a <= b))
+    | ">", [P.V.I a; P.V.I b] -> Some (P.V.B (a > b))
+    | "<", [P.V.I a; P.V.I b] -> Some (P.V.B (a < b))
     | _, _ -> None
   let exec expr env =
     let rec aux = function
@@ -42,18 +42,18 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
          | Some v -> v
          | None -> match args with
            | [] -> raise @@ InterExn "SimpleExpr::exec"
-           | dt :: args -> P.E.B (P.apply (op, dt, args))
+           | dt :: args -> P.V.B (P.apply (op, dt, args))
         )
     in
     aux expr
   let extract_dt expr =
     let rec aux = function
-      | Literal (_, L.IntList lit) -> [P.E.L lit]
-      | Literal (_, L.IntTree lit) -> [P.E.T lit]
+      | Literal (_, L.IntList lit) -> [P.V.L lit]
+      | Literal (_, L.IntTree lit) -> [P.V.T lit]
       | Op (_, _, args) -> List.concat @@ List.map aux args
       | _ -> []
     in
-    let consts = List.remove_duplicates P.E.eq (aux expr) in
+    let consts = List.remove_duplicates P.V.eq (aux expr) in
     let rec aux = function
       | Var (IntList, name) | Var (IntTree, name) -> [name]
       | Op (_, _, args) -> List.concat @@ List.map aux args

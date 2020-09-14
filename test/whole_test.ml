@@ -2,7 +2,7 @@ module Ast = Language.Ast.SpecAst;;
 open Ast;;
 open Printf;;
 open Utils;;
-module Value = Preds.Pred.Element;;
+module Value = Preds.Pred.Value;;
 module A = Axiom.AxiomSyn.Syn;;
 module S = Solver;;
 let module Sexpr = E.SE in
