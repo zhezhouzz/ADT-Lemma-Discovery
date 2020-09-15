@@ -137,6 +137,14 @@ module List = struct
     | h :: t -> List.rev t, h
 
   let union compare l0 l1 = remove_duplicates compare (l0 @ l1)
+
+  let shape_reverse ll =
+    let nth l id =
+      try (List.nth l id) with
+      | Failure _ -> raise @@ InterExn "shape_reverse"
+      | Invalid_argument _ -> raise @@ InterExn "shape_reverse"
+    in
+    List.init (List.length ll) (fun i -> List.map (fun l -> nth l i) ll)
 end
 
 module Tree = struct
