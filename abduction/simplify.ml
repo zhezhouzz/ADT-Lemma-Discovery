@@ -32,7 +32,8 @@ let inspect expr =
 let check_valid ctx expr =
   let solver = Solver.mk_simple_solver ctx in
   let neg = Boolean.mk_not ctx expr in
-  let status = Solver.check solver [neg] in
+  let _ = Solver.add solver [neg] in
+  let status = Solver.check solver [] in
   status == Solver.UNSATISFIABLE
 
 let dda_leaf ctx expr subexpr =
