@@ -104,8 +104,17 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
         (Epr.And (List.fold_left (fun l u -> l @ [geE u sz3; geE ez3 u]) [] fv)) in
     Boolean.mk_and ctx [interval;c]
   module SE = Epr.SE
+  let sample_num = 2
+  let start_size = 2
+  open Printf
   let axiom_infer ~ctx ~vc ~spectable ~prog =
-    let interp = prog [V.I 0; V.L []] in
+    let rintg = QCheck.Gen.int_range 0 start_size in
+    let gens = [QCheck.Gen.(map (fun x -> V.I x) rintg);  QCheck.Gen.((map (fun x -> V.L x) (small_list rintg)))] in
+    let samples = List.map (fun gen -> QCheck.Gen.generate ~n:sample_num gen) gens in
+    let samples = List.shape_reverse samples in
+    (* let _ = List.iter (fun l -> printf "{%s}\n" (List.to_string V.layout l)) samples in *)
+    (* let interp = prog [V.I 2; V.L [1;0;1]] in *)
+    let interp = prog (List.nth samples 0) in
     let negfv, negvc = Ast.neg_to_z3 ctx vc spectable in
     let rec aux positives negatives axiom =
       let neg_vc_with_ax =

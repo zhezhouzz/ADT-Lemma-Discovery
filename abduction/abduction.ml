@@ -64,7 +64,6 @@ let linear_multi_abduction ctx specs replacements pre post =
 let abduce (ctx: Z3.context) (specs: (Ast.spec StrMap.t)) (pre: Ast.t) (post: Ast.t) =
   let (z3_pre,  replacements) = Flatten.flatten ctx pre  specs Flatten.empty_replacements in
   let (z3_post, replacements) = Flatten.flatten ctx post specs replacements in
-
   let solver = Solver.mk_simple_solver ctx in
   let _ = Solver.add solver [z3_pre] in
   let pre_sat = Solver.check solver [] in
