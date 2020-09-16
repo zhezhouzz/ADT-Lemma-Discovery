@@ -112,9 +112,10 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     let gens = [QCheck.Gen.(map (fun x -> V.I x) rintg);  QCheck.Gen.((map (fun x -> V.L x) (small_list rintg)))] in
     let samples = List.map (fun gen -> QCheck.Gen.generate ~n:sample_num gen) gens in
     let samples = List.shape_reverse samples in
-    (* let _ = List.iter (fun l -> printf "{%s}\n" (List.to_string V.layout l)) samples in *)
-    (* let interp = prog [V.I 2; V.L [1;0;1]] in *)
+    let _ = List.iter (fun l -> printf "{%s}\n" (List.to_string V.layout l)) samples in
+    (* let interp = prog [V.I 2; V.L []] in *)
     let interp = prog (List.nth samples 0) in
+    (* let _ = List.iter (fun (name, v) -> printf "%s:%s\n" name (V.layout v)) interp in *)
     let negfv, negvc = Ast.neg_to_z3 ctx vc spectable in
     let rec aux positives negatives axiom =
       let neg_vc_with_ax =
@@ -123,10 +124,12 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
       if valid then axiom else
         let cs, (dtname, _) = List.match_snoc interp in
         let negfv = List.map (fun u -> SE.Var (SE.Int, u)) negfv in
-        let constraints = sample_constraint ctx negfv cs (0, 2) in
+        let range = IntList.bigger_range @@ V.flatten_forall_l @@ snd @@ List.split interp in
+        let _ = printf "range = (%i, %i)\n" (fst range) (snd range) in
+        let constraints = sample_constraint ctx negfv cs range in
         let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; negvc] in
         let _, m = S.check ctx neg_vc_fixed_dt in
-        let m = match m with None -> raise @@ InterExn "bad" | Some m -> m in
+        let m = match m with None -> raise @@ InterExn "axiom_infer::bad" | Some m -> m in
         let get_interpretation ctx m title fv =
           let title_b = List.map
               (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:fv) title in

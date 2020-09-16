@@ -8,6 +8,7 @@ module type Value = sig
   val layout : t -> string
   val eq : t -> t -> bool
   val flatten_forall: t -> int list
+  val flatten_forall_l: t list -> int list
 end
 
 module Value: Value = struct
@@ -38,4 +39,13 @@ module Value: Value = struct
     | I _ | B _ | NotADt -> raise @@ InterExn "flatten_forall: not a datatype"
     | L il -> List.flatten_forall (fun x y -> x == y) il
     | T it -> Tree.flatten_forall (fun x y -> x == y) it
+  let flatten_forall_l l =
+    List.fold_left (fun r v ->
+        match v with
+        | I i -> i :: r
+        | B _ -> r
+        | L il -> (List.flatten_forall (fun x y -> x == y) il) @ r
+        | T it -> (Tree.flatten_forall (fun x y -> x == y) it) @ r
+        | NotADt -> raise @@ InterExn "flatten_forall_l: not a value"
+      ) [] l
 end
