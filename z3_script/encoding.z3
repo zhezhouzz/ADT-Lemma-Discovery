@@ -1,0 +1,23 @@
+(set-option :timeout 2000)
+(declare-sort Tree)
+(declare-fun tree_member (Tree Int) Bool)
+(declare-fun tree_order (Tree Int Int) Bool)
+(declare-fun tree_value (Int) Tree)
+(declare-const t0 Int)
+(declare-const t1 Int)
+(declare-const u Int)
+
+;; (t0: u -> v <=> t1: u -> v) implies (t0: u => t1: u)
+(assert (and
+         (forall ((u Int) (v Int))
+                 (iff (tree_order (tree_value t0) u v) (tree_order (tree_value t1) u v))
+                 )
+         (tree_order (tree_value t0) 1 2)
+        (not (=> (tree_member (tree_value t0) u) (tree_member (tree_value t1) u)))
+        )
+        )
+
+(check-sat)
+(get-model)
+(eval (tree_member (tree_value t0) u))
+(eval (tree_member (tree_value t0) u))
