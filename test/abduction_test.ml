@@ -33,7 +33,8 @@ let assert_spec_equiv ctx expected actual =
   let iff = Boolean.mk_iff ctx expected actual in
   let neg = Boolean.mk_not ctx iff in
   let solver = Solver.mk_simple_solver ctx in
-  let status = Solver.check solver [neg] in
+  let _ = Solver.add solver [neg] in
+  let status = Solver.check solver [] in
   match status with
     | Solver.UNSATISFIABLE -> () (* OK *)
     | _ -> assert_failure "specs are not equivalent"

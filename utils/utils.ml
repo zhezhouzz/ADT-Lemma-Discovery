@@ -247,6 +247,19 @@ module IntList = struct
     match l with
     | [] -> None
     | h :: t -> Some (aux h t)
+  let min_opt l =
+    let rec aux m = function
+      | [] -> m
+      | h :: t -> if h < m then aux h t else aux m t
+    in
+    match l with
+    | [] -> None
+    | h :: t -> Some (aux h t)
+  let bigger_range l =
+    match min_opt l, max_opt l with
+    | None, None -> (0, 1)
+    | Some s, Some e -> (s, e + 1)
+    | _, _ -> raise @@ InterExn "never happen"
 end
 
 let list_list_foldl l0 l1 default0 default1 f0 f1 =
