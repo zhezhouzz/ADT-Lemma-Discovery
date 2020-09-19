@@ -1,0 +1,15 @@
+(declare-fun five () Int)
+(declare-fun a () Int)
+(declare-fun cmp () Bool)
+(declare-const x Int)
+(assert
+ (forall ((b Int))
+         (=>
+          (or (= b 1) (= b 2))
+          (> x b))
+         )
+ )
+;; (assert (exists ((five Int) (cmp Bool)) (and (= five a)
+;;                                         (= cmp (< five 1000))
+;;                                         (= cmp false)  )))
+(apply qe)
