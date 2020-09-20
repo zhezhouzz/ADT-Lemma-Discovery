@@ -8,6 +8,7 @@ module type Epr = sig
   val to_z3: Z3.context -> t -> Z3.Expr.expr
   val forallformula_to_z3: Z3.context -> forallformula -> Z3.Expr.expr
   val neg_forallf: forallformula -> string list * forallformula
+  val related_dt: t -> string list -> string list
 end
 
 module Epr (E: EprTree.EprTree): Epr = struct
@@ -112,4 +113,15 @@ module Epr (E: EprTree.EprTree): Epr = struct
     let fv = List.map (fun name -> Integer.mk_const_s ctx name) fv in
     make_forall ctx fv (to_z3 ctx epr)
   let neg_forallf (fv, epr) = fv, ([], Not epr)
+  let related_dt e fv =
+    let rec aux = function
+      | True -> []
+      | Atom expr -> SE.related_dt expr fv
+      | Implies (p1, p2) -> (aux p1) @ (aux p2)
+      | Ite (p1, p2, p3) -> (aux p1) @ (aux p2) @ (aux p3)
+      | Not p -> (aux p)
+      | And ps -> List.flatten (List.map aux ps)
+      | Or ps -> List.flatten (List.map aux ps)
+      | Iff (p1, p2) -> (aux p1) @ (aux p2) in
+    List.remove_duplicates String.equal (aux e)
 end

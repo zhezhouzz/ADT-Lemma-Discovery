@@ -1,4 +1,5 @@
 (tests
- (names language_test whole_test abduction_test pred_test utils_test case1_test)
+ (names language_test whole_test abduction_test pred_test utils_test case1_test
+ bench_merge_sort)
  (libraries abduction axiom ounit2 solver)
 )

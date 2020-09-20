@@ -87,17 +87,22 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
 
   open Z3
 
+  let fixed_sample ctx l =
+    Boolean.mk_and ctx (
+      List.fold_left (fun cs (name, dt) ->
+          match dt with
+          | V.I _ -> cs
+            (* (Epr.SE.fixed_int_to_z3 ctx name i):: cs *)
+          | V.B _ -> cs
+          | _ ->
+            (Epr.SE.fixed_dt_to_z3 ctx "member" name dt)::
+            (Epr.SE.fixed_dt_to_z3 ctx "list_order" name dt)::
+            cs
+        ) [] l
+    )
+
   let sample_constraint ctx fv l (s, e) =
-    let c = Boolean.mk_and ctx (
-        List.fold_left (fun cs (dtname, dt) ->
-            match dt with
-            | V.I _ | V.B _ -> cs
-            | _ ->
-              (Epr.SE.fixed_dt_to_z3 ctx "member" dtname dt)::
-              (Epr.SE.fixed_dt_to_z3 ctx "list_order" dtname dt)::
-              cs
-          ) [] l
-      ) in
+    let c = fixed_sample ctx l in
     let geE a b = Epr.Atom (Epr.SE.Op (Epr.SE.Bool, ">=", [a; b])) in
     let sz3, ez3 = map_double (fun x -> Epr.SE.Literal (Epr.SE.Int, Epr.SE.L.Int x)) (s, e) in
     let interval = Epr.to_z3 ctx
@@ -107,29 +112,106 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   let sample_num = 2
   let start_size = 2
   open Printf
+
+  let get_sat_conj ctx vc spec_tab =
+    let vc_nnf = Ast.to_nnf vc in
+    let vc_dnf = Ast.to_dnf (Ast.remove_unsat_clause vc_nnf) in
+    let rec aux = function
+      | [] -> []
+      | h :: t -> if fst @@ S.check ctx (Ast.to_z3 ctx h spec_tab)
+        then aux t
+        else
+          let _ = printf "conj:%s\n" (Ast.layout h) in
+          (* let _ = printf "conj:%s\n" (Ast.layout (Ast.application h spec_tab)) in *)
+          let fv, dts, skolemize_conj = Ast.skolemize_conj (Ast.application h spec_tab) in
+          let _ = printf "fv=[%s] dts=[%s]\n" (List.to_string (fun x -> x) fv)
+              (List.to_string (fun x -> x) dts) in
+          (* let _ = printf "conj:%s\n" (Ast.layout skolemize_conj) in *)
+          let valid, _ = S.check ctx (Ast.to_z3 ctx skolemize_conj spec_tab) in
+          if valid then raise @@ InterExn "get_sat_conj" else
+            (fv, dts, skolemize_conj, h) :: (aux t)
+    in
+    match vc_dnf with
+    | Or ps -> aux ps
+    | _ -> raise @@ InterExn "get_sat_conj"
+
   let axiom_infer ~ctx ~vc ~spectable ~prog =
     let rintg = QCheck.Gen.int_range 0 start_size in
     let gens = [QCheck.Gen.(map (fun x -> V.I x) rintg);  QCheck.Gen.((map (fun x -> V.L x) (small_list rintg)))] in
     let samples = List.map (fun gen -> QCheck.Gen.generate ~n:sample_num gen) gens in
     let samples = List.shape_reverse samples in
     let _ = List.iter (fun l -> printf "{%s}\n" (List.to_string V.layout l)) samples in
-    (* let interp = prog [V.I 2; V.L []] in *)
-    let interp = prog (List.nth samples 0) in
-    (* let _ = List.iter (fun (name, v) -> printf "%s:%s\n" name (V.layout v)) interp in *)
-    let negfv, negvc = Ast.neg_to_z3 ctx vc spectable in
+    (* let interp = prog (List.nth samples 0) in *)
+    let interp = prog
+        [V.I 1; V.I 2; V.L [2;3]; V.L [3;4]] in
+    let _ = List.iter (fun (name, v) -> printf "%s:%s\n" name (V.layout v)) interp in
+    let interp_constraints = fixed_sample ctx interp in
+    let _ = printf "interp_constraints :%s\n" (Expr.to_string interp_constraints) in
+    let conjs = get_sat_conj ctx (Ast.Not vc) spectable in
+    (* let negfv, negdts, skolemize_negvc, negvc = List.nth conjs 2 in
+     * let negvc' = Ast.elem_not_conj negvc in
+     * let _ = printf "negvc':%s\n" (Ast.layout negvc') in
+     * let negvc' = Ast.application negvc' spectable in
+     * let _ = match negvc' with
+     *   | Ast.And ps ->
+     *     let _ = List.iter (fun p ->
+     *         let _ = printf "lit: %s\n" (Ast.layout p) in
+     *         let valid, _ = S.check ctx
+     *             (Boolean.mk_and ctx [interp_constraints; Ast.to_z3 ctx p spectable]) in
+     *         printf "valid: %b\n" valid
+     *       ) ps in
+     *     (match ps with
+     *      | [p1;p2;p3;p4;p5;p6;p7] ->
+     *        let valid, _ = S.check ctx
+     *            (Boolean.mk_and ctx
+     *               [interp_constraints;
+     *                Ast.to_z3 ctx (Ast.And [p1;p2;p3;p4;p5;p6;p7]) spectable]) in
+     *        printf "valid: %b\n" valid
+     *      | _ -> raise @@ InterExn "axiom_infer::bad which_conj")
+     *   | _ -> raise @@ InterExn "axiom_infer::bad which_conj" in
+     * let _ = raise @@ InterExn "axiom_infer::bad which_conj" in *)
+    let rec which_conj = function
+      | [] -> raise @@ InterExn "axiom_infer::bad which_conj"
+      | (negfv, negdts, skolemize_negvc, negvc) :: t ->
+        let negvc' = Ast.elem_not_conj negvc in
+        let _ = printf "negvc':%s\n" (Ast.layout negvc') in
+        let valid, _ = S.check ctx
+            (Boolean.mk_and ctx [interp_constraints; Ast.to_z3 ctx negvc' spectable]) in
+        let _ = printf "valid: %b\n" valid in
+        if valid
+        then which_conj t
+        else negfv, negdts, (Ast.to_z3 ctx skolemize_negvc spectable)
+    in
+    let negfv, negdts, negvc = which_conj conjs in
+    let _ = printf "negfv:%s\n" (List.to_string (fun x -> x) negfv) in
+    let _ = printf "negdts:%s\n" (List.to_string (fun x -> x) negdts) in
+    let _ = printf "negvc:%s\n" (Expr.to_string negvc) in
     let rec aux positives negatives axiom =
       let neg_vc_with_ax =
         Boolean.mk_and ctx [negvc; Epr.forallformula_to_z3 ctx axiom] in
       let valid, _ = S.check ctx neg_vc_with_ax in
       if valid then axiom else
-        let cs, (dtname, _) = List.match_snoc interp in
         let negfv = List.map (fun u -> SE.Var (SE.Int, u)) negfv in
-        let range = IntList.bigger_range @@ V.flatten_forall_l @@ snd @@ List.split interp in
-        let _ = printf "range = (%i, %i)\n" (fst range) (snd range) in
-        let constraints = sample_constraint ctx negfv cs range in
-        let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; negvc] in
-        let _, m = S.check ctx neg_vc_fixed_dt in
-        let m = match m with None -> raise @@ InterExn "axiom_infer::bad" | Some m -> m in
+        let try_make_module dtname =
+          let _ = printf "try which_dt :=> %s\n" dtname in
+          let cs = List.filter
+              (fun (dtname', _) -> not (String.equal dtname dtname')) interp in
+          (* let _ = List.iter (fun (name, v) -> printf "%s:%s\n" name (V.layout v)) cs in *)
+          let range = IntList.bigger_range @@ V.flatten_forall_l @@ snd @@ List.split interp in
+          let _ = printf "range = (%i, %i)\n" (fst range) (snd range) in
+          let constraints = sample_constraint ctx negfv cs range in
+          let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; negvc] in
+          let _, m = S.check ctx neg_vc_fixed_dt in
+          m
+        in
+        let rec which_dt = function
+          | [] -> raise @@ InterExn "axiom_infer::bad"
+          | dtname :: t ->
+            (match try_make_module dtname with
+             | None -> which_dt t
+             | Some m -> dtname, m)
+        in
+        let dtname, m = which_dt ["t1";"t2";"l1";"l2";"l3"] in
         let get_interpretation ctx m title fv =
           let title_b = List.map
               (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:fv) title in
@@ -143,6 +225,8 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
         let fvv_exp = List.map (fun x -> V.I x) fvv in
         let positives = positives @ (List.map (fun dt -> make_sample title dt fvv_exp) dts) in
         let negatives = (cex_to_sample fvv_exp predv) :: negatives in
+        let _ = List.iter (fun pos -> printf "pos:%s\n" (layout_sample pos)) positives in
+        let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in
         let axiom = classify title ~pos:positives ~neg:negatives in
         let axiom = D.to_forallformula axiom ~dtname:"l" in
         aux positives negatives axiom

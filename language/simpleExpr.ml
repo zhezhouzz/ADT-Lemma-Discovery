@@ -6,7 +6,9 @@ module type SimpleExpr = sig
   val exec: t -> value Utils.StrMap.t -> value
   val extract_dt: t -> value list * string list
   val to_z3: Z3.context -> t -> Z3.Expr.expr
+  val fixed_int_to_z3: Z3.context -> string -> int -> Z3.Expr.expr
   val fixed_dt_to_z3: Z3.context -> string -> string -> value -> Z3.Expr.expr
+  val related_dt: t -> string list -> string list
 end
 
 module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
@@ -78,16 +80,16 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
     | "<", [a; b] -> Some (mk_lt ctx a b)
     | _, _ -> None
 
-  (* let is_dt = function
-   *   | Int -> false
-   *   | Bool -> false
-   *   | IntList -> true
-   *   | IntTree -> true
-   *
-   * let get_tp = function
-   *   | Literal (tp, _) -> tp
-   *   | Var (tp, _) -> tp
-   *   | Op (tp, _, _) -> tp *)
+  let is_dt = function
+    | Int -> false
+    | Bool -> false
+    | IntList -> true
+    | IntTree -> true
+
+  let get_tp = function
+    | Literal (tp, _) -> tp
+    | Var (tp, _) -> tp
+    | Op (tp, _, _) -> tp
 
   let var_to_z3 ctx tp name =
     match tp with
@@ -156,4 +158,31 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
         make_forall ctx (List.map (fun u -> bvar_to_z3 ctx u) fv)
           (Boolean.mk_iff ctx left right)
     | None -> raise @@ InterExn "no such pred"
+
+  let related_dt expr fv =
+    let extract = function
+      | Literal (_, _) -> []
+      | Var (tp, name) -> [tp, name]
+      | Op (_, _, _) -> []
+    in
+    let rec aux = function
+      | Literal (_, _) -> []
+      | Var (_, _) -> []
+      | Op (_, _, args) ->
+        let r = List.flatten (List.map aux args) in
+        let argsname = List.flatten (List.map extract args) in
+        if List.exists (fun (tp, name) ->
+            (eq_tp tp Int) && (List.exists (fun name' -> String.equal name name') fv)
+          ) argsname
+        then
+          (List.filter_map (fun (tp, name) ->
+              if is_dt tp then Some name else None
+             ) argsname) @ r
+        else
+          r
+    in
+    List.remove_duplicates String.equal (aux expr)
+
+  let fixed_int_to_z3 ctx name i =
+    to_z3 ctx (Op (Bool, "==", [Var (Int, name); Literal (Int, L.Int i)]))
 end

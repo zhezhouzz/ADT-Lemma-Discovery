@@ -12,10 +12,11 @@ module type SimpleExprTree = sig
     | Var of tp * string
     | Op of tp * op * t list
 
-  val eq_tp: tp * tp -> bool
+  val eq_tp: tp -> tp -> bool
   val layout_tp: tp -> string
   val layout: t -> string
   val subst: t -> string list -> t list -> t
+  val eq: t -> t -> bool
 end
 
 module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
@@ -39,12 +40,13 @@ module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
     | IntList -> "int list"
     | IntTree -> "int tree"
 
-  let eq_tp = function
+  let eq_tp_ = function
     | (Int, Int) -> true
     | (Bool, Bool) -> true
     | (IntList, IntList) -> true
     | (IntTree, IntTree) -> true
     | _ -> false
+  let eq_tp a b = eq_tp_ (a, b)
 
 let layout_op op args =
   match op, args with
@@ -77,4 +79,15 @@ let subst expr args argsvalue =
     | Op (tp, op, args) -> Op (tp, op, List.map aux args)
   in
   aux expr
+
+let eq a b =
+  let rec aux = function
+    | Literal (tp1, x1), Literal (tp2, x2) -> (eq_tp tp1 tp2) && (L.eq x1 x2)
+    | Var (tp1, name1), Var (tp2, name2) -> (eq_tp tp1 tp2) && (String.equal name1 name2)
+    | Op (tp1, op1, args1), Op (tp2, op2, args2) ->
+      (eq_tp tp1 tp2) && (String.equal op1 op2) &&
+      (List.for_all2 (fun a b -> aux (a, b)) args1 args2)
+    | _ -> false
+  in
+  aux (a, b)
 end

@@ -8,6 +8,13 @@ module type Ast = sig
   val spec_to_z3: Z3.context -> string -> spec -> Z3.FuncDecl.func_decl * Z3.Expr.expr
   val to_z3: Z3.context -> t -> spec Utils.StrMap.t -> Z3.Expr.expr
   val neg_to_z3: Z3.context -> t -> spec Utils.StrMap.t -> string list * Z3.Expr.expr
+  val application: t -> spec Utils.StrMap.t -> t
+  val to_nnf: t -> t
+  val remove_unsat_clause: t -> t
+  val to_dnf: t -> t
+  (* val get_sat_conj: ctx -> t spec Utils.StrMap.t -> t *)
+  val skolemize_conj: t -> string list * string list * t
+  val elem_not_conj: t -> t
 end
 
 module Ast (A: AstTree.AstTree): Ast = struct
@@ -52,11 +59,20 @@ module Ast (A: AstTree.AstTree): Ast = struct
         Boolean.mk_iff ctx (FuncDecl.apply fdecl args) (E.forallformula_to_z3 ctx forallf)) in
     fdecl, body
 
-  (* let make_spec_def ctx spec_tab =
-   *   StrMap.fold (fun name spec (m, bodys) ->
-   *     let fdecl, body = spec_to_z3 ctx name spec in
-   *     StrMap.add name fdecl m, body :: bodys
-   *   ) spec_tab (StrMap.empty, []) *)
+  let application a spec_tab =
+    let rec aux = function
+      | ForAll ff -> ForAll ff
+      | Implies (p1, p2) -> Implies(aux p1, aux p2)
+      | Ite (p1, p2, p3) -> Ite (aux p1, aux p2, aux p3)
+      | Not p -> Not (aux p)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Iff (p1, p2) -> Iff (aux p1, aux p2)
+      | SpecApply (spec_name, argsvalue) ->
+        let args, body = StrMap.find spec_name spec_tab in
+        ForAll (E.subst_forallformula body args argsvalue)
+    in
+    aux a
   let to_z3 ctx a spec_tab =
     (* let ptab, bodys = make_spec_def ctx spec_tab in *)
     let rec aux = function
@@ -80,6 +96,91 @@ module Ast (A: AstTree.AstTree): Ast = struct
       let fv, body = E.neg_forallf body in
       fv, to_z3 ctx (And [p;ForAll body]) spec_tab
     | _ -> raise @@ InterExn "neg_to_z3"
+
+  let desugar a =
+    let rec aux = function
+      | ForAll ff -> ForAll ff
+      | Implies (p1, p2) -> aux (Or [Not p1; p2])
+      | Ite (p1, p2, p3) -> aux (And [Implies (p1, p2); Implies (Not p1, p3)])
+      | Not p -> Not (aux p)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Iff (p1, p2) -> aux (Or [And [p1; p2]; And [Not p1; Not p2]])
+      | SpecApply (spec_name, argsvalue) -> SpecApply (spec_name, argsvalue)
+    in
+    aux a
+  let to_nnf a =
+    let rec aux a =
+      match a with
+      | ForAll _ | SpecApply (_, _) -> a
+      | Not (SpecApply (_, _)) | Not (ForAll _) -> a
+      | Not (Not p) -> aux p
+      | Not (And ps) -> Or (List.map (fun p -> aux (Not p)) ps)
+      | Not (Or ps) -> And (List.map (fun p -> aux (Not p)) ps)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | _ -> raise @@ InterExn "undesugar"
+    in
+    aux (desugar a)
+
+  let remove_unsat_clause a =
+    let conflict a b =
+      match (a, b) with
+      | Not a, b ->
+        (* Printf.printf "%s %s: %b\n" (layout a) (layout b) (eq a b); *)
+        eq a b
+      | a, Not b ->
+        (* Printf.printf "%s %s: %b\n" (layout a) (layout b) (eq a b); *)
+        eq a b
+      | _ -> false
+    in
+    let rec aux a =
+      match a with
+      | ForAll _ | SpecApply (_, _) | Not _ -> a
+      | And ps ->
+        let ps = List.remove_duplicates eq (List.map aux ps) in
+        if List.double_exists conflict ps then Or [] else And ps
+      | Or ps ->
+        let ps = (List.map aux ps) in
+        if List.double_exists conflict ps then And [] else Or ps
+      | _ -> raise @@ InterExn "undesugar"
+    in
+    aux a
+
+  let to_dnf a =
+    let rec aux a =
+      match a with
+      | ForAll _ | SpecApply (_, _) | Not _ -> [[a]]
+      | Or ps -> List.concat @@ List.map aux ps
+      | And ps -> List.map (fun l -> List.flatten l) (List.choose_list_list (List.map aux ps))
+      | _ -> raise @@ InterExn "undesugar"
+    in
+    Or (List.map (fun l -> And l) (aux a))
+  let skolemize = function
+    | ForAll ff -> None, ForAll ff
+    | Not (ForAll (fv, body)) ->
+      let dts = E.related_dt body fv in
+      let fv' = List.init (List.length fv) (fun _ -> Renaming.name ()) in
+      let fvse' = List.map (fun n -> E.SE.Var (E.SE.Int, n)) fv' in
+      Some (fv', dts), ForAll ([], E.subst (E.Not body) fv fvse')
+    | _ -> raise @@ InterExn "skolemize: not a nnf"
+  let skolemize_conj = function
+    | And ps ->
+      let newvars, ps = List.split (List.map skolemize ps) in
+      let vars, dts = List.split (List.filter_map (fun x -> x) newvars) in
+      let vars, dts = map_double
+          (fun l -> List.remove_duplicates String.equal @@ List.flatten l) (vars, dts) in
+      vars, dts, And ps
+    | _ -> raise @@ InterExn "skolemize_conj::not a conj"
+  let elem_not_conj = function
+    | And ps ->
+      And (List.map (fun p -> match p with
+          | ForAll _ | SpecApply (_, _) -> p
+          | Not (ForAll ff) -> ForAll ff
+          | Not (SpecApply (a, b)) -> SpecApply (a, b)
+          | _ -> raise @@ InterExn "elem_not_conj::not a nnf"
+        ) ps)
+    | _ -> raise @@ InterExn "elem_not_conj::not a conj"
 end
 module Lit = Lit.Lit(LitTree.LitTree)
 module SimpleExpr = SimpleExpr.SimpleExpr(SimpleExprTree.SimpleExprTree(Lit))

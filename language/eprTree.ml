@@ -15,6 +15,8 @@ module type EprTree = sig
   val layout_forallformula: forallformula -> string
   val subst: t -> string list -> SE.t list -> t
   val subst_forallformula: forallformula -> string list -> SE.t list -> forallformula
+  val eq: t -> t -> bool
+  val eq_forallformula: forallformula -> forallformula -> bool
 end
 
 module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
@@ -65,5 +67,23 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     aux body
 
   let subst_forallformula (fv, body) args argsvalue =
-   fv, subst body args argsvalue
+    fv, subst body args argsvalue
+
+  let eq a b =
+    let rec aux a b =
+      match (a, b) with
+      | True, True -> true
+      | Atom expr1, Atom expr2 -> SE.eq expr1 expr2
+      | Implies (p1, p2), Implies (p1', p2') -> (aux p1 p1') && (aux p2 p2')
+      | And ps1, And ps2 -> List.for_all2 aux ps1 ps2
+      | Or ps1, Or ps2 -> List.for_all2 aux ps1 ps2
+      | Not p1, Not p2 -> aux p1 p2
+      | Iff (p1, p2), Iff (p1', p2') -> (aux p1 p1') && (aux p2 p2')
+      | Ite (p1, p2, p3), Ite (p1', p2', p3') -> (aux p1 p1') && (aux p2 p2') && (aux p3 p3')
+      | _ -> false
+    in
+    aux a b
+
+  let eq_forallformula (fv1, body1) (fv2, body2) =
+    (List.for_all2 String.equal fv1 fv2) && (eq body1 body2)
 end

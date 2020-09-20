@@ -4,6 +4,13 @@ exception InterExn of string
 module StrMap = Map.Make(String);;
 module IntMap = Map.Make(struct type t = int let compare = compare end);;
 
+module Renaming = struct
+  let universe_label = ref 0
+  let name () =
+    let n =  Printf.sprintf "x!!%i" (!universe_label) in
+    universe_label := (!universe_label) + 1; n
+end
+
 module List = struct
   include List
   let eq compare l1 l2 =
@@ -51,6 +58,15 @@ module List = struct
 
   let to_string f l =
     fold_lefti (fun res i a -> if i == 0 then res ^ (f a) else res ^ "," ^ (f a)) "" l
+
+  let rec double_exists f l =
+    let rec aux e = function
+      | [] -> false
+      | h :: t -> if f e h then true else aux e t
+    in
+    match l with
+    | [] -> false
+    | h :: t -> if aux h t then true else double_exists f t
 
   let rec check_list_unique eq l =
     let rec aux e = function
@@ -145,6 +161,27 @@ module List = struct
       | Invalid_argument _ -> raise @@ InterExn "shape_reverse"
     in
     List.init (List.length ll) (fun i -> List.map (fun l -> nth l i) ll)
+
+  let choose_list_list ll =
+    if List.exists (fun l -> (List.length l) == 0) ll then [] else
+      let one_lists, others = List.partition (fun l -> (List.length l) == 1) ll in
+      let others = Array.of_list (List.map Array.of_list others) in
+      let one_list = List.flatten one_lists in
+      let n = Array.length others in
+      let idx_max = Array.init n (fun i -> Array.length others.(i)) in
+      let idx = Array.init n (fun _ -> 0) in
+      let rec increase i =
+        if i >= n then None else
+        if (idx.(i) + 1) >= idx_max.(i)
+        then (Array.set idx i 0; increase (i + 1))
+        else (Array.set idx i (idx.(i) + 1); Some ()) in
+      let rec aux r =
+        let a = List.init n (fun i -> others.(i).(idx.(i))) in
+        match increase 0 with
+        | None -> a :: r
+        | Some _ -> aux (a :: r)
+      in
+      List.map (fun l -> one_list @ l) (aux [])
 end
 
 module Tree = struct
