@@ -91,8 +91,8 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     Boolean.mk_and ctx (
       List.fold_left (fun cs (name, dt) ->
           match dt with
-          | V.I _ -> cs
-            (* (Epr.SE.fixed_int_to_z3 ctx name i):: cs *)
+          | V.I i ->
+            (Epr.SE.fixed_int_to_z3 ctx name i):: cs
           | V.B _ -> cs
           | _ ->
             (Epr.SE.fixed_dt_to_z3 ctx "member" name dt)::
@@ -186,12 +186,78 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     let _ = printf "negfv:%s\n" (List.to_string (fun x -> x) negfv) in
     let _ = printf "negdts:%s\n" (List.to_string (fun x -> x) negdts) in
     let _ = printf "negvc:%s\n" (Expr.to_string negvc) in
+    let counter = ref 0 in
     let rec aux positives negatives axiom =
+      let _ =
+        if (!counter) > 2 then raise @@ InterExn "zz" else counter:= (!counter) + 1 in
       let neg_vc_with_ax =
         Boolean.mk_and ctx [negvc; Epr.forallformula_to_z3 ctx axiom] in
       let valid, _ = S.check ctx neg_vc_with_ax in
       if valid then axiom else
         let negfv = List.map (fun u -> SE.Var (SE.Int, u)) negfv in
+        let get_interpretation ctx m title dtname fv =
+          let head_l1_x4 = SE.to_z3 ctx
+              (SE.Op(SE.Bool, "head",
+                     [SE.Var (SE.IntList, "l1"); SE.Var (SE.Int, "x!!4")])) in
+          let _ = printf "%s=%b\n" (Expr.to_string head_l1_x4) (S.get_pred m head_l1_x4) in
+          let head_l2_x4 = SE.to_z3 ctx
+              (SE.Op(SE.Bool, "head",
+                     [SE.Var (SE.IntList, "l2"); SE.Var (SE.Int, "x!!4")])) in
+          let _ = printf "%s=%b\n" (Expr.to_string head_l2_x4) (S.get_pred m head_l2_x4) in
+          let title_b = List.map
+              (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:fv) title in
+          let title_z3 = List.map (fun b -> Epr.to_z3 ctx b) title_b in
+          List.map (fun fv -> S.get_int m (SE.to_z3 ctx fv)) fv,
+          List.map (fun z -> S.get_pred m z) title_z3
+        in
+        (* let cs = match interp with
+         *   | [h1;h2;t1;t2;l1;l2;ltmp0;l3] -> [h1;h2;t1;t2;l1;l2;ltmp0;]
+         *   | _ -> raise @@ InterExn "zz"
+         * in
+         * let range = (0, 10) in
+         * let constraints = sample_constraint ctx negfv cs range in
+         * let _ = printf "constraints:%s\n" (Expr.to_string constraints) in
+         * let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; negvc] in
+         * let valid, m = S.check ctx neg_vc_fixed_dt in
+         * let m = match m with
+         *   | None -> raise @@ InterExn "none"
+         *   | Some m -> m in
+         * let _ = printf "valid: %b\n" valid in
+         * let title = make_title (List.length negfv) in
+         * let _ = printf "title: %s\n" (layout_title title) in
+         * let fvv, predv = get_interpretation ctx m title "ltmp0" negfv in
+         * let _ = printf "\tltmp0\nfv:%s\npred:%s\n" (IntList.to_string fvv)
+         *     (List.to_string string_of_bool predv) in
+         * let fvv, predv = get_interpretation ctx m title "l3" negfv in
+         * let _ = printf "\tl3\nfv:%s\npred:%s\n" (IntList.to_string fvv)
+         *     (List.to_string string_of_bool predv) in
+         * let fvv, predv = get_interpretation ctx m title "t1" negfv in
+         * let _ = printf "\tt1\nfv:%s\npred:%s\n" (IntList.to_string fvv)
+         *     (List.to_string string_of_bool predv) in
+         * let fvv, predv = get_interpretation ctx m title "l2" negfv in
+         * let _ = printf "\tl2\nfv:%s\npred:%s\n" (IntList.to_string fvv)
+         *     (List.to_string string_of_bool predv) in
+         * let list_var name = Ast.E.SE.Var (Ast.E.SE.IntList, name) in
+         * let int_var name = Ast.E.SE.Var (Ast.E.SE.Int, name) in
+         * let member l u = Ast.E.Atom (SE.Op (SE.Bool, "member", [l; u])) in
+         * let list_order l u v = Ast.E.Atom (SE.Op (SE.Bool, "list_order", [l; u; v])) in
+         * let int_neq a b = Ast.E.Not (Ast.E.Atom
+         *                                (Ast.E.SE.Op (Ast.E.SE.Bool, "==", [a;b]))) in
+         * let axiom =
+         *   let l1    = list_var "l1" in
+         *   let u    = int_var "u" in
+         *   let v    = int_var "v" in
+         *   (["l1"; "u"; "v"],
+         *    Ast.E.Implies (
+         *        Ast.E.And [member l1 u; member l1 v; int_neq u v],
+         *                Ast.E.Or [list_order l1 u v; list_order l1 v u]
+         *              )
+         *   ) in
+         * let valid, m = S.check ctx (Boolean.mk_and ctx
+         *                               [constraints;negvc;
+         *                                Ast.E.forallformula_to_z3 ctx axiom]) in
+         * let _ = printf "valid: %b\n" valid in
+         * let _ = raise @@ InterExn "zz" in *)
         let try_make_module dtname =
           let _ = printf "try which_dt :=> %s\n" dtname in
           let cs = List.filter
@@ -200,7 +266,9 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
           let range = IntList.bigger_range @@ V.flatten_forall_l @@ snd @@ List.split interp in
           let _ = printf "range = (%i, %i)\n" (fst range) (snd range) in
           let constraints = sample_constraint ctx negfv cs range in
-          let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; negvc] in
+          let neg_vc_fixed_dt = Boolean.mk_and ctx
+              [constraints; negvc; Epr.forallformula_to_z3 ctx axiom] in
+          let _ = printf "try_make_modulenegvc:\n%s\n" (Expr.to_string negvc) in
           let _, m = S.check ctx neg_vc_fixed_dt in
           m
         in
@@ -211,24 +279,26 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
              | None -> which_dt t
              | Some m -> dtname, m)
         in
-        let dtname, m = which_dt ["t1";"t2";"l1";"l2";"l3"] in
-        let get_interpretation ctx m title fv =
-          let title_b = List.map
-              (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:fv) title in
-          let title_z3 = List.map (fun b -> Epr.to_z3 ctx b) title_b in
-          List.map (fun fv -> S.get_int m (SE.to_z3 ctx fv)) fv,
-          List.map (fun z -> S.get_pred m z) title_z3
-        in
+        let dtname, m = which_dt ["l3"] in
+        (* let _ = printf "model:%s\n" (Model.to_string m) in *)
         let title = make_title (List.length negfv) in
-        let fvv, predv = get_interpretation ctx m title negfv in
+        let fvv, predv = get_interpretation ctx m title dtname negfv in
         let dts = randomgen fvv in
         let fvv_exp = List.map (fun x -> V.I x) fvv in
         let positives = positives @ (List.map (fun dt -> make_sample title dt fvv_exp) dts) in
         let negatives = (cex_to_sample fvv_exp predv) :: negatives in
+        let _ = printf "title: %s\n" (layout_title title) in
         let _ = List.iter (fun pos -> printf "pos:%s\n" (layout_sample pos)) positives in
         let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in
         let axiom = classify title ~pos:positives ~neg:negatives in
+        let _ = printf "pos_in:%s\n"
+            (List.to_string string_of_bool
+               (List.map (fun pos -> D.exec_raw axiom title pos.vec) positives)) in
+        let _ = printf "neg:%s\n"
+            (List.to_string string_of_bool
+               (List.map (fun neg -> D.exec_raw axiom title neg.vec) negatives)) in
         let axiom = D.to_forallformula axiom ~dtname:"l" in
+        let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
         aux positives negatives axiom
     in
     aux [] [] ([], Epr.True)

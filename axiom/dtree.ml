@@ -8,6 +8,7 @@ module type Dtree = sig
     | Node of feature * t * t
   val exec: t -> value list -> bool
   val exec_feature: feature -> value -> value list -> bool
+  val exec_raw: t -> feature list ->  bool list -> bool
   val layout_feature: feature -> string
   val layout: t -> string
   val to_forallformula: t -> dtname:string -> Language.Ast.SpecAst.E.forallformula
@@ -48,6 +49,27 @@ module Dtree : Dtree = struct
       | Leaf (pred, ids) -> (leaf_apply (pred, ids) args)
       | Node (feature, l, r) ->
         if leaf_apply feature args
+        then aux l
+        else aux r
+    in
+    aux dt
+
+  let feature_eq (pred, ids) (pred', ids') =
+    (String.equal pred pred') && (IntList.eq ids ids')
+
+  let exec_raw (dt: t) (fl: feature list) (vec: bool list) : bool =
+    let m = List.combine fl vec in
+    let get_b f =
+      match List.find_opt (fun (f', _) -> feature_eq f f') m with
+      | None -> raise @@ InterExn "exec_raw"
+      | Some (_, b) -> b
+    in
+    let rec aux = function
+      | T -> true
+      | F -> false
+      | Leaf feature -> get_b feature
+      | Node (feature, l, r) ->
+        if get_b feature
         then aux l
         else aux r
     in
