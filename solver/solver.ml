@@ -8,8 +8,8 @@ let solver_result solver =
   match check solver [] with
   | UNSATISFIABLE -> true, None
   | UNKNOWN ->
-    (* raise (InterExn "time out!") *)
-  Printf.printf "\ttimeout\n"; false, None
+    raise (InterExn "time out!")
+  (* Printf.printf "\ttimeout\n"; false, None *)
   | SATISFIABLE ->
     match Solver.get_model solver with
     | None -> raise (InterExn "never happen")

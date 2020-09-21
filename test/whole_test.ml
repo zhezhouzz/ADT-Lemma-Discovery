@@ -6,20 +6,8 @@ module Value = Preds.Pred.Value;;
 module A = Axiom.AxiomSyn.Syn;;
 module S = Solver;;
 let module Sexpr = E.SE in
-let libcode_cons a l = a :: l in
-let libcode_sort l = List.sort (fun a b -> -(compare a b)) l in
-let clientcode inps =
-  match inps with
-  | [Value.I a; Value.L l0] ->
-    let b = a + 1 in
-    let l1 = libcode_cons a l0 in
-    let l2 = libcode_sort l1 in
-    let l3 = libcode_cons b l2 in
-    let l4 = libcode_sort l3 in
-    ["a", Value.I a; "b", Value.I b;
-     "l0", Value.L l0; "l1", Value.L l1; "l2", Value.L l2; "l3", Value.L l3; "l4", Value.L l4]
-  | _ -> raise @@ TestFailedException "bad clientcode"
-in
+(* let libcode_cons a l = a :: l in
+ * let libcode_sort l = List.sort (fun a b -> -(compare a b)) l in *)
 let _ = printf "whole test\n" in
 let a = Sexpr.Var (Sexpr.Int, "a") in
 let u = Sexpr.Var (Sexpr.Int, "u") in
@@ -80,6 +68,6 @@ let _ = printf "axiom:\n\t%s\n" (Z3.Expr.to_string axz3) in
 let neg_vc_with_ax = Z3.Boolean.mk_and ctx [neg_vc; axz3] in
 let valid, _ = Solver.check ctx neg_vc_with_ax in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
-let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~prog:clientcode in
+let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab in
 let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in
 ();;
