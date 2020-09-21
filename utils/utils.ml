@@ -182,6 +182,20 @@ module List = struct
         | Some _ -> aux (a :: r)
       in
       List.map (fun l -> one_list @ l) (aux [])
+
+  let choose_n_eq eq l n =
+    let l = remove_duplicates eq l in
+    let rec aux r n =
+      if n == 0 then r else
+        aux (List.flatten @@ List.map (fun e -> List.map (fun r -> e :: r) r) l) (n - 1)
+    in
+    if n < 0 then raise @@ InterExn "choose_n_eq: bad n"
+    else if n == 0 then [[]] else
+      aux (List.map (fun x -> [x]) l) (n - 1)
+
+  let choose_eq_all eq l =
+    List.flatten @@
+    List.init ((List.length l) + 1) (fun n -> choose_n_eq eq l n)
 end
 
 module Tree = struct
@@ -297,6 +311,9 @@ module IntList = struct
     | None, None -> (-1, 1)
     | Some s, Some e -> (s - 1, e + 1)
     | _, _ -> raise @@ InterExn "never happen"
+  let of_range (s, e) =
+    let len = e - s + 1 in
+    List.init len (fun i -> i + s)
 end
 
 let list_list_foldl l0 l1 default0 default1 f0 f1 =

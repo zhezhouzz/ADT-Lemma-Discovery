@@ -9,6 +9,9 @@ module type Epr = sig
   val forallformula_to_z3: Z3.context -> forallformula -> Z3.Expr.expr
   val neg_forallf: forallformula -> string list * forallformula
   val related_dt: t -> string list -> string list
+  val desugar: t -> t
+  val to_nnf: t -> t
+  val simplify_ite: t -> t
 end
 
 module Epr (E: EprTree.EprTree): Epr = struct
@@ -124,4 +127,56 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Or ps -> List.flatten (List.map aux ps)
       | Iff (p1, p2) -> (aux p1) @ (aux p2) in
     List.remove_duplicates String.equal (aux e)
+
+  let desugar a =
+    let rec aux = function
+      | Atom se -> Atom se
+      | Implies (p1, p2) -> aux (Or [Not p1; p2])
+      | Ite (p1, p2, p3) -> aux (And [Implies (p1, p2); Implies (Not p1, p3)])
+      | Not p -> Not (aux p)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Iff (p1, p2) -> aux (Or [And [p1; p2]; And [Not p1; Not p2]])
+      | True -> True
+    in
+    aux a
+
+  let to_nnf a =
+    let rec aux a =
+      match a with
+      | Atom _ | True | Not (True) | Not (Atom _) -> a
+      | Not (Not p) -> aux p
+      | Not (And ps) -> Or (List.map (fun p -> aux (Not p)) ps)
+      | Not (Or ps) -> And (List.map (fun p -> aux (Not p)) ps)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | _ -> raise @@ InterExn "undesugar"
+    in
+    aux (desugar a)
+
+  let simplify_ite a =
+    let simp_ite p1 p2 p3 =
+      match p2, p3 with
+      | True, True -> True
+      | True, Not True -> p1
+      | True, p3 -> Or [p1; p3]
+      | Not True, True -> Not p1
+      | Not True, Not True -> Not True
+      | Not True, p3 -> And [Not p1; p3]
+      | p2, True -> Or [Not p1; p2]
+      | p2, Not True -> And [p1; p2]
+      | _ -> Ite (p1, p2, p3)
+    in
+    let rec aux a =
+      match a with
+      | Atom se -> Atom se
+      | Implies (p1, p2) -> aux (Or [Not p1; p2])
+      | Ite (p1, p2, p3) -> simp_ite (aux p1) (aux p2) (aux p3)
+      | Not p -> Not (aux p)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Iff (p1, p2) -> Iff (aux p1, aux p2)
+      | True -> True
+    in
+    aux a
 end

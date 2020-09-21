@@ -94,21 +94,28 @@ let spec_tab = add_spec spec_tab "MergePre" ["l1";"l2";"l3"] ["u";"v"]
       ]) in
 let spec_tab = add_spec spec_tab "MergePost" ["l1";"l2";"l3"] ["u";"v"]
     (E.And [E.Implies (list_order l3 u v, int_le u v);
-            E.Iff (head l3 u, E.Or [head l1 u; head l2 u])])
+            E.Implies (member l3 u, E.Or [member l1 u; member l2 u]);
+            (* E.Iff (head l3 u, E.Or [head l1 u; head l2 u]); *)
+           ])
 in
 let spec_tab = add_spec spec_tab "Cons" ["h1";"t1";"l1"] ["u"; "v"]
     (E.And [
-        (E.Iff (list_order l1 u v,
-                E.Or [E.And [member t1 v; int_eq h1 u]; list_order t1 u v]));
+        (E.Implies (list_order l1 u v,
+                    E.Or [E.And [member t1 v; int_eq h1 u]; list_order t1 u v]));
+        (head l1 h1);
+        (E.Implies (list_order t1 u v, list_order l1 u v));
         (E.Iff (member l1 u,
                 E.Or [member t1 u; int_eq h1 u]))
       ]) in
 let axiom = (["l1"; "u"; "v"; "w"],
              E.And [
-               E.Implies (list_order l1 u v, E.Not (head l1 u));
-               E.Implies (E.And [head l1 u; member l1 v], list_order l1 u v);
-               E.Implies (list_order l1 u v,
-                          E.Or [head l1 u; E.And [head l1 w;list_order l1 w u]]);
+               (* E.Implies (head l1 u, member l1 u); *)
+               (* E.Implies (list_order l1 u v, E.And [member l1 u; member l1 v;]); *)
+               (* E.Implies (E.And [member l1 u; member l1 v; E.Not (int_eq u v)],
+                *            E.Or [list_order l1 u v; list_order l1 v u]); *)
+               E.Implies (E.And [head l1 u; member l1 v; E.Not (int_eq u v)],
+                          list_order l1 u v);
+               (* E.Implies (E.And [head l1 w; list_order l1 u v], list_order l1 w v); *)
              ]
             ) in
 let ctx =

@@ -14,6 +14,7 @@ module type Ast = sig
   val to_dnf: t -> t
   (* val get_sat_conj: ctx -> t spec Utils.StrMap.t -> t *)
   val skolemize_conj: t -> string list * string list * t
+  val skolemize: t -> string list * t
   val elem_not_conj: t -> t
 end
 
@@ -156,7 +157,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | _ -> raise @@ InterExn "undesugar"
     in
     Or (List.map (fun l -> And l) (aux a))
-  let skolemize = function
+  let skolemize_clasue = function
     | ForAll ff -> None, ForAll ff
     | Not (ForAll (fv, body)) ->
       let dts = E.related_dt body fv in
@@ -164,9 +165,24 @@ module Ast (A: AstTree.AstTree): Ast = struct
       let fvse' = List.map (fun n -> E.SE.Var (E.SE.Int, n)) fv' in
       Some (fv', dts), ForAll ([], E.subst (E.Not body) fv fvse')
     | _ -> raise @@ InterExn "skolemize: not a nnf"
-  let skolemize_conj = function
+  let rec skolemize a =
+    match a with
+    | ForAll _ -> [], a
+    | SpecApply (_, _) | Not (SpecApply (_, _)) -> raise @@ InterExn "need apply"
+    | Not (ForAll (fv, body)) ->
+      let fv' = List.init (List.length fv) (fun _ -> Renaming.name ()) in
+      let fvse' = List.map (fun n -> E.SE.Var (E.SE.Int, n)) fv' in
+      fv', ForAll ([], E.subst (E.Not body) fv fvse')
+    | Or ps ->
+      let newvars, ps = List.split (List.map skolemize ps) in
+      List.flatten newvars, Or ps
     | And ps ->
       let newvars, ps = List.split (List.map skolemize ps) in
+      List.flatten newvars, And ps
+    | _ -> raise @@ InterExn "undesugar"
+  let skolemize_conj = function
+    | And ps ->
+      let newvars, ps = List.split (List.map skolemize_clasue ps) in
       let vars, dts = List.split (List.filter_map (fun x -> x) newvars) in
       let vars, dts = map_double
           (fun l -> List.remove_duplicates String.equal @@ List.flatten l) (vars, dts) in

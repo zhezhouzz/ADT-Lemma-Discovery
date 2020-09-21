@@ -47,8 +47,15 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     List.fold_left (fun r pred -> sprintf "%s [%s]" r (D.layout_feature pred)) "" title
 
   let randomgen (fv: int list) =
+    let additional =
+      match IntList.max_opt fv with
+      | None -> raise @@ InterExn "randomgen"
+      | Some m -> m + 1
+    in
     List.map (fun l -> V.L l) @@
-    List.remove_duplicates IntList.eq @@ List.combination_l_all (fv @ fv)
+    List.remove_duplicates IntList.eq @@
+    List.choose_eq_all (fun a b -> a == b) (additional :: (fv @ fv))
+    (* List.combination_l_all (additional :: (fv @ fv)) *)
 
   let make_sample (title:title) (dt: V.t) (args: V.t list) =
     let vec = List.map (fun feature -> D.exec_feature feature dt args) title in
@@ -108,10 +115,46 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     let interval = Epr.to_z3 ctx
         (Epr.And (List.fold_left (fun l u -> l @ [geE u sz3; geE ez3 u]) [] fv)) in
     Boolean.mk_and ctx [interval;c]
+
   module SE = Epr.SE
   let sample_num = 2
   let start_size = 2
   open Printf
+
+  let interval ctx exists_fv (s, e) =
+    let (s', e') =
+      map_double (fun x -> Epr.SE.Literal (Epr.SE.Int, Epr.SE.L.Int x)) (s, e) in
+    let name_to_var name = SE.Var (SE.Int, name) in
+    let geE a b = Epr.Atom (SE.Op (SE.Bool, ">=", [a; b])) in
+    let interval = Epr.to_z3 ctx
+        (Epr.And (List.fold_left (fun l u ->
+             l @ [geE (name_to_var u) s'; geE e' (name_to_var u)]) [] exists_fv)) in
+    interval
+
+  let sample_constraint_over_dt ctx dtname l exists_fv (s, e) =
+    let c = fixed_sample ctx l in
+    let dt = SE.Var (SE.IntList, dtname) in
+    let u, v = SE.Var (SE.Int, "u"), SE.Var (SE.Int, "v") in
+    let s', e' = SE.Literal (SE.Int, SE.L.Int s), SE.Literal (SE.Int, SE.L.Int e) in
+    let geE a b = Epr.Atom (SE.Op (SE.Bool, ">=", [a; b])) in
+    let member l u = Epr.Atom (SE.Op (SE.Bool, "member", [l; u])) in
+    let head l u = Epr.Atom (SE.Op (SE.Bool, "member", [l; u])) in
+    let list_order l u v = Epr.Atom (SE.Op (SE.Bool, "list_order", [l; u; v])) in
+    let dt_c = ["u"; "v"], Epr.And [
+        Epr.Implies (
+          Epr.Not (Epr.And [geE u s';geE e' u]),
+          Epr.Not (Epr.Or [member dt u; head dt u]));
+        Epr.Implies (
+          Epr.Not (Epr.And [geE u s';geE e' u;geE v s';geE e' v]),
+          Epr.Not (list_order dt u v));
+      ] in
+    let name_to_var name = SE.Var (SE.Int, name) in
+    let interval = Epr.to_z3 ctx
+        (Epr.And (List.fold_left (fun l u ->
+             l @ [geE (name_to_var u) s'; geE e' (name_to_var u)]) [] exists_fv)) in
+    Boolean.mk_and ctx [c; interval;
+                        Epr.forallformula_to_z3 ctx dt_c;
+                       ]
 
   let get_sat_conj ctx vc spec_tab =
     let vc_nnf = Ast.to_nnf vc in
@@ -135,7 +178,232 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     | Or ps -> aux ps
     | _ -> raise @@ InterExn "get_sat_conj"
 
-  let axiom_infer ~ctx ~vc ~spectable ~prog =
+  let complement s len default =
+    let vecs = List.choose_n_eq (fun a b -> a == b) [true;false] len in
+    let vecs = List.filter_map (fun vec ->
+        match List.find_opt (fun s -> List.eq (fun a b -> a == b) s.vec vec) s with
+        | None -> Some vec
+        | Some _ -> None
+      ) vecs in
+    let negs = List.map (fun vec -> cex_to_sample default vec) vecs in
+    negs
+
+  let additional_axiom ctx =
+    let module E = Ast.E in
+    let list_var name = SE.Var (SE.IntList, name) in
+    let int_var name = SE.Var (SE.Int, name) in
+    let head l u = E.Atom (SE.Op (SE.Bool, "head", [l; u])) in
+    let member l u = E.Atom (SE.Op (SE.Bool, "member", [l; u])) in
+    let list_order l u v = E.Atom (SE.Op (SE.Bool, "list_order", [l; u; v])) in
+    let l1    = list_var "l1" in
+    let u    = int_var "u" in
+    let v    = int_var "v" in
+    let w    = int_var "w" in
+    let axiom = (["l1"; "u"; "v"; "w"],
+                 E.And [
+                   (* E.Implies (list_order l1 u v, E.Not (head l1 v)); *)
+                   E.Implies (head l1 u, member l1 u);
+                   E.Implies (list_order l1 u v,
+                              E.Or [E.And [head l1 u; member l1 v];
+                                    E.And [head l1 w;list_order l1 w u]]);
+                 ]
+                ) in
+    E.forallformula_to_z3 ctx axiom
+
+    let axiom_infer ~ctx ~vc ~spectable ~prog =
+    let neg_vc_nnf = Ast.to_nnf (Ast.Not vc) in
+    let neg_vc_nnf_applied = Ast.application neg_vc_nnf spectable in
+    let exists_fv, neg_vc_skolemized = Ast.skolemize neg_vc_nnf_applied in
+    let _ = printf "exists_fv:%s\nvc:%s\n"
+        (List.to_string (fun x -> x) exists_fv) (Ast.layout neg_vc_skolemized) in
+    (* let _ = raise @@ InterExn "zz" in *)
+    let counter = ref 0 in
+    let fv_num = 2 in
+    let neg_vc_with_ax axiom =
+      Boolean.mk_and ctx [
+        additional_axiom ctx;
+        Ast.to_z3 ctx neg_vc_skolemized spectable
+        ; Epr.forallformula_to_z3 ctx axiom] in
+    let rec main_loop positives negatives axiom =
+      let _ =
+        if (!counter) > 2 then raise @@ InterExn "counter" else counter:= (!counter) + 1 in
+      let valid, m = S.check ctx (neg_vc_with_ax axiom) in
+      if valid then axiom else
+        let range = (0, 3) in
+        let constraints = interval ctx (["h1";"h2"] @ exists_fv) range in
+        let valid, m = S.check ctx (Boolean.mk_and ctx [constraints; neg_vc_with_ax axiom]) in
+        let m = match m with None -> raise @@ InterExn "bad range" | Some m -> m in
+        let _ = printf "model:%s\n" (Model.to_string m) in
+        let title = make_title fv_num in
+        let int_to_se i = SE.Literal (SE.Int, SE.L.Int i) in
+        let get_interpretation ctx m title dtname args =
+          let args = List.map int_to_se args in
+          let title_b = List.map
+              (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:args) title in
+          let title_z3 = List.map (fun b -> Epr.to_z3 ctx b) title_b in
+          List.map (fun z -> S.get_pred m z) title_z3
+        in
+        let all_args = List.choose_n_eq (fun x y -> x == y) (IntList.of_range range) fv_num in
+        let all_args_vec dtname =
+          List.combine all_args
+            (List.map (fun args -> get_interpretation ctx m title dtname args) all_args) in
+        let dtnames = ["t1"; "t2";"l1";"l2";"l3";"ltmp0"] in
+        let all_args_vec = List.flatten (List.map all_args_vec dtnames) in
+        let _ = printf "num:%i\n" (List.length all_args_vec) in
+        let booll_eq vec vec' = List.eq (fun x y -> x == y) vec vec' in
+        let all_args_vec = List.remove_duplicates
+            (fun (_, vec) (_, vec') -> booll_eq vec vec') all_args_vec in
+        let _ = List.iter
+            (fun (args, vec) -> printf "%s:%s\n"
+                (IntList.to_string args) (boollist_to_string vec)) all_args_vec in
+        let mk_positives positives args =
+          let dts = randomgen args in
+          let samples = List.map
+              (fun dt -> make_sample title dt (List.map (fun i -> V.I i) args)) dts in
+          let positives = positives @ samples in
+          List.remove_duplicates (fun p p' -> booll_eq p.vec p'.vec) positives
+        in
+        let update (positives, negatives) (args, vec) =
+          let eq_that_vec p = booll_eq p.vec vec in
+          match List.find_opt eq_that_vec positives with
+          | Some _ -> positives, negatives
+          | None ->
+            let samples = mk_positives positives args in
+            let positives =
+              List.remove_duplicates (fun p p' -> booll_eq p.vec p'.vec) (samples @ positives)
+            in
+            match List.find_opt eq_that_vec samples with
+            | Some _ -> positives, negatives
+            | None ->
+              positives, (cex_to_sample (List.map (fun i -> V.I i) args) vec) :: negatives
+        in
+        let positives, negatives =
+          List.fold_left update (positives, negatives) all_args_vec in
+        let _ = printf "title: %s\n" (layout_title title) in
+        let _ = List.iter (fun pos -> printf "pos:%s\n" (layout_sample pos)) positives in
+        let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in
+        let axiom = classify title ~pos:positives ~neg:negatives in
+        let (axiom_fv, axiom_body) = D.to_forallformula axiom ~dtname:"l" in
+        let axiom = axiom_fv, Epr.simplify_ite axiom_body in
+        let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
+        let _ = printf "axiom:%s\n" (Expr.to_string (Epr.forallformula_to_z3 ctx axiom)) in
+        (* let negatives = complement positives 7 [V.I 1;V.I 1] in
+         * let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in
+         * let axiom = classify title ~pos:positives ~neg:negatives in
+         * let axiom = D.to_forallformula axiom ~dtname:"l" in
+         * let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
+         * let _ = raise @@ InterExn "zz" in *)
+        main_loop positives negatives axiom
+        (* raise @@ InterExn "zz" *)
+    in
+    main_loop [] [] ([], Epr.True)
+
+  let axiom_infer2 ~ctx ~vc ~spectable ~prog =
+    let neg_vc_nnf = Ast.to_nnf (Ast.Not vc) in
+    let neg_vc_nnf_applied = Ast.application neg_vc_nnf spectable in
+    let exists_fv, neg_vc_skolemized = Ast.skolemize neg_vc_nnf_applied in
+    let _ = printf "exists_fv:%s\nvc:%s\n"
+        (List.to_string (fun x -> x) exists_fv) (Ast.layout neg_vc_skolemized) in
+    (* let _ = raise @@ InterExn "zz" in *)
+    let counter = ref 0 in
+    let fv_num = 2 in
+    let neg_vc_with_ax axiom =
+      Boolean.mk_and ctx [
+        additional_axiom ctx;
+        Ast.to_z3 ctx neg_vc_skolemized spectable
+        ; Epr.forallformula_to_z3 ctx axiom] in
+    let rec main_loop positives negatives axiom =
+      let _ =
+        if (!counter) > 1 then raise @@ InterExn "zz" else counter:= (!counter) + 1 in
+      let valid, _ = S.check ctx (neg_vc_with_ax axiom) in
+      if valid then axiom else
+        let legal_interp = prog [V.I 1; V.I 2; V.L [2;3]; V.L [3;4]] in
+        let range =
+          IntList.bigger_range @@ V.flatten_forall_l @@ snd @@ List.split legal_interp in
+        let try_make_module dtname =
+          let _ = printf "try which_dt :=> %s\n" dtname in
+          let cs = List.filter
+              (fun (dtname', _) -> not (String.equal dtname dtname')) legal_interp in
+          (* let _ = List.iter (fun (name, v) -> printf "%s:%s\n" name (V.layout v)) cs in *)
+          let _ = printf "range = (%i, %i)\n" (fst range) (snd range) in
+          let constraints = sample_constraint_over_dt ctx dtname cs exists_fv range in
+          let neg_vc_fixed_dt = Boolean.mk_and ctx [constraints; neg_vc_with_ax axiom] in
+          (* let _ = printf "try_make_modulenegvc:\n%s\n" (Expr.to_string negvc) in *)
+          let _, m = S.check ctx neg_vc_fixed_dt in
+          m
+        in
+        let rec which_dt = function
+          | [] -> raise @@ InterExn "axiom_infer::not a good interp"
+          | dtname :: t ->
+            (match try_make_module dtname with
+             | None -> which_dt t
+             | Some m -> dtname, m)
+        in
+        let dtname, m = which_dt ["t1";"t2";"l1";"l2";"l3";"ltmp0"] in
+        (* let dtname, m = which_dt ["l3"] in *)
+        let _ = printf "model:\n%s\n" (Model.to_string m) in
+        let title = make_title fv_num in
+        let int_to_se i = SE.Literal (SE.Int, SE.L.Int i) in
+        let get_interpretation ctx m title dtname args =
+          let args = List.map int_to_se args in
+          let title_b = List.map
+              (fun feature -> D.feature_to_epr feature ~dtname:dtname ~fv:args) title in
+          let title_z3 = List.map (fun b -> Epr.to_z3 ctx b) title_b in
+          List.map (fun z -> S.get_pred m z) title_z3
+        in
+        let all_args = List.choose_n_eq (fun x y -> x == y) (IntList.of_range range) fv_num in
+        let all_vec = List.map
+            (fun args -> get_interpretation ctx m title dtname args) all_args in
+        let all_args_vec = List.combine all_args all_vec in
+        let booll_eq vec vec' = List.eq (fun x y -> x == y) vec vec' in
+        let all_args_vec = List.remove_duplicates
+            (fun (_, vec) (_, vec') -> booll_eq vec vec') all_args_vec in
+        let _ = List.iter
+            (fun (args, vec) -> printf "%s:%s\n"
+                (IntList.to_string args) (List.to_string string_of_bool vec)) all_args_vec in
+        let mk_positives positives args =
+          let dts = randomgen args in
+          let _ = match args with
+            | [1;2] -> List.iter (fun dt -> printf "dt:%s\n" (V.layout dt)) dts
+            | _ -> () in
+          let samples = List.map
+              (fun dt -> make_sample title dt (List.map (fun i -> V.I i) args)) dts in
+          let positives = positives @ samples in
+          List.remove_duplicates (fun p p' -> booll_eq p.vec p'.vec) positives
+        in
+        let update (positives, negatives) (args, vec) =
+          let eq_that_vec p = booll_eq p.vec vec in
+          match List.find_opt eq_that_vec positives with
+          | Some _ -> positives, negatives
+          | None ->
+            let samples = mk_positives positives args in
+            let positives =
+              List.remove_duplicates (fun p p' -> booll_eq p.vec p'.vec) (samples @ positives)
+            in
+            match List.find_opt eq_that_vec samples with
+            | Some _ -> positives, negatives
+            | None ->
+              positives, (cex_to_sample (List.map (fun i -> V.I i) args) vec) :: negatives
+        in
+        let positives, negatives =
+          List.fold_left update (positives, negatives) all_args_vec in
+        let _ = printf "title: %s\n" (layout_title title) in
+        let _ = List.iter (fun pos -> printf "pos:%s\n" (layout_sample pos)) positives in
+        let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in
+        let axiom = classify title ~pos:positives ~neg:negatives in
+        let axiom = D.to_forallformula axiom ~dtname:"l" in
+        let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
+        let negatives = complement positives 7 [V.I 1;V.I 1] in
+        let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in
+        let axiom = classify title ~pos:positives ~neg:negatives in
+        let axiom = D.to_forallformula axiom ~dtname:"l" in
+        let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
+        main_loop positives negatives axiom
+        (* raise @@ InterExn "zz" *)
+    in
+    main_loop [] [] ([], Epr.True)
+
+  let axiom_infer_ ~ctx ~vc ~spectable ~prog =
     let rintg = QCheck.Gen.int_range 0 start_size in
     let gens = [QCheck.Gen.(map (fun x -> V.I x) rintg);  QCheck.Gen.((map (fun x -> V.L x) (small_list rintg)))] in
     let samples = List.map (fun gen -> QCheck.Gen.generate ~n:sample_num gen) gens in
