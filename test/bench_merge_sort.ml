@@ -52,15 +52,6 @@ let vc = Implies (
               And [merge t1 l2 ltmp0; cons h1 ltmp0 l3],
               And [merge l1 t2 ltmp0; cons h2 ltmp0 l3])],
     merge l1 l2 l3) in
-let _ = printf "vc:%s\n" (layout vc) in
-let vc_nnf = to_nnf (Not vc) in
-let _ = printf "vc_nnf:%s\n" (layout vc_nnf) in
-let vc_nnf = remove_unsat_clause vc_nnf in
-let _ = printf "vc_nnf:%s\n" (layout vc_nnf) in
-let vc_dnf = to_dnf vc_nnf in
-let _ = match vc_dnf with
-  | Or ps -> List.iter (fun p -> printf "%s\n" (layout p)) ps
-  | _ -> raise @@ TestFailedException "zz" in
 let spec_tab = StrMap.empty in
 let spec_tab = add_spec spec_tab "Le" ["a";"b"] [] (int_le a b) in
 let spec_tab = add_spec spec_tab "MergePre" ["l1";"l2";"l3"] ["u";"v"]
@@ -91,10 +82,10 @@ let axiom = (["l1"; "u"; "v"; "w"],
             ) in
 let ctx =
   Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
-let valid, _ = S.check ctx (to_z3 ctx vc_dnf spec_tab) in
+let valid, _ = S.check ctx (to_z3 ctx (Not vc) spec_tab) in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
 let valid, _ = S.check ctx
-    (Boolean.mk_and ctx [to_z3 ctx vc_dnf spec_tab;
+    (Boolean.mk_and ctx [to_z3 ctx (Not vc) spec_tab;
                          E.forallformula_to_z3 ctx axiom
                         ]) in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in

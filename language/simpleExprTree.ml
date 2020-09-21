@@ -17,6 +17,9 @@ module type SimpleExprTree = sig
   val layout: t -> string
   val subst: t -> string list -> t list -> t
   val eq: t -> t -> bool
+  val var_to_tp_name: t -> (int list * (tp * string) list)
+  val get_tp: t -> tp
+  val is_dt: tp -> bool
 end
 
 module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
@@ -39,6 +42,17 @@ module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
     | Int -> "int"
     | IntList -> "int list"
     | IntTree -> "int tree"
+
+  let get_tp = function
+    | Literal (tp, _) -> tp
+    | Var (tp, _) -> tp
+    | Op (tp, _, _) -> tp
+
+  let is_dt = function
+    | Int -> false
+    | Bool -> false
+    | IntList -> true
+    | IntTree -> true
 
   let eq_tp_ = function
     | (Int, Int) -> true
@@ -90,4 +104,12 @@ let eq a b =
     | _ -> false
   in
   aux (a, b)
+
+let rec var_to_tp_name = function
+  | Var (tp, name) -> [], [tp, name]
+  | Literal (Int, L.Int i) -> [i], []
+  | Literal (_, _) -> [], []
+  | Op (_, _, args) ->
+    let a, b = List.split (List.map var_to_tp_name args) in
+    List.flatten a, List.flatten b
 end

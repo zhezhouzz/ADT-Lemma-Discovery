@@ -210,15 +210,28 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
                 ) in
     E.forallformula_to_z3 ctx axiom
 
+  (* prevent loop forever *)
+  let max_main_loop_times = 4
+
   let axiom_infer ~ctx ~vc ~spectable =
+    (* TODO: handle interal integers... *)
+    let _, vars = Ast.extract_variables vc in
+    let dtnames = List.filter_map (fun (tp, name) ->
+        if SE.is_dt tp then Some name else None) vars in
+    let intnames = List.filter_map (fun (tp, name) ->
+        match tp with
+        | SE.Int -> Some name
+        | _ -> None) vars in
+    (* let _ = List.iter (fun name -> printf "var:%s\n" name) dtnames in *)
     let neg_vc_nnf = Ast.to_nnf (Ast.Not vc) in
     let neg_vc_nnf_applied = Ast.application neg_vc_nnf spectable in
     let exists_fv, neg_vc_skolemized = Ast.skolemize neg_vc_nnf_applied in
-    let _ = printf "exists_fv:%s\nvc:%s\n"
-        (List.to_string (fun x -> x) exists_fv) (Ast.layout neg_vc_skolemized) in
-    (* let _ = raise @@ InterExn "zz" in *)
-    let counter = ref 0 in
+    (* let _ = printf "exists_fv:%s\nvc:%s\n"
+     *     (List.to_string (fun x -> x) exists_fv) (Ast.layout neg_vc_skolemized) in *)
+    let counter = ref max_main_loop_times in
+    (* TODO: increase number of fv automatically... *)
     let fv_num = 2 in
+    let title = make_title fv_num in
     let neg_vc_with_ax axiom =
       Boolean.mk_and ctx [
         additional_axiom ctx;
@@ -226,15 +239,15 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
         ; Epr.forallformula_to_z3 ctx axiom] in
     let rec main_loop positives negatives axiom =
       let _ =
-        if (!counter) > 2 then raise @@ InterExn "counter" else counter:= (!counter) + 1 in
+        if (!counter) <= 0 then
+          raise @@ InterExn "main_loop: too many iterations"
+        else counter:= (!counter) - 1 in
       let valid, _ = S.check ctx (neg_vc_with_ax axiom) in
       if valid then axiom else
         let range = (0, 3) in
-        let constraints = interval ctx (["h1";"h2"] @ exists_fv) range in
+        let constraints = interval ctx (intnames @ exists_fv) range in
         let _, m = S.check ctx (Boolean.mk_and ctx [constraints; neg_vc_with_ax axiom]) in
         let m = match m with None -> raise @@ InterExn "bad range" | Some m -> m in
-        let _ = printf "model:%s\n" (Model.to_string m) in
-        let title = make_title fv_num in
         let int_to_se i = SE.Literal (SE.Int, SE.L.Int i) in
         let get_interpretation ctx m title dtname args =
           let args = List.map int_to_se args in
@@ -247,9 +260,8 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
         let all_args_vec dtname =
           List.combine all_args
             (List.map (fun args -> get_interpretation ctx m title dtname args) all_args) in
-        let dtnames = ["t1"; "t2";"l1";"l2";"l3";"ltmp0"] in
         let all_args_vec = List.flatten (List.map all_args_vec dtnames) in
-        let _ = printf "num:%i\n" (List.length all_args_vec) in
+        (* let _ = printf "num:%i\n" (List.length all_args_vec) in *)
         let booll_eq vec vec' = List.eq (fun x y -> x == y) vec vec' in
         let all_args_vec = List.remove_duplicates
             (fun (_, vec) (_, vec') -> booll_eq vec vec') all_args_vec in
@@ -284,9 +296,8 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
          * let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in *)
         let axiom = classify title ~pos:positives ~neg:negatives in
         let axiom = D.to_forallformula axiom ~dtname:"l" in
-        (* let (axiom_fv, axiom_body) = axiom in *)
-        (* let axiom = axiom_fv, Epr.simplify_ite axiom_body in
-         * let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
+        let axiom = Epr.forallformula_simplify_ite axiom in
+        (* let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
          * let _ = printf "axiom:%s\n" (Expr.to_string (Epr.forallformula_to_z3 ctx axiom)) in *)
         main_loop positives negatives axiom
         (* raise @@ InterExn "zz" *)

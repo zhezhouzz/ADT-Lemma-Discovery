@@ -79,18 +79,6 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
     | ">", [a; b] -> Some (mk_gt ctx a b)
     | "<", [a; b] -> Some (mk_lt ctx a b)
     | _, _ -> None
-
-  let is_dt = function
-    | Int -> false
-    | Bool -> false
-    | IntList -> true
-    | IntTree -> true
-
-  let get_tp = function
-    | Literal (tp, _) -> tp
-    | Var (tp, _) -> tp
-    | Op (tp, _, _) -> tp
-
   let var_to_z3 ctx tp name =
     match tp with
     | Int -> Integer.mk_const_s ctx name

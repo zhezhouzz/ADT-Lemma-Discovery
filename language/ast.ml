@@ -16,6 +16,7 @@ module type Ast = sig
   val skolemize_conj: t -> string list * string list * t
   val skolemize: t -> string list * t
   val elem_not_conj: t -> t
+  val extract_variables: t -> (int list * (E.SE.tp * string) list)
 end
 
 module Ast (A: AstTree.AstTree): Ast = struct
@@ -197,6 +198,23 @@ module Ast (A: AstTree.AstTree): Ast = struct
           | _ -> raise @@ InterExn "elem_not_conj::not a nnf"
         ) ps)
     | _ -> raise @@ InterExn "elem_not_conj::not a conj"
+  let extract_variables a =
+    let merge l =
+      let a, b = List.split l in List.flatten a, List.flatten b
+    in
+    let rec aux = function
+      | SpecApply (_, args) -> merge (List.map E.SE.var_to_tp_name args)
+      | ForAll _ -> raise @@ InterExn "extract_variables"
+      | Implies (p1, p2) -> merge (List.map aux [p1;p2])
+      | Ite (p1, p2, p3) -> merge (List.map aux [p1;p2;p3])
+      | Not p -> aux p
+      | And ps -> merge (List.map aux ps)
+      | Or ps -> merge (List.map aux ps)
+      | Iff (p1, p2) -> merge (List.map aux [p1;p2])
+    in
+    let eq (tp1, name1) (tp2, name2) = (E.SE.eq_tp tp1 tp2) && (String.equal name1 name2) in
+    let a, b = aux a in
+    List.remove_duplicates (fun x y -> x == y) a, List.remove_duplicates eq b
 end
 module Lit = Lit.Lit(LitTree.LitTree)
 module SimpleExpr = SimpleExpr.SimpleExpr(SimpleExprTree.SimpleExprTree(Lit))

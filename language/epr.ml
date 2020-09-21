@@ -12,6 +12,7 @@ module type Epr = sig
   val desugar: t -> t
   val to_nnf: t -> t
   val simplify_ite: t -> t
+  val forallformula_simplify_ite: forallformula -> forallformula
 end
 
 module Epr (E: EprTree.EprTree): Epr = struct
@@ -179,4 +180,5 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | True -> True
     in
     aux a
+  let forallformula_simplify_ite (fv, e) = fv, simplify_ite e
 end
