@@ -1,4 +1,4 @@
-module Ast = Language.SpecAst
+module Ast = Language.Ast.SpecAst
 module Value = Preds.Pred.Value
 module S = Solver;;
 module A = Axiom.AxiomSyn.Syn;;
@@ -20,7 +20,32 @@ module SE = E.SE
  *     then h1 :: (libmerge t1 l2)
  *     else h2 :: (libmerge l1 t2)
  * in *)
-open Language.Helper;;
+let list_var name = SE.Var (SE.IntList, name) in
+let int_var name = SE.Var (SE.Int, name) in
+let add_spec spectab name args fv body =
+  StrMap.add name (args, (fv,body)) spectab in
+let l1    = list_var "l1" in
+let l2    = list_var "l2" in
+let l3    = list_var "l3" in
+let ltmp0    = list_var "ltmp0" in
+let t1    = list_var "t1" in
+let t2    = list_var "t2" in
+let a    = int_var "a" in
+let b    = int_var "b" in
+let u    = int_var "u" in
+let v    = int_var "v" in
+let h1    = int_var "h1" in
+let h2    = int_var "h2" in
+let member l u = E.Atom (SE.Op (SE.Bool, "member", [l; u])) in
+let head l u = E.Atom (SE.Op (SE.Bool, "head", [l; u])) in
+let list_order l u v = E.Atom (SE.Op (SE.Bool, "list_order", [l; u; v])) in
+let cons h t l = SpecApply ("Cons", [h;t;l]) in
+let merge_pre l1 l2 l3 = SpecApply ("MergePre", [l1;l2;l3]) in
+let merge_post l1 l2 l3 = SpecApply ("MergePost", [l1;l2;l3]) in
+let merge l1 l2 l3 = Implies (merge_pre l1 l2 l3, merge_post l1 l2 l3) in
+let int_le a b = E.Atom (SE.Op (SE.Bool, "<=", [a;b])) in
+let int_eq a b = E.Atom (SE.Op (SE.Bool, "==", [a;b])) in
+let le a b = SpecApply ("Le", [a;b]) in
 let vc = Implies (
     And [cons h1 t1 l1; cons h2 t2 l2;
          Ite (le h1 h2,

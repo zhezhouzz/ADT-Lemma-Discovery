@@ -12,7 +12,7 @@
  *)
 
 module AbdMap = Map.Make(Abducible)
-module Ast = Language.Ast.SpecAst
+module Ast = Language.SpecAst
 module StrSet = Set.Make(String)
 
 open Utils

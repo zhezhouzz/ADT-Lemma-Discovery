@@ -3,7 +3,7 @@ open Utils;;
 open Preds.Pred.Value;;
 module P = Preds.Pred.Predicate;;
 module A = Axiom.AxiomSyn.Syn;;
-module Epr = Language.Ast.SpecAst.E;;
+module Epr = Language.SpecAst.E;;
 let list_order l u v = "order", l, [I 0; I 1; u; v]
 let tree_left t u v = "order", t, [I 0; I 1; u; v]
 let tree_right t u v = "order", t, [I 0; I 2; u; v]

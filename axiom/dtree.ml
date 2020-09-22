@@ -11,13 +11,13 @@ module type Dtree = sig
   val exec_raw: t -> feature list ->  bool list -> bool
   val layout_feature: feature -> string
   val layout: t -> string
-  val to_forallformula: t -> dtname:string -> Language.Ast.SpecAst.E.forallformula
+  val to_forallformula: t -> dtname:string -> Language.SpecAst.E.forallformula
   val feature_to_epr: feature -> dtname:string ->
-    fv:Language.Ast.SpecAst.E.SE.t list -> Language.Ast.SpecAst.E.t
+    fv:Language.SpecAst.E.SE.t list -> Language.SpecAst.E.t
 end
 
 module Dtree : Dtree = struct
-  module Epr = Language.Ast.SpecAst.E
+  module Epr = Language.SpecAst.E
   module P = Preds.Pred.Predicate
   open Utils
   open Printf

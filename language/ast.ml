@@ -216,7 +216,3 @@ module Ast (A: AstTree.AstTree): Ast = struct
     let a, b = aux a in
     List.remove_duplicates (fun x y -> x == y) a, List.remove_duplicates eq b
 end
-module Lit = Lit.Lit(LitTree.LitTree)
-module SimpleExpr = SimpleExpr.SimpleExpr(SimpleExprTree.SimpleExprTree(Lit))
-module Epr = Epr.Epr(EprTree.EprTree(SimpleExpr))
-module SpecAst = Ast(AstTree.AstTree(Epr))

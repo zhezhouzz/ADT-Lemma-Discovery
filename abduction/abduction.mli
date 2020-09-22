@@ -22,7 +22,7 @@
  * containing an error message.
  *)
 val abduce : Z3.context ->
-             Language.Ast.SpecAst.spec Utils.StrMap.t ->
-             Language.Ast.SpecAst.t ->
-             Language.Ast.SpecAst.t ->
+             Language.SpecAst.spec Utils.StrMap.t ->
+             Language.SpecAst.t ->
+             Language.SpecAst.t ->
              (Z3.Expr.expr Utils.StrMap.t, string) result

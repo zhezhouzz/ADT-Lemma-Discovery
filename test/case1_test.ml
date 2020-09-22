@@ -1,4 +1,4 @@
-module Ast = Language.Ast.SpecAst
+module Ast = Language.SpecAst
 module Value = Preds.Pred.Value
 
 open Ast
