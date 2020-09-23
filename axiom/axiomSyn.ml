@@ -79,9 +79,9 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     in
     let trs = QCheck.Gen.generate ~n:10 tree_gen in
     let trs = List.remove_duplicates (Tree.eq (fun x y -> x == y)) trs in
-    let _ = List.iter (fun tr ->
-        printf "tr:%s\n" (Tree.layout string_of_int tr)
-      ) trs in
+    (* let _ = List.iter (fun tr ->
+     *     printf "tr:%s\n" (Tree.layout string_of_int tr)
+     *   ) trs in *)
     List.map (fun l -> V.T l) trs
 
   let randomgen (fv: int list) (tp: Epr.SE.tp) =
