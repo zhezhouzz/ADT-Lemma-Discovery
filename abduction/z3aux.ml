@@ -61,3 +61,6 @@ let quanti_head ctx forallvars existsvars body =
          p
          (Some 1)
          [] [] None None)
+
+let make_uninterpreted_sort ctx name =
+  Sort.mk_uninterpreted ctx (Symbol.mk_string ctx name)

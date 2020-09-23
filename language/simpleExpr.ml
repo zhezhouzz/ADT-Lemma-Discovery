@@ -93,7 +93,8 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
     match tp with
     | Int -> Integer.mk_const_s ctx name
     | Bool -> Boolean.mk_const_s ctx name
-    | IntList | IntTree -> Integer.mk_const_s ctx name
+    | IntList -> encode_ds_var ctx "list" name
+    | IntTree -> encode_ds_var ctx "tree" name
 
   let bvar_to_z3 ctx = function
     | Var (tp, name) -> var_to_z3 ctx tp name
@@ -121,6 +122,10 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
         match non_dt_op_to_z3 ctx op eargs with
         | Some e -> e
         | None ->
+           let sorts = List.map Expr.get_sort eargs in
+           let func = FuncDecl.mk_func_decl ctx (Symbol.mk_string ctx op) sorts (Boolean.mk_sort ctx) in
+           Z3.FuncDecl.apply func eargs
+(*
           (match List.find_opt
                    (fun info -> String.equal info.P.name op) P.preds_info with
           | Some _ ->
@@ -130,6 +135,7 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
              | [] -> raise @@ InterExn "never happend"
              | dt :: args -> FuncDecl.apply (StrMap.find pred ptable) (dt :: (args' @ args)))
           | None -> raise @@ InterExn (sprintf "no such op(%s)" op))
+*)
     in
     aux b
 
