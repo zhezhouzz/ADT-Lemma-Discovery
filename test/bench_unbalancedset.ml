@@ -1,94 +1,98 @@
-module Ast = Language.Ast.SpecAst
+module Ast = Language.SpecAst
 module Value = Preds.Pred.Value
 module S = Solver;;
 module A = Axiom.AxiomSyn.Syn;;
 
-open Ast
 open Utils
 open Z3
 open Printf
+open Language.Helper;;
+open Ast
 module SE = E.SE
 ;;
-(* Some simple literals to aid in test construction. *)
-(* let libcode_cons a l = a :: l in
- * let rec libmerge l1 l2 =
- *   match l1, l2 with
- *   | [], l2 -> l2
- *   | l1, [] -> l1
- *   | h1 :: t1, h2 :: t2 ->
- *     if h1 <= h2
- *     then h1 :: (libmerge t1 l2)
- *     else h2 :: (libmerge l1 t2)
- * in *)
-let list_var name = SE.Var (SE.IntList, name) in
-let int_var name = SE.Var (SE.Int, name) in
-let add_spec spectab name args fv body =
-  StrMap.add name (args, (fv,body)) spectab in
-let l1    = list_var "l1" in
-let l2    = list_var "l2" in
-let l3    = list_var "l3" in
-let ltmp0    = list_var "ltmp0" in
-let t1    = list_var "t1" in
-let t2    = list_var "t2" in
-let a    = int_var "a" in
-let b    = int_var "b" in
-let u    = int_var "u" in
-let v    = int_var "v" in
-let h1    = int_var "h1" in
-let h2    = int_var "h2" in
-let member l u = E.Atom (SE.Op (SE.Bool, "member", [l; u])) in
-let head l u = E.Atom (SE.Op (SE.Bool, "head", [l; u])) in
-let list_order l u v = E.Atom (SE.Op (SE.Bool, "list_order", [l; u; v])) in
-let cons h t l = SpecApply ("Cons", [h;t;l]) in
-let merge_pre l1 l2 l3 = SpecApply ("MergePre", [l1;l2;l3]) in
-let merge_post l1 l2 l3 = SpecApply ("MergePost", [l1;l2;l3]) in
-let merge l1 l2 l3 = Implies (merge_pre l1 l2 l3, merge_post l1 l2 l3) in
-let int_le a b = E.Atom (SE.Op (SE.Bool, "<=", [a;b])) in
-let int_eq a b = E.Atom (SE.Op (SE.Bool, "==", [a;b])) in
-let le a b = SpecApply ("Le", [a;b]) in
+(* let rec insert x = function
+ *   | E -> T (E, x, E)
+ *   | T (a, y, b) as s ->
+ *     if Element.lt x y then T (insert x a, y, b)
+ *     else if Element.lt y x then T (a, y, insert x b)
+ *     else s *)
+let t l e r result = SpecApply ("T", [l;e;r;result]) in
+let insert_pre a t1 t2 = SpecApply ("InsertPre", [a;t1;t2]) in
+let insert_post a t1 t2 = SpecApply ("InsertPost", [a;t1;t2]) in
+let insert a t1 t2 = Implies (insert_pre a t1 t2, insert_post a t1 t2) in
+let lt a b = SpecApply ("Lt", [a;b]) in
+(* let vc = Implies (
+ *     And [t tree1 x tree2 tree3;
+ *          Ite (lt x y,
+ *               And [insert x tree1 tree4; t tree4 y tree2 tree5],
+ *               Ite (lt y x,
+ *                    And [insert x tree2 tree4; t tree1 y tree4 tree5],
+ *                    insert x tree3 tree5
+ *                    (\* t tree1 x tree2 tree5 *\)
+ *                   ))],
+ *     insert x tree3 tree5
+ *   ) in *)
 let vc = Implies (
-    And [cons h1 t1 l1; cons h2 t2 l2;
-         Ite (le h1 h2,
-              And [merge t1 l2 ltmp0; cons h1 ltmp0 l3],
-              And [merge l1 t2 ltmp0; cons h2 ltmp0 l3])],
-    merge l1 l2 l3) in
+    And [t tree1 y tree2 tree3;lt x y;insert x tree1 tree4; t tree4 y tree2 tree5],
+    insert x tree3 tree5
+  ) in
 let spec_tab = StrMap.empty in
-let spec_tab = add_spec spec_tab "Le" ["a";"b"] [] (int_le a b) in
-let spec_tab = add_spec spec_tab "MergePre" ["l1";"l2";"l3"] ["u";"v"]
-    (E.And [
-        E.Implies (list_order l1 u v, int_le u v);
-        E.Implies (list_order l2 u v, int_le u v);
-      ]) in
-let spec_tab = add_spec spec_tab "MergePost" ["l1";"l2";"l3"] ["u";"v"]
-    (E.And [E.Implies (list_order l3 u v, int_le u v);
-            E.Implies (member l3 u, E.Or [member l1 u; member l2 u]);
-            (* E.Iff (head l3 u, E.Or [head l1 u; head l2 u]); *)
-           ])
+let spec_tab = add_spec spec_tab "Lt" ["a";"b"] [] (int_lt a b) in
+let spec_tab = add_spec spec_tab "InsertPre" ["x";"tree1";"tree2"] ["u"; "v"]
+    (E.Implies (tree_parent tree1 u v, int_ge u v))
 in
-let spec_tab = add_spec spec_tab "Cons" ["h1";"t1";"l1"] ["u"; "v"]
+let spec_tab = add_spec spec_tab "InsertPost" ["x";"tree1";"tree2"] ["u";"v"]
     (E.And [
-        (E.Implies (list_order l1 u v,
-                    E.Or [E.And [member t1 v; int_eq h1 u]; list_order t1 u v]));
-        (head l1 h1);
-        (E.Implies (list_order t1 u v, list_order l1 u v));
-        (E.Iff (member l1 u,
-                E.Or [member t1 u; int_eq h1 u]))
+        E.Implies (tree_parent tree2 u v, int_ge u v);
+        E.Implies (member tree2 u, E.Or [member tree1 u; int_eq u x]);
+      ])
+in
+let spec_tab = add_spec spec_tab "T" ["tree1";"x";"tree2";"tree3"] ["u"; "v"]
+    (E.And [
+        E.Implies (
+          tree_parent tree3 u v,
+          E.Or [
+            tree_parent tree1 u v;
+            tree_parent tree2 u v;
+            E.And [int_eq u x; E.Or [member tree1 v; member tree2 v]]
+          ]
+        );
+        E.Implies (
+          E.Or [
+            tree_parent tree1 u v;
+            tree_parent tree2 u v;
+          ],
+          tree_parent tree3 u v
+          (* E.And [int_eq u x; E.Or [member tree1 v; member tree2 v]] *)
+        );
+        E.Iff (member tree3 u,
+                   E.Or [member tree1 u; member tree2 u; int_eq u x]);
+        (* E.Implies (
+         *   E.Or [member tree1 u; member tree2 u], member tree3 u); *)
+        head tree3 x
       ]) in
-let axiom = (["l1"; "u"; "v"; "w"],
+let axiom = (["tree1"; "u"; "v"],
              E.And [
-               E.Implies (E.And [head l1 u; member l1 v; E.Not (int_eq u v)],
-                          list_order l1 u v);
+               E.Implies(
+                 E.And [head tree1 u; Not (int_eq u v); member tree1 v],
+                 tree_parent tree1 u v);
+               (* E.Implies(head tree1 u, member tree1 u); *)
              ]
             ) in
+let _ = printf "vc:%s\n" (layout vc) in
 let ctx =
   Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
 let valid, _ = S.check ctx (to_z3 ctx (Not vc) spec_tab) in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
-let valid, _ = S.check ctx
+let valid, m = S.check ctx
     (Boolean.mk_and ctx [to_z3 ctx (Not vc) spec_tab;
                          E.forallformula_to_z3 ctx axiom
                         ]) in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
-let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab in
+let _ = match m with
+  | None -> printf "none.\n"
+  | Some m -> printf "model:\n%s\n" (Model.to_string m) in
+let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
+    ~pred_names:["member";"tree_left";"tree_right";"==";"head"] ~dttp:E.SE.IntTree in
 let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in
 ();;

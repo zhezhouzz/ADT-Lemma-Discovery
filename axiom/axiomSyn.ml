@@ -6,7 +6,7 @@ module type AxiomSyn = sig
   type sample = {dt: value; args: value list; vec: vec}
   type title = D.feature list
   val layout_title: title -> string
-  val make_title: int -> title
+  val make_title: string list -> int -> title
   val make_sample: title -> value -> value list -> sample
   val cex_to_sample: value list -> vec -> sample
   val layout_sample: sample -> string
@@ -14,7 +14,7 @@ module type AxiomSyn = sig
   val randomgen: int list -> value list
   val sample_constraint: Z3.context ->
     Ast.E.SE.t list -> (string * value) list -> (int * int) -> Z3.Expr.expr
-  val axiom_infer: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> Ast.E.forallformula
+  val axiom_infer: ctx:Z3.context -> vc:Ast.t -> spectable:Ast.spec Utils.StrMap.t -> pred_names: string list -> dttp:Ast.E.SE.tp -> Ast.E.forallformula
 end
 
 module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
@@ -30,9 +30,9 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   type sample = {dt: V.t; args: V.t list; vec: vec}
   type title = D.feature list
 
-  let make_title fvs_num =
+  let make_title names fvs_num =
     let aux info =
-      let _ = printf "%s(arglen = %i)\n" info.P.name info.P.num_int in
+      (* let _ = printf "%s(arglen = %i)\n" info.P.name info.P.num_int in *)
       let fvs_c = List.combination fvs_num info.P.num_int in
       let fvs_c =
         if info.P.permu then
@@ -41,21 +41,56 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
       in
       List.map (fun fv_c -> (info.P.name, fv_c)) fvs_c
     in
-    List.fold_left (fun r info -> r @ (aux info)) [] P.preds_info
+    let info = List.filter_map (fun info ->
+        match List.find_opt (fun name -> String.equal name info.P.name) names with
+        | None -> None
+        | Some _ -> Some info
+      ) P.preds_info in
+    List.fold_left (fun r info -> r @ (aux info)) [] info
 
   let layout_title (title: title) =
     List.fold_left (fun r pred -> sprintf "%s [%s]" r (D.layout_feature pred)) "" title
 
-  let randomgen (fv: int list) =
-    let additional =
-      match IntList.max_opt fv with
-      | None -> raise @@ InterExn "randomgen"
-      | Some m -> m + 1
-    in
+  let additional fv =
+    match IntList.max_opt fv with
+    | None -> raise @@ InterExn "additional"
+    | Some m -> m + 1
+
+  let randomgen_list (fv: int list) =
     List.map (fun l -> V.L l) @@
     List.remove_duplicates IntList.eq @@
-    List.choose_eq_all (fun a b -> a == b) (additional :: (fv @ fv))
-  (* List.combination_l_all (additional :: (fv @ fv)) *)
+    List.choose_eq_all (fun a b -> a == b) ((additional fv):: (fv @ fv))
+
+  let randomgen_tree (fv: int list) =
+    let ad = additional fv in
+    let values = (ad :: fv) @ fv in
+    let _ = printf "fv:%s\n" (IntList.to_string values) in
+    let node a l r = Tree.Node (a, l, r) in
+    let tree_gen =
+      QCheck.Gen.((sized_size (int_bound 10)) @@ fix
+                    (fun self n -> match n with
+                       | 0 -> oneofl [Tree.Leaf]
+                       | n ->
+                         frequency
+                           [1, oneofl [Tree.Leaf];
+                            3, QCheck.Gen.map3 node (oneofl values)
+                              (self (n/2)) (self (n/2))]
+                    ))
+    in
+    let trs = QCheck.Gen.generate ~n:10 tree_gen in
+    let trs = List.remove_duplicates (Tree.eq (fun x y -> x == y)) trs in
+    let _ = List.iter (fun tr ->
+        printf "tr:%s\n" (Tree.layout string_of_int tr)
+      ) trs in
+    List.map (fun l -> V.T l) trs
+
+  let randomgen (fv: int list) (tp: Epr.SE.tp) =
+    let module SE = Epr.SE in
+    match tp with
+    | SE.IntList -> randomgen_list fv
+    | SE.IntTree -> randomgen_tree fv
+    | _ -> raise @@ InterExn "randomgen: not a dt"
+
 
   let make_sample (title:title) (dt: V.t) (args: V.t list) =
     let vec = List.map (fun feature -> D.exec_feature feature dt args) title in
@@ -213,8 +248,8 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   (* prevent loop forever *)
   let max_main_loop_times = 4
 
-  let axiom_infer ~ctx ~vc ~spectable =
-    (* TODO: handle interal integers... *)
+  let axiom_infer ~ctx ~vc ~spectable ~pred_names ~dttp =
+    (* TODO: handle literal integers... *)
     let _, vars = Ast.extract_variables vc in
     let dtnames = List.filter_map (fun (tp, name) ->
         if SE.is_dt tp then Some name else None) vars in
@@ -231,7 +266,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
     let counter = ref max_main_loop_times in
     (* TODO: increase number of fv automatically... *)
     let fv_num = 2 in
-    let title = make_title fv_num in
+    let title = make_title pred_names fv_num in
     let neg_vc_with_ax axiom =
       Boolean.mk_and ctx [
         additional_axiom ctx;
@@ -269,7 +304,7 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
             (fun (args, vec) -> printf "%s:%s\n"
                 (IntList.to_string args) (boollist_to_string vec)) all_args_vec in
         let mk_positives positives args =
-          let dts = randomgen args in
+          let dts = randomgen args dttp in
           let samples = List.map
               (fun dt -> make_sample title dt (List.map (fun i -> V.I i) args)) dts in
           let positives = positives @ samples in
@@ -281,13 +316,18 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
           | Some _ -> positives, negatives
           | None ->
             let samples = mk_positives positives args in
+            let aux negs =
+              List.filter_map (fun n ->
+                  match List.find_opt (fun p -> booll_eq p.vec n.vec) samples with
+                  | Some _ -> None
+                  | None -> Some n
+                ) negs in
+            let negatives =
+              (cex_to_sample (List.map (fun i -> V.I i) args) vec) :: negatives in
             let positives =
               List.remove_duplicates (fun p p' -> booll_eq p.vec p'.vec) (samples @ positives)
             in
-            match List.find_opt eq_that_vec samples with
-            | Some _ -> positives, negatives
-            | None ->
-              positives, (cex_to_sample (List.map (fun i -> V.I i) args) vec) :: negatives
+            positives, aux negatives
         in
         let positives, negatives =
           List.fold_left update (positives, negatives) all_args_vec in
@@ -295,10 +335,10 @@ module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
          * let _ = List.iter (fun pos -> printf "pos:%s\n" (layout_sample pos)) positives in
          * let _ = List.iter (fun neg -> printf "neg:%s\n" (layout_sample neg)) negatives in *)
         let axiom = classify title ~pos:positives ~neg:negatives in
-        let axiom = D.to_forallformula axiom ~dtname:"l" in
+        let axiom = D.to_forallformula axiom ~dtname:"dt" in
         let axiom = Epr.forallformula_simplify_ite axiom in
-        (* let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
-         * let _ = printf "axiom:%s\n" (Expr.to_string (Epr.forallformula_to_z3 ctx axiom)) in *)
+        let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
+        let _ = printf "axiom:%s\n" (Expr.to_string (Epr.forallformula_to_z3 ctx axiom)) in
         main_loop positives negatives axiom
         (* raise @@ InterExn "zz" *)
     in

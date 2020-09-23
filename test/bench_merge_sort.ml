@@ -21,6 +21,11 @@ module SE = E.SE
  *     else h2 :: (libmerge l1 t2)
  * in *)
 open Language.Helper;;
+let cons h t l = SpecApply ("Cons", [h;t;l]) in
+let merge_pre l1 l2 l3 = SpecApply ("MergePre", [l1;l2;l3]) in
+let merge_post l1 l2 l3 = SpecApply ("MergePost", [l1;l2;l3]) in
+let le a b = SpecApply ("Le", [a;b]) in
+let merge l1 l2 l3 = Implies (merge_pre l1 l2 l3, merge_post l1 l2 l3) in
 let vc = Implies (
     And [cons h1 t1 l1; cons h2 t2 l2;
          Ite (le h1 h2,
@@ -64,6 +69,7 @@ let valid, _ = S.check ctx
                          E.forallformula_to_z3 ctx axiom
                         ]) in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
-let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab in
+let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
+    ~pred_names:["member";"list_order";"==";"head"] ~dttp:E.SE.IntList in
 let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in
 ();;

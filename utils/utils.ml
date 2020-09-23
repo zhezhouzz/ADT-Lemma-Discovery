@@ -213,7 +213,14 @@ module Tree = struct
             aux (aux before l) r
     in
     aux false t
-  let layout _ _ = "tree"
+  let layout f tr =
+    let rec aux = function
+      | Leaf -> "."
+      | Node (a, Leaf, Leaf) -> (f a)
+      | Node (a, l, r) ->
+        Printf.sprintf "{%s, %s, %s}" (aux l) (f a) (aux r)
+    in
+    aux tr
 
   let left_child eq t u v =
     let rec aux before t =

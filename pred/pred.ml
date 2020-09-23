@@ -21,7 +21,10 @@ module Pred (V: Value.Value) : Pred with type V.t = V.t = struct
     {name="member"; num_dt=1; num_int=1; permu=false};
     {name="head"; num_dt=1; num_int=1; permu=false};
     {name="=="; num_dt=0; num_int=2; permu=false};
-    {name="list_order"; num_dt=1; num_int=2; permu=true};]
+    {name="list_order"; num_dt=1; num_int=2; permu=true};
+    {name="tree_left"; num_dt=1; num_int=2; permu=true};
+    {name="tree_right"; num_dt=1; num_int=2; permu=true};
+    {name="tree_parallel"; num_dt=1; num_int=2; permu=true};]
   (* desugared *)
   let raw_preds_info = [
     {name="member"; num_dt=1; num_int=1; permu=false};
