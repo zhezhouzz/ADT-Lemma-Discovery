@@ -13,6 +13,7 @@ module type EprTree = sig
   type forallformula = free_variable list * t
   val layout: t -> string
   val layout_forallformula: forallformula -> string
+  val pretty_layout_forallformula: forallformula -> string
   val subst: t -> string list -> SE.t list -> t
   val subst_forallformula: forallformula -> string list -> SE.t list -> forallformula
   val eq: t -> t -> bool
@@ -25,6 +26,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
   with type SE.t = SE.t = struct
   module SE = SE
   open Utils
+  open Printf
 
   type t =
     | True
@@ -40,18 +42,63 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
 
   let rec layout = function
     | True -> "true"
-    | Atom bexpr -> Printf.sprintf "(%s)" (SE.layout bexpr)
-    | Implies (p1, p2) -> Printf.sprintf "(%s => %s)" (layout p1) (layout p2)
+    | Atom bexpr -> sprintf "(%s)" (SE.layout bexpr)
+    | Implies (p1, p2) -> sprintf "(%s => %s)" (layout p1) (layout p2)
     | And ps -> List.inner_layout (List.map layout ps) "/\\" "true"
     | Or ps -> List.inner_layout (List.map layout ps) "\\/" "true"
     | Not p -> "~"^(layout p)
-    | Iff (p1, p2) -> Printf.sprintf "(%s <=> %s)" (layout p1) (layout p2)
+    | Iff (p1, p2) -> sprintf "(%s <=> %s)" (layout p1) (layout p2)
     | Ite (p1, p2, p3) ->
-      Printf.sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
+      sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
+
+  let pretty_layout indent e =
+    let mk_indent indent = String.init indent (fun _ -> ' ') in
+    let rec aux indent = function
+      | True -> "true"
+      | Atom bexpr -> sprintf "%s%s" (mk_indent indent) (SE.layout bexpr)
+      | Implies (Atom e1, Atom e2) ->
+        sprintf "%s(%s => %s)"
+          (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2))
+      | Implies (p1, p2) ->
+        sprintf "%s(\n%s => \n%s\n%s)"
+          (mk_indent indent) (aux (indent + 1) p1) (aux (indent + 1) p2) (mk_indent indent)
+      | And [] -> raise @@ InterExn "epr does not involve void conj"
+      | And [p] -> aux indent p
+      | And [Atom e1; Atom e2] -> sprintf "%s(%s /\\ %s)"
+                                    (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2))
+      | And [Atom e1; Atom e2; Atom e3] ->
+        sprintf "%s(%s /\\ %s /\\ %s)"
+          (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2)) (aux 0 (Atom e3))
+      | And ps -> sprintf "%s(\n%s\n%s)" (mk_indent indent)
+                    (List.inner_layout (List.map (aux (indent + 1)) ps) " /\\\n" "true")
+                    (mk_indent indent)
+      | Or [] -> raise @@ InterExn "epr does not involve void disconj"
+      | Or [p] -> aux indent p
+      | Or [Atom e1; Atom e2] -> sprintf "%s(%s \\/ %s)"
+                                   (mk_indent indent)(aux 0 (Atom e1)) (aux 0 (Atom e2))
+      | Or [Atom e1; Atom e2; Atom e3] ->
+        sprintf "%s(%s \\/ %s \\/ %s)"
+          (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2)) (aux 0 (Atom e3))
+      | Or ps -> sprintf "%s(\n%s\n%s)" (mk_indent indent)
+                   (List.inner_layout (List.map (aux (indent + 1)) ps) " \\/\n" "false")
+                   (mk_indent indent)
+      | Not p -> sprintf "%s~%s" (mk_indent indent) (aux 0 p)
+      | Iff (p1, p2) ->
+        sprintf "%s(%s <=> \n%s)"
+          (mk_indent indent) (aux 0 p1) (aux (indent + 1) p2)
+      | Ite (p1, p2, p3) ->
+        sprintf "%s(ite%s\n%s\n%s)"
+          (mk_indent indent) (aux 1 p1) (aux (indent + 4) p2) (aux (indent + 4) p3)
+    in
+    aux indent e
+
+  let pretty_layout_forallformula (forallvars, body) =
+    if (List.length forallvars) == 0 then layout body else
+      sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (pretty_layout 0 body)
 
   let layout_forallformula (forallvars, body) =
     if (List.length forallvars) == 0 then layout body else
-      Printf.sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (layout body)
+      sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (layout body)
 
   let subst body args argsvalue =
     let rec aux = function

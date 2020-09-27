@@ -18,8 +18,8 @@ Notation "A : B |> C" := (tree_parent A B C) (at level 80, right associativity).
 
 Inductive insert: nat -> nat -> nat -> Prop :=
 | inst: forall x tree1 tree2,
-    ((forall u v, tree1: u |> v -> u > v) ->
-    ((forall u v, tree2: u |> v -> u > v) /\
+    ((forall u v, tree1: u |> v -> u >= v) ->
+    ((forall u v, tree2: u |> v -> u >= v) /\
                  (forall u, tree2 ---> u <-> (tree1 ---> u \/ u = x)))) ->
     insert x tree1 tree2.
 
@@ -53,13 +53,13 @@ Proof.
   intros. repeat desconj.
   invclear H1. apply inst. intros.
   invclear H.
-  assert (forall u v : nat, tree1 : u |> v -> u > v). {
+  assert (forall u v : nat, tree1 : u |> v -> u >= v). {
     intros. apply H1. rewrite <- (H u v). auto.
   }
-  assert (forall u v : nat, tree2 : u |> v -> u > v). {
+  assert (forall u v : nat, tree2 : u |> v -> u >= v). {
     intros. apply H1. rewrite <- (H u v). auto.
   }
-  assert (forall u v : nat, tree4 : u |> v -> u > v). {
+  assert (forall u v : nat, tree4 : u |> v -> u >= v). {
     apply H3 in H6. repeat desconj.
     auto.
   }
