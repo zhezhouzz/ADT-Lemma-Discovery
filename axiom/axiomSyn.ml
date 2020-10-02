@@ -2,7 +2,7 @@ module type AxiomSyn = sig
   module D: Dtree.Dtree
   module Ast = Language.SpecAst
   type vec = bool list
-  type value = Preds.Pred.Value.t
+  type value = Pred.Value.t
   type sample = {dt: value; args: value list; vec: vec}
   type title = D.feature list
   val layout_title: title -> string
@@ -20,8 +20,8 @@ end
 
 module AxiomSyn (D: Dtree.Dtree) (F: Ml.FastDT.FastDT) = struct
   module D = D
-  module V = Preds.Pred.Value
-  module P = Preds.Pred.Predicate
+  module V = Pred.Value
+  module P = Pred.Pred
   module Ast = Language.SpecAst
   module Epr = Ast.E
   module S = Solver

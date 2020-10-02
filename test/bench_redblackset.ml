@@ -1,5 +1,5 @@
 module Ast = Language.SpecAst
-module Value = Preds.Pred.Value
+module Value = Pred.Value
 module S = Solver;;
 module A = Axiom.AxiomSyn.Syn;;
 module T = Tp.Tp

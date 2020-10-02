@@ -12,7 +12,7 @@ module type SimpleExpr = sig
 end
 
 module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
-  module P = Preds.Pred.Predicate
+  module P = Pred.Pred
   module T = Tp.Tp
   include B
   open Utils
@@ -34,11 +34,7 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
   let exec expr env =
     let rec aux = function
       | Literal (_, lit) -> L.exec lit
-      | Var (_, name) ->
-        (match StrMap.find_opt name env with
-         | None -> raise @@ InterExn "SimpleExpr::exec"
-         | Some v -> v
-        )
+      | Var (_, name) -> StrMap.find "SimpleExpr::exec" env name
       | Op (_, op, args) ->
         let args = List.map aux args in
         (match non_dt_op op args with
@@ -119,7 +115,8 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
             let args' = List.map (fun x -> int_to_z3 ctx x) args' in
             (match eargs with
              | [] -> raise @@ InterExn "never happend"
-             | dt :: args -> FuncDecl.apply (StrMap.find pred ptable) (dt :: (args' @ args)))
+             | dt :: args ->
+               FuncDecl.apply (StrMap.find "SE:to_z3" ptable pred) (dt :: (args' @ args)))
           | None -> raise @@ InterExn (sprintf "no such op(%s)" op))
     in
     aux b

@@ -1,7 +1,7 @@
 open Printf;;
 open Utils;;
-open Preds.Pred.Value;;
-module P = Preds.Pred.Predicate;;
+open Pred.Value;;
+module P = Pred.Pred;;
 module A = Axiom.AxiomSyn.Syn;;
 module Epr = Language.SpecAst.E;;
 let list_order l u v = "order", l, [I 0; I 1; u; v]

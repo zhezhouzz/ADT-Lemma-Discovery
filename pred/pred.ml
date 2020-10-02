@@ -1,4 +1,4 @@
-module type Pred = sig
+module type Predicate = sig
   module V: Value.Value
   type t = string
   val layout : t -> string
@@ -14,7 +14,7 @@ module type Pred = sig
   val tp_to_preds: Tp.Tp.t -> pred_info list
 end
 
-module Pred (V: Value.Value) : Pred with type V.t = V.t = struct
+module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
   module V = V
   module T = Tp.Tp
   open Utils
@@ -130,5 +130,5 @@ module Pred (V: Value.Value) : Pred with type V.t = V.t = struct
     | _ -> raise @@ InterExn "fixed_dt_truth_tab"
 end
 
-module Predicate = Pred(Value.Value);;
-module Value = Predicate.V;;
+module Pred = Predicate(Value.Value);;
+module Value = Pred.V;;

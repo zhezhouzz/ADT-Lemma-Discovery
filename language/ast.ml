@@ -30,7 +30,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
   let spec_exec (args, forallf) args' env =
     let argsmap = List.combine args args' in
     let new_env = List.fold_left (fun m (name, name') ->
-        StrMap.add name (StrMap.find name' env) m
+        StrMap.add name (StrMap.find "spec_exex" env name') m
       ) StrMap.empty argsmap in
     E.forallformula_exec forallf new_env
   let exec ast stable env =
@@ -44,7 +44,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Iff (e1, e2) -> (aux e1) == (aux e2)
       | SpecApply (spec_name, args) ->
         let argsvalue = List.map (fun b -> E.SE.exec b env) args in
-        let args', body = StrMap.find spec_name stable in
+        let args', body = StrMap.find "ast:exec" stable spec_name in
         let env = List.fold_left (fun env (k, v) -> StrMap.add k v env) env
             (List.combine args' argsvalue) in
         E.forallformula_exec body env
@@ -72,7 +72,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Or ps -> Or (List.map aux ps)
       | Iff (p1, p2) -> Iff (aux p1, aux p2)
       | SpecApply (spec_name, argsvalue) ->
-        let args, body = StrMap.find spec_name spec_tab in
+        let args, body = StrMap.find "ast::application" spec_tab spec_name in
         ForAll (E.subst_forallformula body args argsvalue)
     in
     aux a
@@ -87,14 +87,14 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Or ps -> Boolean.mk_or ctx (List.map aux ps)
       | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2)
       | SpecApply (spec_name, argsvalue) ->
-        let args, body = StrMap.find spec_name spec_tab in
+        let args, body = StrMap.find "ast::to_z3" spec_tab spec_name in
         E.forallformula_to_z3 ctx @@ E.subst_forallformula body args argsvalue
     in
     aux a
   let neg_to_z3 ctx a spec_tab =
     match a with
     | Implies (p, SpecApply (name, argsvalue)) ->
-      let args, body = StrMap.find name spec_tab in
+      let args, body = StrMap.find "neg_to_z3" spec_tab name in
       let body = E.subst_forallformula body args argsvalue in
       let fv, body = E.neg_forallf body in
       fv, to_z3 ctx (And [p;ForAll body]) spec_tab

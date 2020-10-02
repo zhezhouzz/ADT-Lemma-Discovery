@@ -19,7 +19,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
   include E
   open Utils
   type value = SE.value
-  module V = Preds.Pred.Value
+  module V = Pred.Value
   let fv _ = []
   let type_check bexpr = (bexpr, true)
   let exec e env =
@@ -55,7 +55,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
     in
     let dts, names = aux e in
     let names = List.remove_duplicates String.equal names in
-    dts @ (List.map (fun n -> StrMap.find n env) names)
+    dts @ (List.map (StrMap.find "extract_dt" env) names)
 
   let forallu e env =
     let dts = extract_dt e env in

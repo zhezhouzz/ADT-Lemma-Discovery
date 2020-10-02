@@ -1,7 +1,7 @@
 module type Dtree = sig
-  type value = Preds.Pred.Value.t
-  type feature = Preds.Pred.Predicate.t * int list
-  type feature2 = Preds.Pred.Predicate.t * int option * int list
+  type value = Pred.Value.t
+  type feature = Pred.Pred.t * int list
+  type feature2 = Pred.Pred.t * int option * int list
   type 'a t =
     | T
     | F
@@ -22,7 +22,7 @@ end
 
 module Dtree : Dtree = struct
   module Epr = Language.SpecAst.E
-  module P = Preds.Pred.Predicate
+  module P = Pred.Pred
   module T = Tp.Tp
   open Utils
   open Printf
@@ -98,7 +98,8 @@ module Dtree : Dtree = struct
       sprintf "[%s](%s,%s)" (layout_feature feature) (layout l) (layout r)
 
   let to_epr_ pred dtname args =
-    let info = List.find (fun info -> String.equal info.P.name pred) P.preds_info in
+    let info = List.find "ftree:to_epr_"
+        (fun info -> String.equal info.P.name pred) P.preds_info in
     if info.num_dt == 0 then
       Epr.Atom (Epr.SE.Op (T.Bool, pred, args))
     else

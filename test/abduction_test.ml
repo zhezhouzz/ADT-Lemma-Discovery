@@ -1,5 +1,5 @@
 module Ast = Language.SpecAst
-module Value = Preds.Pred.Value
+module Value = Pred.Value
 
 open Ast
 open OUnit2

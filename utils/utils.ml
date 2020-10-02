@@ -1,8 +1,18 @@
 exception TestFailedException of string
 exception InterExn of string
+exception UndefExn of string
 
-module StrMap = Map.Make(String);;
+(* module StrMap = Map.Make(String);; *)
 module IntMap = Map.Make(struct type t = int let compare = compare end);;
+
+module StrMap = struct
+  include Map.Make(String)
+  let find info m k =
+    match find_opt k m with
+    | None -> raise @@ InterExn info
+    | Some v -> v
+  let find_opt m k = find_opt k m
+end
 
 module Renaming = struct
   let universe_label = ref 0
@@ -20,6 +30,11 @@ module List = struct
       | (_, _) -> false
     in
     aux (l1, l2)
+
+  let find info f l =
+    match find_opt f l with
+    | None -> raise @@ InterExn info
+    | Some v -> v
 
   let order eq l u v =
     let rec aux = function
@@ -348,6 +363,11 @@ module IntList = struct
   let of_range (s, e) =
     let len = e - s + 1 in
     List.init len (fun i -> i + s)
+end
+
+module StrList = struct
+  let eq l1 l2 = List.eq String.equal l1 l2
+  let to_string l = List.to_string (fun x -> x) l
 end
 
 let list_list_foldl l0 l1 default0 default1 f0 f1 =

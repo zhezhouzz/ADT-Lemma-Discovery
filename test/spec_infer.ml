@@ -2,7 +2,7 @@ module Ast = Language.SpecAst;;
 open Ast;;
 open Printf;;
 open Utils;;
-module V = Preds.Pred.Value;;
+module V = Pred.Value;;
 module A = Axiom.AxiomSyn.Syn;;
 module T = Tp.Tp;;
 let module SE = E.SE in

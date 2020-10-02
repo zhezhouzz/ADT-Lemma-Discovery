@@ -1,5 +1,5 @@
 module Ast = Language.SpecAst;;
-module V = Preds.Pred.Value;;
+module V = Pred.Value;;
 open Ast;;
 open Printf;;
 open Utils;;
