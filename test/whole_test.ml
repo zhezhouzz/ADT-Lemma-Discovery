@@ -23,7 +23,7 @@ let module Sexpr = E.SE in
  * let intplus a b = Sexpr.Op (Sexpr.Int, "+", [a; b]) in
  * let inteqE a b = E.Atom (Sexpr.Op (Sexpr.Bool, "==", [a; b])) in
  * let geE a b = E.Atom (Sexpr.Op (Sexpr.Bool, ">=", [a; b])) in
- * let memberE l u = E.Atom (Sexpr.Op (Sexpr.Bool, "member", [l; u])) in
+ * let list_memberE l u = E.Atom (Sexpr.Op (Sexpr.Bool, "list_member", [l; u])) in
  * let listorderE l u v = E.Atom (Sexpr.Op (Sexpr.Bool, "list_order", [l; u; v])) in *)
 let vc = Implies (And [SpecApply ("Cons", [a; l0; l1]);
                        SpecApply ("Sort", [l1; l2]);
@@ -34,17 +34,17 @@ let specs = [
   "Post", (["a"; "l0";"l1"],
            (["u"; "v"],
             E.And [
-              E.Implies (member l0 u, member l1 u);
+              E.Implies (list_member l0 u, list_member l1 u);
               E.Implies (list_order l1 u v, int_ge u v);
               E.Implies (
                 E.And [int_eq u (int_plus a const1); int_eq v a], list_order l1 u v)]));
   (* The following specs are the result of abduction. *)
   "Cons", (["a";"l0";"l1"],
-           (["u"], E.Implies (E.Or [int_eq u a; member l0 u], member l1 u);)
+           (["u"], E.Implies (E.Or [int_eq u a; list_member l0 u], list_member l1 u);)
           );
   "Sort", (["l0";"l1"],
            (["u";"v"], E.And [
-               E.Implies (member l0 u, member l1 u);
+               E.Implies (list_member l0 u, list_member l1 u);
                E.Implies (list_order l1 u v, int_ge u v);
              ])
   )
@@ -62,7 +62,7 @@ let valid, _ = Solver.check ctx neg_vc in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
 let ax = ["l0";"u";"v"], (
     E.Implies (
-      E.And [E.Not (int_eq u v); member l0 u; member l0 v],
+      E.And [E.Not (int_eq u v); list_member l0 u; list_member l0 v],
               E.Or [list_order l0 u v; list_order l0 v u])
   ) in
 let axz3 = E.forallformula_to_z3 ctx ax in
@@ -71,6 +71,6 @@ let neg_vc_with_ax = Z3.Boolean.mk_and ctx [neg_vc; axz3] in
 let valid, _ = Solver.check ctx neg_vc_with_ax in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
 let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
-    ~pred_names:["member";"list_order";"=="] ~dttp:T.IntList in
+    ~pred_names:["list_member";"list_order";"=="] ~dttp:T.IntList in
 let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in
 ();;

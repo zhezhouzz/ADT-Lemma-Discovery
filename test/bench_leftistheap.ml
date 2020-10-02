@@ -54,41 +54,41 @@ let spec_tab = add_spec spec_tab "MergePre" ["tree1";"tree2";"tree3"] ["u";"v"]
       ]) in
 let spec_tab = add_spec spec_tab "MergePost" ["tree1";"tree2";"tree3"] ["u";"v"]
     (E.And [E.Implies (tree_parent tree3 u v, int_le u v);
-            E.Implies (member tree3 u, E.Or [member tree1 u; member tree2 u]);
-            (* E.Iff (head tree3 u, E.Or [head tree1 u; head tree2 u]); *)
+            E.Implies (tree_member tree3 u, E.Or [tree_member tree1 u; tree_member tree2 u]);
+            (* E.Iff (tree_head tree3 u, E.Or [tree_head tree1 u; tree_head tree2 u]); *)
            ])
 in
 let spec_tab = add_spec spec_tab "E" ["tree1"] ["u"]
-    (Not (member tree1 u)) in
+    (Not (tree_member tree1 u)) in
 let spec_tab = add_spec spec_tab "T" ["rank";"x";"tree1";"tree2";"tree3"] ["u"; "v"]
     (E.And [
         (E.Iff (tree_parent tree3 u v,
-                    E.Or [E.And [member tree1 v; int_eq x u];
-                          E.And [member tree2 v; int_eq x u];
+                    E.Or [E.And [tree_member tree1 v; int_eq x u];
+                          E.And [tree_member tree2 v; int_eq x u];
                           tree_parent tree1 u v;
                           tree_parent tree2 u v]));
-        (head tree3 x);
+        (tree_head tree3 x);
         (* (E.Implies (E.Or [tree_parent tree1 u v;
          *                   tree_parent tree2 u v;], tree_parent tree3 u v)); *)
-        (E.Iff (member tree3 u,
-                E.Or [member tree1 u; member tree2 u; int_eq x u]))
+        (E.Iff (tree_member tree3 u,
+                E.Or [tree_member tree1 u; tree_member tree2 u; int_eq x u]))
       ]) in
 let spec_tab = add_spec spec_tab "makeT" ["x";"tree1";"tree2";"tree3"] ["u"; "v"]
     (E.And [
         (E.Iff (tree_parent tree3 u v,
-                    E.Or [E.And [member tree1 v; head tree3 u];
-                          E.And [member tree2 v; head tree3 u];
+                    E.Or [E.And [tree_member tree1 v; tree_head tree3 u];
+                          E.And [tree_member tree2 v; tree_head tree3 u];
                           tree_parent tree1 u v;
                           tree_parent tree2 u v]));
-        E.Iff (head tree3 u, int_eq u x);
+        E.Iff (tree_head tree3 u, int_eq u x);
         (* (E.Implies (E.Or [tree_parent tree1 u v;
          *                   tree_parent tree2 u v;], tree_parent tree3 u v)); *)
-        (E.Iff (member tree3 u,
-                E.Or [member tree1 u; member tree2 u; int_eq x u]))
+        (E.Iff (tree_member tree3 u,
+                E.Or [tree_member tree1 u; tree_member tree2 u; int_eq x u]))
       ]) in
 let axiom = (["tree1"; "u"; "v"],
              E.And [
-               E.Implies (E.And [head tree1 u; member tree1 v; E.Not (int_eq u v)],
+               E.Implies (E.And [tree_head tree1 u; tree_member tree1 v; E.Not (int_eq u v)],
                           tree_parent tree1 u v);
              ]
             ) in
@@ -106,6 +106,6 @@ let _ = if valid then printf "valid\n" else printf "not valid\n" in
  *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
  * let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in *)
 (* let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
- *     ~pred_names:["member";"tree_left";"tree_right";"==";"head"] ~dttp:E.SE.IntTree in
+ *     ~pred_names:["tree_member";"tree_left";"tree_right";"==";"tree_head"] ~dttp:E.SE.IntTree in
  * let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in *)
 ();;

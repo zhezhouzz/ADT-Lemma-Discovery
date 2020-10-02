@@ -43,40 +43,40 @@ let spec_tab = add_spec spec_tab "ReversePost" ["l1";"l2";"l3"] ["u";"v"]
     (E.And [
         E.Implies (E.Or [list_order l1 u v;
                          list_order l2 v u;
-                         E.And [member l2 u; member l1 v]],
+                         E.And [list_member l2 u; list_member l1 v]],
                    list_order l3 u v);
-        E.Iff (member l3 u, E.Or [member l1 u; member l2 u]);
+        E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
 let spec_tab = add_spec spec_tab "Nil" ["l1"] ["u";"v"]
     (E.And [
-        (Not (member l1 u));
+        (Not (list_member l1 u));
         (Not (list_order l1 u v));
       ])
     in
 let spec_tab = add_spec spec_tab "Cons" ["h1";"t1";"l1"] ["u"; "v"]
     (E.And [
         (E.Iff (list_order l1 u v,
-                    E.Or [E.And [member t1 v; head l1 u]; list_order t1 u v]));
-        (E.Iff (member l1 u, E.Or [member t1 u; int_eq h1 u]));
-        head l1 h1;
+                    E.Or [E.And [list_member t1 v; list_head l1 u]; list_order t1 u v]));
+        (E.Iff (list_member l1 u, E.Or [list_member t1 u; int_eq h1 u]));
+        list_head l1 h1;
       ]) in
 let spec_tab = add_spec spec_tab "Lazy" ["l1"; "l2"] ["u";"v"]
     (E.And [
         (E.Iff (list_order l1 u v, list_order l2 u v));
-        (E.Iff (member l1 u, member l2 u));
+        (E.Iff (list_member l1 u, list_member l2 u));
       ]) in
 let spec_tab = add_spec spec_tab "Force" ["l1"; "l2"] ["u";"v"]
     (E.And [
         (E.Iff (list_order l1 u v, list_order l2 u v));
-        (E.Iff (member l1 u, member l2 u));
+        (E.Iff (list_member l1 u, list_member l2 u));
       ]) in
 let axiom = (["l1"; "u"; "v"],
              E.And [
-               E.Implies (head l1 u, member l1 u);
-               E.Implies (And[head l1 u; head l1 v], int_eq u v);
+               E.Implies (list_head l1 u, list_member l1 u);
+               E.Implies (And[list_head l1 u; list_head l1 v], int_eq u v);
                E.Implies (list_order l1 u v,
-                          E.And [member l1 u; member l1 v]);
+                          E.And [list_member l1 u; list_member l1 v]);
              ]
             ) in
 let _ = printf "vc:\n%s\n" (vc_layout vc) in
@@ -96,6 +96,6 @@ let _ = match m with
  *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
  * let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in *)
 (* let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
- *     ~pred_names:["member";"tree_left";"tree_right";"==";"head"] ~dttp:E.SE.IntTree in
+ *     ~pred_names:["list_member";"tree_left";"tree_right";"==";"list_head"] ~dttp:E.SE.IntTree in
  * let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in *)
 ();;

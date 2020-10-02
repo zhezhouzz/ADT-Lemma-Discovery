@@ -65,17 +65,17 @@ let spec_tab = add_spec spec_tab "BalancePre" ["r1";"tree1";"x";"tree2";"tree3"]
     (E.And [
         E.Implies (tree_any_order tree1 u v, Not (int_eq u v));
         E.Implies (tree_any_order tree2 u v, Not (int_eq u v));
-        E.Implies (E.Or[member tree1 u; member tree2 u], Not (int_eq u x));
+        E.Implies (E.Or[tree_member tree1 u; tree_member tree2 u], Not (int_eq u x));
       ])
 in
 let spec_tab = add_spec spec_tab "BalancePost" ["r1";"tree1";"x";"tree2";"tree3"] ["u";"v"]
     (E.And [
         E.Implies (tree_any_order tree3 u v, Not (int_eq u v));
-        E.Implies (member tree3 u, E.Or [member tree1 u; member tree2 u; int_eq u x]);
+        E.Implies (tree_member tree3 u, E.Or [tree_member tree1 u; tree_member tree2 u; int_eq u x]);
       ])
 in
 let spec_tab = add_spec spec_tab "E" ["tree1"] ["u"]
-    (Not (member tree1 u)) in
+    (Not (tree_member tree1 u)) in
 let spec_tab = add_spec spec_tab "T" ["r1";"tree1";"x";"tree2";"tree3"] ["u"; "v"]
     (E.And [
         E.Iff (
@@ -83,20 +83,20 @@ let spec_tab = add_spec spec_tab "T" ["r1";"tree1";"x";"tree2";"tree3"] ["u"; "v
           E.Or [
             tree_parent tree1 u v;
             tree_parent tree2 u v;
-            E.And [int_eq u x; E.Or [member tree1 v; member tree2 v]]
+            E.And [int_eq u x; E.Or [tree_member tree1 v; tree_member tree2 v]]
           ]
         );
-        E.Iff (treep tree3 u v, E.And [member tree1 u; member tree2 v]);
-        E.Iff (member tree3 u,
-                   E.Or [member tree1 u; member tree2 u; int_eq u x]);
-        head tree3 x
+        E.Iff (treep tree3 u v, E.And [tree_member tree1 u; tree_member tree2 v]);
+        E.Iff (tree_member tree3 u,
+                   E.Or [tree_member tree1 u; tree_member tree2 u; int_eq u x]);
+        tree_head tree3 x
       ]) in
 let axiom = (["tree1"; "u"; "v"],
              E.And [
                E.Implies(
-                 E.And [head tree1 u; member tree1 v],
+                 E.And [tree_head tree1 u; tree_member tree1 v],
                  tree_parent tree1 u v);
-               E.Implies(tree_parent tree1 u v, E.And [member tree1 u; member tree1 v]);
+               E.Implies(tree_parent tree1 u v, E.And [tree_member tree1 u; tree_member tree1 v]);
              ]
             ) in
 let _ = printf "vc:\n%s\n" (vc_layout vc) in
@@ -116,6 +116,6 @@ let _ = StrMap.iter (fun name spec ->
     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
 let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in
 (* let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
- *     ~pred_names:["member";"tree_left";"tree_right";"==";"head"] ~dttp:E.SE.IntTree in
+ *     ~pred_names:["tree_member";"tree_left";"tree_right";"==";"tree_head"] ~dttp:E.SE.IntTree in
  * let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in *)
 ();;

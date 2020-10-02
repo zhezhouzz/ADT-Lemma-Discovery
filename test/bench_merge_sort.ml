@@ -41,37 +41,37 @@ let spec_tab = add_spec spec_tab "MergePre" ["l1";"l2";"l3"] ["u";"v"]
       ]) in
 let spec_tab = add_spec spec_tab "MergePost" ["l1";"l2";"l3"] ["u";"v"]
     (E.And [E.Implies (list_order l3 u v, int_le u v);
-            E.Implies (member l3 u, E.Or [member l1 u; member l2 u]);
-            (* E.Iff (head l3 u, E.Or [head l1 u; head l2 u]); *)
+            E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
+            (* E.Iff (list_head l3 u, E.Or [list_head l1 u; list_head l2 u]); *)
            ])
 in
 let spec_tab = add_spec spec_tab "Cons" ["h1";"t1";"l1"] ["u"; "v"]
     (E.And [
         (E.Iff (list_order l1 u v,
-                    E.Or [E.And [member t1 v; int_eq h1 u]; list_order t1 u v]));
-        (E.Iff(head l1 u, int_eq u h1));
+                    E.Or [E.And [list_member t1 v; int_eq h1 u]; list_order t1 u v]));
+        (E.Iff(list_head l1 u, int_eq u h1));
         (E.Implies (list_order t1 u v, list_order l1 u v));
-        (E.Iff (member l1 u,
-                E.Or [head l1 u; list_order l1 v u]
-                  (* E.Or [member t1 u; int_eq h1 u] *)
+        (E.Iff (list_member l1 u,
+                E.Or [list_head l1 u; list_order l1 v u]
+                  (* E.Or [list_member t1 u; int_eq h1 u] *)
                ))
       ]) in
 (* (E.And [
  *     (E.Implies (list_order l1 u v,
- *                 E.Or [E.And [member t1 v; int_eq h1 u]; list_order t1 u v]));
- *     (head l1 h1);
+ *                 E.Or [E.And [list_member t1 v; int_eq h1 u]; list_order t1 u v]));
+ *     (list_head l1 h1);
  *     (E.Implies (list_order t1 u v, list_order l1 u v));
- *     (E.Iff (member l1 u,
- *             E.Or [member t1 u; int_eq h1 u]))
+ *     (E.Iff (list_member l1 u,
+ *             E.Or [list_member t1 u; int_eq h1 u]))
  *   ]) in *)
 let axiom = (["l1"; "u"; "v"; "w"],
              E.And [
-               E.Implies (E.And [head l1 u; member l1 v; E.Not (int_eq u v)],
+               E.Implies (E.And [list_head l1 u; list_member l1 v; E.Not (int_eq u v)],
                           list_order l1 u v);
-               (* E.Implies (head l1 u, member l1 u); *)
+               (* E.Implies (list_head l1 u, list_member l1 u); *)
                E.Implies (list_order l1 u v,
-                          E.And [member l1 u; member l1 v]);
-               E.Implies (E.And [member l1 u; member l1 v; E.Not (int_eq u v)],
+                          E.And [list_member l1 u; list_member l1 v]);
+               E.Implies (E.And [list_member l1 u; list_member l1 v; E.Not (int_eq u v)],
                           E.Or [list_order l1 u v; list_order l1 v u;]);
              ]
             ) in
@@ -85,6 +85,6 @@ let valid, _ = S.check ctx
                         ]) in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
 (* let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
- *     ~pred_names:["member";"list_order";"==";"head"] ~dttp:E.SE.IntList in
+ *     ~pred_names:["list_member";"list_order";"==";"list_head"] ~dttp:E.SE.IntList in
  * let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in *)
 ();;
