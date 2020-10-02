@@ -166,6 +166,8 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Not True, p3 -> And [Not p1; p3]
       | p2, True -> Or [Not p1; p2]
       | p2, Not True -> And [p1; p2]
+      | x1, Not x2 ->
+        if eq x1 x2 then Iff (x1, x2) else Ite (p1, p2, p3)
       | _ -> Ite (p1, p2, p3)
     in
     let rec aux a =

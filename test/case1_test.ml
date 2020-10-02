@@ -8,16 +8,17 @@ open Z3
 open Z3.Arithmetic
 open Printf
 module SE = E.SE
+module T = Tp.Tp
 
 (* Some simple literals to aid in test construction. *)
-let l0    = SE.Var (SE.Int, "l0")
-let l1    = SE.Var (SE.Int, "l1")
-let l2    = SE.Var (SE.Int, "l2")
-let u    = SE.Var (SE.Int, "u")
-let one = SE.Literal (SE.Int, SE.L.Int 1)
-let two = SE.Literal (SE.Int, SE.L.Int 2)
-let member l u = SE.Op (SE.Bool, "member", [l; u])
-let list_order l u v = SE.Op (SE.Bool, "list_order", [l; u; v])
+let l0    = SE.Var (T.Int, "l0")
+let l1    = SE.Var (T.Int, "l1")
+let l2    = SE.Var (T.Int, "l2")
+let u    = SE.Var (T.Int, "u")
+let one = SE.Literal (T.Int, SE.L.Int 1)
+let two = SE.Literal (T.Int, SE.L.Int 2)
+let member l u = SE.Op (T.Bool, "member", [l; u])
+let list_order l u v = SE.Op (T.Bool, "list_order", [l; u; v])
 
 (* Helper functions. *)
 let set_simple_spec (name: string) (params: string list) (spec: E.t) (map: Ast.spec StrMap.t) =

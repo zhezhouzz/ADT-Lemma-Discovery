@@ -2,6 +2,7 @@ module Ast = Language.SpecAst
 module Value = Preds.Pred.Value
 module S = Solver;;
 module A = Axiom.AxiomSyn.Syn;;
+module T = Tp.Tp
 
 open Utils
 open Z3
@@ -30,7 +31,7 @@ let tmpe = tree_var "tmpe" in
 let r1, r2= map_double bool_var ("r1", "r2") in
 let red r = SpecApply ("R", [r]) in
 let black r = SpecApply ("B", [r]) in
-let redb r = E.Atom(SE.Op (SE.Bool, "==", [r;SE.Literal (SE.Bool, SE.L.Bool true)])) in
+let redb r = E.Atom(SE.Op (T.Bool, "==", [r;SE.Literal (T.Bool, SE.L.Bool true)])) in
 let blackb r = E.Not(redb r) in
 let vc =
   Implies(And [black r1; red r2; e tmpe;],

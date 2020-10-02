@@ -7,10 +7,11 @@ module Helper = struct
   open SpecAst
   open Utils
   module SE = E.SE
-  let list_var name = SE.Var (SE.IntList, name)
-  let tree_var name = SE.Var (SE.IntTree, name)
-  let int_var name = SE.Var (SE.Int, name)
-  let bool_var name = SE.Var (SE.Bool, name)
+  module T = Tp.Tp
+  let list_var name = SE.Var (T.IntList, name)
+  let tree_var name = SE.Var (T.IntTree, name)
+  let int_var name = SE.Var (T.Int, name)
+  let bool_var name = SE.Var (T.Bool, name)
   let add_spec spectab name args fv body =
     StrMap.add name (args, (fv,body)) spectab
   let l0    = list_var "l0"
@@ -30,6 +31,7 @@ module Helper = struct
   let z    = int_var "z"
   let u    = int_var "u"
   let v    = int_var "v"
+  let w    = int_var "w"
   let h1    = int_var "h1"
   let h2    = int_var "h2"
   let tree1 = tree_var "tree1"
@@ -37,20 +39,22 @@ module Helper = struct
   let tree3 = tree_var "tree3"
   let tree4 = tree_var "tree4"
   let tree5 = tree_var "tree5"
-  let const0 = SE.Literal (SE.Int, SE.L.Int 0)
-  let const1 = SE.Literal (SE.Int, SE.L.Int 1)
-  let int_plus a b = SE.Op (SE.Int, "+", [a; b])
-  let member l u = E.Atom (SE.Op (SE.Bool, "member", [l; u]))
-  let head l u = E.Atom (SE.Op (SE.Bool, "head", [l; u]))
-  let list_order l u v = E.Atom (SE.Op (SE.Bool, "list_order", [l; u; v]))
-  let treel t u v = E.Atom (SE.Op (SE.Bool, "tree_left", [t; u; v]))
-  let treer t u v = E.Atom (SE.Op (SE.Bool, "tree_right", [t; u; v]))
-  let treep t u v = E.Atom (SE.Op (SE.Bool, "tree_parallel", [t; u; v]))
+  let const0 = SE.Literal (T.Int, SE.L.Int 0)
+  let const1 = SE.Literal (T.Int, SE.L.Int 1)
+  let int_plus a b = SE.Op (T.Int, "+", [a; b])
+  let list_member l u = E.Atom (SE.Op (T.Bool, "list_member", [l; u]))
+  let tree_member l u = E.Atom (SE.Op (T.Bool, "tree_member", [l; u]))
+  let list_head l u = E.Atom (SE.Op (T.Bool, "list_head", [l; u]))
+  let tree_head l u = E.Atom (SE.Op (T.Bool, "tree_head", [l; u]))
+  let list_order l u v = E.Atom (SE.Op (T.Bool, "list_order", [l; u; v]))
+  let treel t u v = E.Atom (SE.Op (T.Bool, "tree_left", [t; u; v]))
+  let treer t u v = E.Atom (SE.Op (T.Bool, "tree_right", [t; u; v]))
+  let treep t u v = E.Atom (SE.Op (T.Bool, "tree_parallel", [t; u; v]))
   let tree_parent t u v = E.Or [treel t u v; treer t u v]
   let tree_any_order t u v = E.Or [treel t u v; treer t u v; treep t u v]
-  let int_ge a b = E.Atom (SE.Op (SE.Bool, ">=", [a;b]))
-  let int_le a b = E.Atom (SE.Op (SE.Bool, "<=", [a;b]))
-  let int_lt a b = E.Atom (SE.Op (SE.Bool, "<", [a;b]))
-  let int_gt a b = E.Atom (SE.Op (SE.Bool, ">", [a;b]))
-  let int_eq a b = E.Atom (SE.Op (SE.Bool, "==", [a;b]))
+  let int_ge a b = E.Atom (SE.Op (T.Bool, ">=", [a;b]))
+  let int_le a b = E.Atom (SE.Op (T.Bool, "<=", [a;b]))
+  let int_lt a b = E.Atom (SE.Op (T.Bool, "<", [a;b]))
+  let int_gt a b = E.Atom (SE.Op (T.Bool, ">", [a;b]))
+  let int_eq a b = E.Atom (SE.Op (T.Bool, "==", [a;b]))
 end

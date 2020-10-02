@@ -62,27 +62,27 @@ let spec_tab = add_spec spec_tab "E" ["tree1"] ["u"]
     (Not (member tree1 u)) in
 let spec_tab = add_spec spec_tab "T" ["rank";"x";"tree1";"tree2";"tree3"] ["u"; "v"]
     (E.And [
-        (E.Implies (tree_parent tree3 u v,
+        (E.Iff (tree_parent tree3 u v,
                     E.Or [E.And [member tree1 v; int_eq x u];
                           E.And [member tree2 v; int_eq x u];
                           tree_parent tree1 u v;
                           tree_parent tree2 u v]));
         (head tree3 x);
-        (E.Implies (E.Or [tree_parent tree1 u v;
-                          tree_parent tree2 u v;], tree_parent tree3 u v));
+        (* (E.Implies (E.Or [tree_parent tree1 u v;
+         *                   tree_parent tree2 u v;], tree_parent tree3 u v)); *)
         (E.Iff (member tree3 u,
                 E.Or [member tree1 u; member tree2 u; int_eq x u]))
       ]) in
 let spec_tab = add_spec spec_tab "makeT" ["x";"tree1";"tree2";"tree3"] ["u"; "v"]
     (E.And [
-        (E.Implies (tree_parent tree3 u v,
-                    E.Or [E.And [member tree1 v; int_eq x u];
-                          E.And [member tree2 v; int_eq x u];
+        (E.Iff (tree_parent tree3 u v,
+                    E.Or [E.And [member tree1 v; head tree3 u];
+                          E.And [member tree2 v; head tree3 u];
                           tree_parent tree1 u v;
                           tree_parent tree2 u v]));
-        (head tree3 x);
-        (E.Implies (E.Or [tree_parent tree1 u v;
-                          tree_parent tree2 u v;], tree_parent tree3 u v));
+        E.Iff (head tree3 u, int_eq u x);
+        (* (E.Implies (E.Or [tree_parent tree1 u v;
+         *                   tree_parent tree2 u v;], tree_parent tree3 u v)); *)
         (E.Iff (member tree3 u,
                 E.Or [member tree1 u; member tree2 u; int_eq x u]))
       ]) in
@@ -102,9 +102,9 @@ let valid, _ = S.check ctx
                          E.forallformula_to_z3 ctx axiom
                         ]) in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
-let _ = StrMap.iter (fun name spec ->
-    printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
-let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in
+(* let _ = StrMap.iter (fun name spec ->
+ *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
+ * let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in *)
 (* let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
  *     ~pred_names:["member";"tree_left";"tree_right";"==";"head"] ~dttp:E.SE.IntTree in
  * let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in *)

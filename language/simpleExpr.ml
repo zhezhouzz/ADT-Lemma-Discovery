@@ -13,6 +13,7 @@ end
 
 module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
   module P = Preds.Pred.Predicate
+  module T = Tp.Tp
   include B
   open Utils
   open Printf
@@ -81,9 +82,9 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
     | _, _ -> None
   let var_to_z3 ctx tp name =
     match tp with
-    | Int -> Integer.mk_const_s ctx name
-    | Bool -> Boolean.mk_const_s ctx name
-    | IntList | IntTree -> Integer.mk_const_s ctx name
+    | T.Int -> Integer.mk_const_s ctx name
+    | T.Bool -> Boolean.mk_const_s ctx name
+    | T.IntList | T.IntTree -> Integer.mk_const_s ctx name
 
   let bvar_to_z3 ctx = function
     | Var (tp, name) -> var_to_z3 ctx tp name
@@ -92,9 +93,9 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
   let predefined_predicates_table ctx =
     let m = StrMap.empty in
     List.fold_left (fun m info ->
-        StrMap.add info.P.name
-          (FuncDecl.mk_func_decl_s ctx info.P.name
-             (List.init (info.P.num_dt + info.P.num_int ) (fun _ -> Integer.mk_sort ctx))
+        StrMap.add info.P.raw_name
+          (FuncDecl.mk_func_decl_s ctx info.P.raw_name
+             (List.init info.P.raw_num_args (fun _ -> Integer.mk_sort ctx))
              (Boolean.mk_sort ctx))
           m
       ) m P.raw_preds_info
@@ -160,11 +161,11 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
         let r = List.flatten (List.map aux args) in
         let argsname = List.flatten (List.map extract args) in
         if List.exists (fun (tp, name) ->
-            (eq_tp tp Int) && (List.exists (fun name' -> String.equal name name') fv)
+            (T.eq tp T.Int) && (List.exists (fun name' -> String.equal name name') fv)
           ) argsname
         then
           (List.filter_map (fun (tp, name) ->
-              if is_dt tp then Some name else None
+              if T.is_dt tp then Some name else None
              ) argsname) @ r
         else
           r

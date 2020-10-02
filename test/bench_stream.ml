@@ -51,13 +51,15 @@ in
 let spec_tab = add_spec spec_tab "Nil" ["l1"] ["u";"v"]
     (E.And [
         (Not (member l1 u));
+        (Not (list_order l1 u v));
       ])
     in
 let spec_tab = add_spec spec_tab "Cons" ["h1";"t1";"l1"] ["u"; "v"]
     (E.And [
         (E.Iff (list_order l1 u v,
-                    E.Or [E.And [member t1 v; int_eq h1 u]; list_order t1 u v]));
-        (E.Iff (member l1 u, E.Or [member t1 u; int_eq h1 u]))
+                    E.Or [E.And [member t1 v; head l1 u]; list_order t1 u v]));
+        (E.Iff (member l1 u, E.Or [member t1 u; int_eq h1 u]));
+        head l1 h1;
       ]) in
 let spec_tab = add_spec spec_tab "Lazy" ["l1"; "l2"] ["u";"v"]
     (E.And [
@@ -71,6 +73,8 @@ let spec_tab = add_spec spec_tab "Force" ["l1"; "l2"] ["u";"v"]
       ]) in
 let axiom = (["l1"; "u"; "v"],
              E.And [
+               E.Implies (head l1 u, member l1 u);
+               E.Implies (And[head l1 u; head l1 v], int_eq u v);
                E.Implies (list_order l1 u v,
                           E.And [member l1 u; member l1 v]);
              ]
@@ -88,9 +92,9 @@ let _ = if valid then printf "valid\n" else printf "not valid\n" in
 let _ = match m with
   | None -> printf "none.\n"
   | Some m -> printf "model:\n%s\n" (Model.to_string m) in
-let _ = StrMap.iter (fun name spec ->
-    printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
-let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in
+(* let _ = StrMap.iter (fun name spec ->
+ *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
+ * let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in *)
 (* let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
  *     ~pred_names:["member";"tree_left";"tree_right";"==";"head"] ~dttp:E.SE.IntTree in
  * let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in *)

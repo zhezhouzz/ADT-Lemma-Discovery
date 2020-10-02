@@ -49,7 +49,7 @@ module AstTree (E: Epr.Epr) : AstTree
   let vc_layout a =
     let mk_indent indent = String.init indent (fun _ -> ' ') in
     let rec aux indent = function
-      | ForAll _ -> raise @@ InterExn "vc does not involve forall"
+      | ForAll ff -> sprintf "%s%s" (mk_indent indent) (E.pretty_layout_forallformula ff)
       | Implies (SpecApply (n1, args1), SpecApply (n2, args2)) ->
         sprintf "%s(%s => %s)"
           (mk_indent indent)
@@ -85,7 +85,8 @@ module AstTree (E: Epr.Epr) : AstTree
     in
     aux 0 a
   let layout_spec (args, formula) =
-    sprintf "fun %s -> %s" (List.to_string (fun x -> x) args) (E.layout_forallformula formula)
+    sprintf "fun %s -> %s" (List.to_string (fun x -> x) args)
+      (E.pretty_layout_forallformula formula)
 
   let layout_spec_entry name (args, formula) =
     sprintf "%s(%s):=\n%s" name

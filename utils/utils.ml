@@ -196,6 +196,33 @@ module List = struct
   let choose_eq_all eq l =
     List.flatten @@
     List.init ((List.length l) + 1) (fun n -> choose_n_eq eq l n)
+
+  let sublist l (s, e) =
+    let rec aux r i l =
+      if i >= e then r else
+        match l with
+        | [] -> raise @@ InterExn "sublist"
+        | h :: t ->
+          if i >= s then
+            aux (r @ [h]) (i+1) t
+          else
+            aux r (i+1) t
+    in
+    aux [] 0 l
+
+  let filter_mapi f l =
+    fold_lefti (fun r i x ->
+        match f i x with
+        | None -> r
+        | Some y -> r @ [y]
+      ) [] l
+
+  let lookup eq x l =
+    let rec aux i = function
+      | [] -> raise @@ InterExn "List.lookup"
+      | h :: t -> if eq x h then i else aux (i + 1) t
+    in
+    aux 0 l
 end
 
 module Tree = struct

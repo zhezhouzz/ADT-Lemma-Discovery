@@ -1,4 +1,4 @@
 (library
  (name language)
- (libraries utils preds z3)
+ (libraries utils preds z3 tp)
 )

@@ -1,5 +1,11 @@
+(env
+  (dev
+    (flags (:standard -w -32 -w -35 -w -27 -w -33 -w -26))))
 (tests
- (names language_test whole_test abduction_test pred_test utils_test case1_test
+ (names language_test whole_test
+; abduction_test
+ pred_test utils_test
+; case1_test
  bench_merge_sort
  bench_unbalancedset
  bench_leftistheap
@@ -8,6 +14,7 @@
  bench_stream
  bench_batchedqueue
  bench_bankersqueue
- bench_splayheap)
- (libraries abduction axiom ounit2 solver)
+ bench_splayheap
+ spec_infer)
+ (libraries axiom ounit2 solver)
 )

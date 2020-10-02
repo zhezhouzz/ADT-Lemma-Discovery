@@ -5,6 +5,7 @@ open Utils;;
 module Value = Preds.Pred.Value;;
 module A = Axiom.AxiomSyn.Syn;;
 module S = Solver;;
+module T = Tp.Tp;;
 open Language.Helper;;
 let module Sexpr = E.SE in
 (* let libcode_cons a l = a :: l in
@@ -70,6 +71,6 @@ let neg_vc_with_ax = Z3.Boolean.mk_and ctx [neg_vc; axz3] in
 let valid, _ = Solver.check ctx neg_vc_with_ax in
 let _ = if valid then printf "valid\n" else printf "not valid\n" in
 let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
-    ~pred_names:["member";"list_order";"=="] ~dttp:E.SE.IntList in
+    ~pred_names:["member";"list_order";"=="] ~dttp:T.IntList in
 let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in
 ();;

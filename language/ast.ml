@@ -21,6 +21,7 @@ end
 
 module Ast (A: AstTree.AstTree): Ast = struct
   include A
+  module T = Tp.Tp
   open Utils
   (* open Printf *)
   type value = E.value
@@ -163,7 +164,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
     | Not (ForAll (fv, body)) ->
       let dts = E.related_dt body fv in
       let fv' = List.init (List.length fv) (fun _ -> Renaming.name ()) in
-      let fvse' = List.map (fun n -> E.SE.Var (E.SE.Int, n)) fv' in
+      let fvse' = List.map (fun n -> E.SE.Var (T.Int, n)) fv' in
       Some (fv', dts), ForAll ([], E.subst (E.Not body) fv fvse')
     | _ -> raise @@ InterExn "skolemize: not a nnf"
   let rec skolemize a =
@@ -172,7 +173,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
     | SpecApply (_, _) | Not (SpecApply (_, _)) -> raise @@ InterExn "need apply"
     | Not (ForAll (fv, body)) ->
       let fv' = List.init (List.length fv) (fun _ -> Renaming.name ()) in
-      let fvse' = List.map (fun n -> E.SE.Var (E.SE.Int, n)) fv' in
+      let fvse' = List.map (fun n -> E.SE.Var (T.Int, n)) fv' in
       fv', ForAll ([], E.subst (E.Not body) fv fvse')
     | Or ps ->
       let newvars, ps = List.split (List.map skolemize ps) in
@@ -212,7 +213,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Or ps -> merge (List.map aux ps)
       | Iff (p1, p2) -> merge (List.map aux [p1;p2])
     in
-    let eq (tp1, name1) (tp2, name2) = (E.SE.eq_tp tp1 tp2) && (String.equal name1 name2) in
+    let eq (tp1, name1) (tp2, name2) = (T.eq tp1 tp2) && (String.equal name1 name2) in
     let a, b = aux a in
     List.remove_duplicates (fun x y -> x == y) a, List.remove_duplicates eq b
 end
