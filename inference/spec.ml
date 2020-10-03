@@ -9,10 +9,10 @@ module type SpecSyn = sig
                    values: value list list}
     | FeatureVector of {feature_set: Feature.Feature.set;
                         vecs: vec list}
-  val infer: ctx:Z3.context -> progtp:(typed_var list * typed_var list) -> prog:(value list -> value list) -> Ast.spec
+  val infer: ctx:Z3.context -> progtp:(Tp.Tp.t list * Tp.Tp.t list) -> prog:(value list -> value list) -> Ast.spec
 end
 
-module AxiomSyn (D: Dtree.Dtree) = struct
+module SpecSyn (D: Dtree.Dtree) = struct
   module D = D
   module V = Pred.Value
   module P = Pred.Pred
@@ -84,6 +84,8 @@ module AxiomSyn (D: Dtree.Dtree) = struct
             ) vec) vecs in
     {feature_set = feature_set'; vecs = vecs'}
   let feature_vector_get_field {feature_set; vecs} feature =
+    (* let _ = printf "feature:%s\nfeature_set:%s\n"
+     *     (F.layout feature) (F.layout_set feature_set) in *)
     let i = List.lookup (fun f1 f2 -> F.eq f1 f2) feature feature_set in
     List.map (fun vec -> List.nth vec i) vecs
 
@@ -102,18 +104,16 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     | Double of data * data
 
   let feature_vector_split feature_vectors target =
-    let feature_vectors = feature_vector_remove_field feature_vectors target in
     let y = feature_vector_get_field feature_vectors target in
+    let feature_vectors = feature_vector_remove_field feature_vectors target in
     let bv_str_list = List.map BitVector.to_string feature_vectors.vecs in
     let bv_tbl = Hashtbl.create (List.length bv_str_list) in
     let _ = List.iter (fun (y, bv) ->
-        match Hashtbl.find_opt bv_tbl bv, y with
-        | Some Unclear, _ -> ()
-        | Some Pos, false -> Hashtbl.add bv_tbl bv Unclear
-        | Some Pos, _ -> ()
-        | Some Neg, true -> Hashtbl.add bv_tbl bv Unclear
-        | Some Neg, _ -> ()
-        | None, y -> Hashtbl.add bv_tbl bv (if y then Pos else Neg)
+        match Hashtbl.find_opt bv_tbl bv with
+        | Some Unclear -> ()
+        | Some Pos -> if y then () else Hashtbl.replace bv_tbl bv Unclear
+        | Some Neg -> if y then Hashtbl.replace bv_tbl bv Unclear else ()
+        | None -> Hashtbl.add bv_tbl bv (if y then Pos else Neg)
       ) (List.combine y bv_str_list) in
     let by_value v =
       Hashtbl.fold (fun k v' r ->
@@ -134,24 +134,30 @@ module AxiomSyn (D: Dtree.Dtree) = struct
   let classify {dfeature_set;labeled_vecs} =
     let samples = List.map (fun (a, b) -> a, Array.of_list b) labeled_vecs in
     let dt = FastDT.make_dt ~samples:(Array.of_list samples) ~max_d:10 in
-    let _ = FastDT.print_tree' dt in
+    (* let _ = FastDT.print_tree' dt in *)
     D.of_fastdt dt dfeature_set
+
+  let make_name tp =
+    let name =
+      match tp with
+      | T.Int -> Renaming.unique "x"
+      | T.IntList -> Renaming.unique "l"
+      | T.IntTree -> Renaming.unique "tr"
+      | T.Bool -> Renaming.unique "b"
+    in
+    tp, name
 
   let infer ~progtp ~prog =
     let fv_num = 2 in
     let fv = List.map (fun n -> (T.Int, n)) @@ new_fv_name fv_num in
     let inptps, outptps = progtp in
+    let inptps = List.map make_name inptps in
+    let outptps = List.map make_name outptps in
+    (* let _ = List.iter (fun (_, name) -> printf "%s\n" name) inptps in *)
     let feature_set = F.make_set (inptps @ outptps @ fv) in
-    (* let inptps, outptps, fv_idxs = make_spec_var_assign progtp fv_num in
-     * let args = (List.filter_map
-     *               (fun (tp, idx) -> match tp with
-     *                  | T.Int -> Some idx
-     *                  | _ -> None
-     *               ) (inptps @ outptps)) @ fv_idxs in
-     * let spec_title = outp_title @ inp_title @ inner_title in *)
     let targets = List.fold_left (fun r dt -> r @ (F.make_target dt fv)) [] outptps in
-    let _ = printf "targets = %s\n" (F.layout_set targets) in
-    let chooses, inps = R.gen_tpvars ~tpvars:inptps ~num:10 ~fv_num:fv_num in
+    (* let _ = printf "targets = %s\n" (F.layout_set targets) in *)
+    let chooses, inps = R.gen_tpvars ~tpvars:inptps ~num:20 ~fv_num:fv_num in
     let samples = simulate prog inptps outptps inps in
     let fv_samples =
       {names = fv;

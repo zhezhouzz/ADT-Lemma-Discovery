@@ -16,5 +16,5 @@
  bench_bankersqueue
  bench_splayheap
  spec_infer)
- (libraries axiom ounit2 solver)
+ (libraries axiom ounit2 solver inference)
 )
