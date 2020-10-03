@@ -105,6 +105,8 @@ module List = struct
       | x :: xs -> go (remove_elt compare x xs) (x::acc)
     in go l []
 
+  let remove_duplicates_eq l = remove_duplicates (fun x y -> x == y) l
+
   let inner_layout l split default =
     match l with
     | [] -> default
@@ -238,6 +240,11 @@ module List = struct
       | h :: t -> if eq x h then i else aux (i + 1) t
     in
     aux 0 l
+
+  let nth l i =
+    match List.nth_opt l i with
+    | Some v -> v
+    | None -> raise @@ InterExn "List.nth"
 end
 
 module Tree = struct
@@ -382,6 +389,16 @@ let ll_in_range_first f l0 l1 =
 let boollist_to_string l =
   List.fold_lefti (fun res i a ->
       if i == 0 then res ^ (string_of_bool a) else res ^ ";" ^ (string_of_bool a)) "" l
+
+module BitVector = struct
+  let to_string bl = String.of_seq
+      (List.to_seq (List.map (fun b -> if b then '1' else '0') bl))
+  let of_string str = List.map (fun c ->
+      match c with
+      | '0' -> false
+      | '1' -> true
+      | _ -> raise @@ InterExn "BitVector") (List.of_seq @@ String.to_seq str)
+end
 
 let sublist l s e =
   let rec aux i result = function
