@@ -1,4 +1,0 @@
-(library
- (name axiom)
- (libraries utils pred language ml solver qcheck)
-)

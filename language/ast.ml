@@ -1,7 +1,7 @@
 module type Ast = sig
   include AstTree.AstTree
   type value = E.value
-  val fv: t -> string list
+  val fv: t -> (Tp.Tp.t * string) list
   val type_check : t -> (t * bool)
   val spec_exec: spec -> string list -> value Utils.StrMap.t -> bool
   val exec: t -> spec Utils.StrMap.t -> value Utils.StrMap.t -> bool
@@ -22,10 +22,28 @@ end
 module Ast (A: AstTree.AstTree): Ast = struct
   include A
   module T = Tp.Tp
+  module SE = E.SE
   open Utils
   (* open Printf *)
   type value = E.value
-  let fv _ = []
+  let fv ast =
+    let rec aux = function
+      | ForAll _ -> raise @@ InterExn "ast:fv"
+      | Implies (p1, p2) -> (aux p1) @ (aux p2)
+      | Ite (p1, p2, p3) -> (aux p1) @ (aux p2) @ (aux p3)
+      | Not p -> (aux p)
+      | And ps -> List.flatten (List.map aux ps)
+      | Or ps -> List.flatten (List.map aux ps)
+      | Iff (p1, p2) -> (aux p1) @ (aux p2)
+      | SpecApply (_, argsvalue) ->
+        List.filter_map (fun e ->
+            match e with
+            | SE.Var (tp, name) -> Some (tp, name)
+            | SE.Op (_, _, _) -> raise @@ UndefExn "ast:fv"
+            | SE.Literal (_, _) -> None
+          ) argsvalue
+    in
+    aux ast
   let type_check bexpr = (bexpr, true)
   let spec_exec (args, forallf) args' env =
     let argsmap = List.combine args args' in

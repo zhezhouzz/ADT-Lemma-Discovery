@@ -4,6 +4,7 @@ module type Feature = sig
   type t =
     | Pr of Pred.Pred.t * variable list * variable list
     | Eq of variable * variable
+    | Bo of variable
   type set = t list
   val exec: t -> value Utils.StrMap.t -> bool
   val layout: t -> string
@@ -13,6 +14,7 @@ module type Feature = sig
   val get_vars: t -> string list * string list
   val make_set: (Tp.Tp.t * string) list -> set
   val make_target: (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
+  val subst:string Utils.StrMap.t -> t -> t
 end
 
 module Feature : Feature = struct
@@ -29,6 +31,7 @@ module Feature : Feature = struct
   type t =
     | Pr of Pred.Pred.t * variable list * variable list
     | Eq of variable * variable
+    | Bo of variable
   type set = t list
   let exec feature m =
     let find = StrMap.find "exec_feature" m in
@@ -40,6 +43,10 @@ module Feature : Feature = struct
     | Pr (_, _, _) -> raise @@ UndefExn "exec_feature"
     | Eq (a, b) ->
       let a, b = map_double find (a, b) in V.eq a b
+    | Bo x ->
+      (match find x with
+       | V.B b -> b
+       | _ -> raise @@ InterExn "exec_feature")
 
   let eq a b =
     match a, b with
@@ -47,6 +54,7 @@ module Feature : Feature = struct
       (String.equal pred pred') && (StrList.eq dts dts') && (StrList.eq args args')
     | Eq (a, b), Eq (a', b') ->
       (String.equal a a') && (String.equal b b')
+    | Bo a, Bo a' -> String.equal a a'
     | _ -> false
 
   let layout = function
@@ -54,33 +62,43 @@ module Feature : Feature = struct
       sprintf "%s(%s)" (P.layout pred) (StrList.to_string (dts @ args))
     | Eq (a, b) ->
       sprintf "%s = %s" a b
+    | Bo x -> x
   let to_epr feature =
-    let op, args =
       match feature with
       | Pr (pred, [dt], args) ->
         let info = P.find_pred_info_by_name pred in
         let dt = SE.Var(info.P.dttp, dt) in
         let args = List.map (fun x -> SE.Var(T.Int, x)) args in
-        pred, dt :: args
+        E.Atom (E.SE.Op (T.Bool, pred, dt :: args))
       | Pr (_, _, _) -> raise @@ UndefExn "feature::to_epr"
-      | Eq (a, b) -> "==", [SE.Var(T.Int, a); SE.Var(T.Int, b)] in
-    E.Atom (E.SE.Op (T.Bool, op, args))
+      | Eq (a, b) ->
+        E.Atom (E.SE.Op (T.Bool, "==", [SE.Var(T.Int, a); SE.Var(T.Int, b)]))
+      | Bo x -> E.Atom (SE.Var (T.Bool, x))
 
   let get_vars = function
     | Pr (_, dts, args) -> dts, args
     | Eq (a, b) -> [], [a;b]
+    | Bo _ -> [], []
 
   let make_set vars =
-    let variable_split (dts, elems) (tp, name) =
-      if T.is_dt tp then (tp, name) :: dts, elems else
+    let variable_split (dts, elems, bs) (tp, name) =
+      if T.is_dt tp then (tp, name) :: dts, elems, bs else
         match tp with
-        | T.Int -> dts, name :: elems
+        | T.Int -> dts, name :: elems, bs
+        | T.Bool -> dts, elems, name :: bs
         | _ -> raise @@ UndefExn "make_set_for_variable"
     in
-    let dts, elems = List.fold_left variable_split ([], []) vars in
+    let dts, elems, bs = List.fold_left variable_split ([], [], []) vars in
+    let bo_feature = match bs with
+      | [] -> []
+      | [name] -> [Bo name]
+      | _ -> raise @@ UndefExn "make_set_for_variable: bo_feature"
+    in
     let make_eq_features elems =
       List.map (fun (a, b) -> Eq (a, b)) @@
-      List.remove_duplicates (fun (a, b) (a', b') -> a == a' && b = b') @@
+      List.remove_duplicates (fun (a, b) (a', b') ->
+          (a == a' && b = b') || (a == b' && b == a')) @@
+      List.filter (fun (a, b) -> a <> b) @@
       List.cross elems elems
     in
     let make_pr_features (tp, dt) elems =
@@ -98,7 +116,7 @@ module Feature : Feature = struct
     let pr_features = List.fold_left
         (fun r v -> r @ (make_pr_features v elems)) [] dts in
     let eq_features = make_eq_features elems in
-    pr_features @ eq_features
+    pr_features @ eq_features @ bo_feature
 
   let layout_set (set: set) =
     List.fold_left (fun r feature -> sprintf "%s [%s]" r (layout feature)) "" set
@@ -120,5 +138,13 @@ module Feature : Feature = struct
       | T.Int ->
         if (List.length elems) == 0 then raise @@ InterExn "make_target"
         else [Eq (name, List.nth elems 0)]
+      | T.Bool -> [Bo name]
       | _ -> raise @@ UndefExn "make_target"
+
+  let subst m x =
+    let find m a = StrMap.find "feature:subst" m a in
+    match x with
+    | Eq (a, b) -> Eq (find m a, find m b)
+    | Pr (pred, [dt], args) -> Pr (pred, [find m dt], List.map (find m) args)
+    | _ -> raise @@ UndefExn "feature:subst"
 end

@@ -77,10 +77,11 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
     | "<", [a; b] -> Some (mk_lt ctx a b)
     | _, _ -> None
   let var_to_z3 ctx tp name =
+    if T.is_dt tp then Integer.mk_const_s ctx name else
     match tp with
     | T.Int -> Integer.mk_const_s ctx name
     | T.Bool -> Boolean.mk_const_s ctx name
-    | T.IntList | T.IntTree -> Integer.mk_const_s ctx name
+    | _ -> raise @@ InterExn "var_to_z3"
 
   let bvar_to_z3 ctx = function
     | Var (tp, name) -> var_to_z3 ctx tp name

@@ -8,8 +8,8 @@ let solver_result solver =
   match check solver [] with
   | UNSATISFIABLE -> true, None
   | UNKNOWN ->
-    raise (InterExn "time out!")
-  (* Printf.printf "\ttimeout\n"; false, None *)
+    (* raise (InterExn "time out!") *)
+  Printf.printf "\ttimeout\n"; false, None
   | SATISFIABLE ->
     match Solver.get_model solver with
     | None -> raise (InterExn "never happen")
@@ -17,7 +17,7 @@ let solver_result solver =
 
 let get_int m i =
   match Model.eval m i true with
-  | None -> 0
+  | None -> raise @@ InterExn "get_int"
   | Some v ->
     (* printf "get_int(%s)\n" (Expr.to_string i); *)
     int_of_string @@ Arithmetic.Integer.numeral_to_string v

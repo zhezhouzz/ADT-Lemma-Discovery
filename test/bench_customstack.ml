@@ -1,7 +1,8 @@
 module Ast = Language.SpecAst
 module Value = Pred.Value
 module S = Solver;;
-module A = Axiom.AxiomSyn.Syn;;
+(* module A = Axiom.AxiomSyn.Syn;; *)
+module A = Inference.AxiomSyn;;
 
 open Ast
 open Utils
@@ -136,8 +137,7 @@ let _ = if valid then printf "valid\n" else printf "not valid\n" in
 let _ = StrMap.iter (fun name spec ->
     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
 let _ = printf "axiom:\n%s\n" (E.pretty_layout_forallformula axiom) in
-let axiom = A.axiom_infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
-    ~pred_names:["list_member";"list_order";"==";"list_head"] ~dttp:T.IntList in
+let axiom = A.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~dttp:T.IntList in
 let axiom = E.forallformula_simplify_ite axiom in
 let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in
 let _ = printf "axiom:\n\t%s\n" (Expr.to_string (E.forallformula_to_z3 ctx axiom)) in

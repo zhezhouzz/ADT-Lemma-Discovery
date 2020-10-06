@@ -111,6 +111,15 @@ module List = struct
       | x :: xs -> go (remove_elt compare x xs) (x::acc)
     in go l []
 
+  let interset compare l1 l2 =
+    let rec aux r = function
+      | [] -> r
+      | h :: t ->
+        if exists (fun y -> compare h y) l2 then aux (h :: r) t
+        else aux r t
+    in
+    aux [] l1
+
   let remove_duplicates_eq l = remove_duplicates (fun x y -> x == y) l
 
   let inner_layout l split default =
@@ -206,8 +215,26 @@ module List = struct
       in
       List.map (fun l -> one_list @ l) (aux [])
 
-  let choose_n_eq eq l n =
-    let l = remove_duplicates eq l in
+  let choose_list_list_order ll =
+    if List.exists (fun l -> (List.length l) == 0) ll then [] else
+      let others = Array.of_list (List.map Array.of_list ll) in
+      let n = Array.length others in
+      let idx_max = Array.init n (fun i -> Array.length others.(i)) in
+      let idx = Array.init n (fun _ -> 0) in
+      let rec increase i =
+        if i >= n then None else
+        if (idx.(i) + 1) >= idx_max.(i)
+        then (Array.set idx i 0; increase (i + 1))
+        else (Array.set idx i (idx.(i) + 1); Some ()) in
+      let rec aux r =
+        let a = List.init n (fun i -> others.(i).(idx.(i))) in
+        match increase 0 with
+        | None -> a :: r
+        | Some _ -> aux (a :: r)
+      in
+      aux []
+
+  let choose_n l n =
     let rec aux r n =
       if n == 0 then r else
         aux (List.flatten @@ List.map (fun e -> List.map (fun r -> e :: r) r) l) (n - 1)
@@ -215,6 +242,9 @@ module List = struct
     if n < 0 then raise @@ InterExn "choose_n_eq: bad n"
     else if n == 0 then [[]] else
       aux (List.map (fun x -> [x]) l) (n - 1)
+
+  let choose_n_eq eq l n =
+    choose_n (remove_duplicates eq l) n
 
   let choose_eq_all eq l =
     List.flatten @@
@@ -325,6 +355,82 @@ module Tree = struct
   let rec flatten = function
     | Leaf -> []
     | Node (a, l, r) -> a::((flatten l) @ (flatten r))
+  let flatten_forall compare t =
+    List.remove_duplicates compare (flatten t)
+  let union l0 l1 = List.union (fun x y -> x == y) l0 l1
+end
+
+module LabeledTree = struct
+  type ('a, 'b) t =
+    | Leaf
+    | Node of ('b * 'a * ('a, 'b) t * ('a, 'b) t)
+  let exists f t =
+    let rec aux before t =
+      if before then true else
+        match t with
+        | Leaf -> false
+        | Node (_, e, l, r) ->
+          if f e then true else
+            aux (aux before l) r
+    in
+    aux false t
+  let layout f tr =
+    let rec aux = function
+      | Leaf -> "."
+      | Node (_, a, Leaf, Leaf) -> (f a)
+      | Node (_, a, l, r) ->
+        Printf.sprintf "{%s, %s, %s}" (aux l) (f a) (aux r)
+    in
+    aux tr
+
+  let left_child eq t u v =
+    let rec aux before t =
+      if before then true else
+        match t with
+        | Leaf -> false
+        | Node (_, a, l, r) ->
+          if eq a u
+          then exists (fun x -> eq x v) l
+          else aux (aux before l) r
+    in
+    aux false t
+
+  let right_child eq t u v =
+    let rec aux before t =
+      if before then true else
+        match t with
+        | Leaf -> false
+        | Node (_, a, l, r) ->
+          if eq a u
+          then exists (fun x -> eq x v) r
+          else aux (aux before l) r
+    in
+    aux false t
+
+  let parallel_child eq t u v =
+    let rec aux = function
+      | Leaf -> false
+      | Node (_, _, l, r) ->
+        ((exists (fun x -> eq x u) l) && (exists (fun x -> eq x v) r)) || (aux l) || (aux r)
+    in
+    aux t
+
+  let eq compare t1 t2 =
+    let rec aux = function
+      | (Leaf, Leaf) -> true
+      | (Node (_, a1, l1, r1), Node (_, a2, l2, r2)) ->
+        if compare a1 a2 then
+          if aux (l1, l2)
+          then aux (r1, r2)
+          else false
+        else false
+      | (_, _) -> false
+    in
+    aux (t1, t2)
+
+  let rec flatten = function
+    | Leaf -> []
+    | Node (_, a, l, r) -> a::((flatten l) @ (flatten r))
   let flatten_forall compare t =
     List.remove_duplicates compare (flatten t)
   let union l0 l1 = List.union (fun x y -> x == y) l0 l1

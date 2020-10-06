@@ -33,7 +33,19 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {name="tree_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
     {name="tree_left"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
     {name="tree_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
-    {name="tree_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};]
+    {name="tree_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
+
+    {name="treei_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
+    {name="treei_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
+    {name="treei_left"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
+    {name="treei_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
+    {name="treei_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
+
+    {name="treeb_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
+    {name="treeb_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
+    {name="treeb_left"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};
+    {name="treeb_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};
+    {name="treeb_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};]
   (* desugared *)
   let raw_preds_info = [
     {raw_name="member"; raw_num_args=2;};
@@ -66,12 +78,22 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
       (match t with
        | Tree.Leaf -> false
        | Tree.Node (root, _, _) -> root == e)
+    | (V.TI t, V.I e) ->
+      (match t with
+       | LabeledTree.Leaf -> false
+       | LabeledTree.Node (_, root, _, _) -> root == e)
+    | (V.TB t, V.I e) ->
+      (match t with
+       | LabeledTree.Leaf -> false
+       | LabeledTree.Node (_, root, _, _) -> root == e)
     | _ -> raise @@ InterExn "head_apply"
 
   let member_apply (dt: V.t) (e: V.t) =
     match (dt, e) with
     | (V.L l, V.I e) -> List.exists (fun x -> x == e) l
     | (V.T t, V.I e) -> Tree.exists (fun x -> x == e) t
+    | (V.TI t, V.I e) -> LabeledTree.exists (fun x -> x == e) t
+    | (V.TB t, V.I e) -> LabeledTree.exists (fun x -> x == e) t
     | _ -> raise @@ InterExn "member_apply"
 
   let order_apply (dt: V.t) i0 i1 (e0: V.t) (e1: V.t) =
@@ -81,6 +103,12 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | (V.T t, 0, 1, V.I e0, V.I e1) -> Tree.left_child eq t e0 e1
     | (V.T t, 0, 2, V.I e0, V.I e1) -> Tree.right_child eq t e0 e1
     | (V.T t, 1, 2, V.I e0, V.I e1) -> Tree.parallel_child eq t e0 e1
+    | (V.TI t, 0, 1, V.I e0, V.I e1) -> LabeledTree.left_child eq t e0 e1
+    | (V.TI t, 0, 2, V.I e0, V.I e1) -> LabeledTree.right_child eq t e0 e1
+    | (V.TI t, 1, 2, V.I e0, V.I e1) -> LabeledTree.parallel_child eq t e0 e1
+    | (V.TB t, 0, 1, V.I e0, V.I e1) -> LabeledTree.left_child eq t e0 e1
+    | (V.TB t, 0, 2, V.I e0, V.I e1) -> LabeledTree.right_child eq t e0 e1
+    | (V.TB t, 1, 2, V.I e0, V.I e1) -> LabeledTree.parallel_child eq t e0 e1
     | _ -> raise @@ InterExn "order_apply"
 
   let eq_apply (e0: V.t) (e1: V.t) =
@@ -91,14 +119,12 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
   let desugar pred =
     match pred with
     | "member" | "==" | "order" | "head" -> pred, []
-    | "list_member" -> "member", []
-    | "tree_member" -> "member", []
-    | "list_head" -> "head", []
-    | "tree_head" -> "head", []
+    | "list_member"  | "tree_member" | "treei_member" | "treeb_member"  -> "member", []
+    | "list_head" | "tree_head" | "treei_head" | "treeb_head" -> "head", []
     | "list_order" -> "order", [0;1]
-    | "tree_left" -> "order", [0;1]
-    | "tree_right" -> "order", [0;2]
-    | "tree_parallel" -> "order", [1;2]
+    | "tree_left" | "treei_left" | "treeb_left" -> "order", [0;1]
+    | "tree_right" | "treei_right" | "treeb_right" -> "order", [0;2]
+    | "tree_parallel" | "treei_parallel" | "treeb_parallel" -> "order", [1;2]
     | _ -> raise @@ InterExn "desugar"
 
   let desugar_ (pred, dt, args) =

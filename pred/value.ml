@@ -4,6 +4,8 @@ module type Value = sig
     | T of int Utils.Tree.t
     | I of int
     | B of bool
+    | TI of (int, int) Utils.LabeledTree.t
+    | TB of (int, bool) Utils.LabeledTree.t
     | NotADt
   val layout : t -> string
   val eq : t -> t -> bool
@@ -19,12 +21,16 @@ module Value: Value = struct
     | T of int Utils.Tree.t
     | I of int
     | B of bool
+    | TI of (int, int) Utils.LabeledTree.t
+    | TB of (int, bool) Utils.LabeledTree.t
     | NotADt
   let layout = function
     | L l -> sprintf "[%s]" (IntList.to_string l)
     | T tr -> Tree.layout string_of_int tr
     | I i -> string_of_int i
     | B b -> string_of_bool b
+    | TI tr -> LabeledTree.layout string_of_int tr
+    | TB tr -> LabeledTree.layout string_of_int tr
     | NotADt -> "_"
   let eq x y =
     let aux = function
@@ -32,6 +38,8 @@ module Value: Value = struct
       | (B x, B y) -> x == y
       | (L x, L y) -> List.eq (fun x y -> x == y) x y
       | (T x, T y) -> Tree.eq (fun x y -> x == y) x y
+      | (TI x, TI y) -> LabeledTree.eq (fun x y -> x == y) x y
+      | (TB x, TB y) -> LabeledTree.eq (fun x y -> x == y) x y
       | (_, _) -> false
     in
     aux (x, y)
@@ -39,6 +47,8 @@ module Value: Value = struct
     | I _ | B _ | NotADt -> raise @@ InterExn "flatten_forall: not a datatype"
     | L il -> List.flatten_forall (fun x y -> x == y) il
     | T it -> Tree.flatten_forall (fun x y -> x == y) it
+    | TI iti -> LabeledTree.flatten_forall (fun x y -> x == y) iti
+    | TB itb -> LabeledTree.flatten_forall (fun x y -> x == y) itb
   let flatten_forall_l l =
     List.fold_left (fun r v ->
         match v with
@@ -46,6 +56,8 @@ module Value: Value = struct
         | B _ -> r
         | L il -> (List.flatten_forall (fun x y -> x == y) il) @ r
         | T it -> (Tree.flatten_forall (fun x y -> x == y) it) @ r
+        | TI iti -> (LabeledTree.flatten_forall (fun x y -> x == y) iti) @ r
+        | TB itb -> (LabeledTree.flatten_forall (fun x y -> x == y) itb) @ r
         | NotADt -> raise @@ InterExn "flatten_forall_l: not a value"
       ) [] l
 end

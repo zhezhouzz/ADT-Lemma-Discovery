@@ -14,6 +14,7 @@ module type EprTree = sig
   val layout: t -> string
   val layout_forallformula: forallformula -> string
   val pretty_layout_forallformula: forallformula -> string
+  val substm: SE.t Utils.StrMap.t -> t -> t
   val subst: t -> string list -> SE.t list -> t
   val subst_forallformula: forallformula -> string list -> SE.t list -> forallformula
   val eq: t -> t -> bool
@@ -112,6 +113,12 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
       | Ite (p1, p2, p3) -> Ite (aux p1, aux p2, aux p3)
     in
     aux body
+
+  let substm m body =
+    let args, argsvalue =
+      StrMap.fold (fun name v (args, argsvalue) ->
+          name::args, v::argsvalue) m ([], []) in
+    subst body args argsvalue
 
   let subst_forallformula (fv, body) args argsvalue =
     fv, subst body args argsvalue
