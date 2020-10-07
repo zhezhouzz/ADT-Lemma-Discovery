@@ -169,26 +169,15 @@ forall u,((list_member(f,u) \/ list_member(r,u)) <=>
 #### axiom-1
 
 ```
-forall dt u_0 u_1,(ite list_member(dt,u_0)
+	forall dt u_0 u_1,(ite list_member(dt,u_0)
     (
-     list_order(dt,u_0,u_1) \/
-     (
-      (u_0==u_1) \/
-      (ite list_head(dt,u_0)
-          (
-           ~list_head(dt,u_1) /\
-           ~list_order(dt,u_1,u_0)
-          )
-          (
-           list_order(dt,u_1,u_0) \/
-           ~list_member(dt,u_1)
-          ))
-     )
+     list_member(dt,u_1) \/
+     ~list_order(dt,u_1,u_0)
     )
     (
-     ~list_head(dt,u_0) /\
+     ~list_order(dt,u_0,u_1) /\
      (
-      ~list_order(dt,u_0,u_1) /\
+      ~list_head(dt,u_0) /\
       ~list_order(dt,u_1,u_0)
      )
     ))
@@ -205,10 +194,11 @@ forall u,((list_member(f,u) \/ list_member(r,u) \/ (u==x)) <=>
 #### axiom-2
 
 ```
-	forall dt u_0 u_1,(ite list_order(dt,u_0,u_1)
-    (list_member(dt,u_0) /\ list_member(dt,u_1))
-    (
-     ~list_order(dt,u_1,u_0) \/
-     (list_member(dt,u_0) /\ list_member(dt,u_1))
-    ))
+	forall dt u_0 u_1,(
+ list_member(dt,u_0) \/
+ (
+  ~list_order(dt,u_0,u_1) /\
+  ~list_order(dt,u_1,u_0)
+ )
+)
 ```

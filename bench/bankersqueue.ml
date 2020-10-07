@@ -12,6 +12,7 @@ module T = Tp.Tp
 module V = Pred.Value
 open Language.Helper
 open Bench_utils
+open Frontend.Fast.Fast;;
 ;;
 (* let snoc (lenf, f, lenr, r) x =
  *   let lenr = lenr + 1 in
@@ -19,9 +20,7 @@ open Bench_utils
  *   if lenr <= lenf then (lenf, f, lenr, r)
  *   else (lenf + lenr, f ++ reverse r, 0, lazy Nil) *)
 let ctx = init () in
-let spec_tab = StrMap.empty in
-let spec_tab = add_spec spec_tab "Plus" ["x";"y";"z"] [] (int_eq (int_plus x y) z) in
-let spec_tab = add_spec spec_tab "Le" ["x";"y"] [] (int_le x y) in
+let spec_tab = predefined_spec_tab in
 let spec_tab, _ = register spec_tab
     {name = "Cons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
      prog = function
@@ -53,27 +52,35 @@ let spec_tab, _ = register spec_tab
        | [V.L l1; V.L l2] -> [V.L (l1 @ l2)]
        | _ -> raise @@ InterExn "bad prog"
     } in
-let cons h t l = SpecApply ("Cons", [h;t;l]) in
-let nil l = SpecApply ("Nil", [l]) in
-let snoc lenf f lenr r x lenf' f' lenr' r' =
-  SpecApply ("Snoc", [lenf;f;lenr;r;x;lenf';f';lenr';r']) in
-let liblazy l1 l2 = SpecApply ("Lazy", [l1;l2]) in
-let reverse l1 l2 = SpecApply ("Reverse", [l1;l2]) in
-let concat l1 l2 l3 = SpecApply ("Concat", [l1;l2;l3]) in
-let plus x y z = SpecApply ("Plus", [x;y;z]) in
-let le x y = SpecApply ("Le", [x;y]) in
-let f, f', r, r' = map4 list_var ("f", "f'", "r", "r'") in
-let lenf, lenf', lenr, lenr' = map4 int_var ("lenf", "lenf'", "lenr", "lenr'") in
-let vc =
-  Implies (And [plus lenr const1 lenr'; cons x r l1; liblazy l1 r';],
-           Ite(le lenr' lenf,
-               snoc lenf f lenr r x lenf f lenr' r',
-               Implies(And[plus lenf lenr' y;reverse r' l2;concat f l2 l3; nil l4; liblazy l4 l5],
-                       snoc lenf f lenr r x y l3 const0 l5)
-              )
-          )
+let make_lets l body =
+  List.fold_right (fun (names, es) body ->
+      Let(names, es, body)
+    ) l body
 in
-
+let ast =
+  ("Snoc", [T.Int, "lenf"; T.IntList, "f"; T.Int, "lenr"; T.IntList, "r"; T.Int, "x";],
+   make_lets
+     [[T.Int, "const1"], Lit (I 1);
+      ([T.Int, "lenr'"], App(T.Int, "Plus", [T.Int, "lenr"; T.Int, "const1"]));
+      ([T.IntList, "tmp0"], App(T.IntList, "Cons", [T.Int, "x"; T.IntList, "r"]));
+      ([T.IntList, "r'"], App(T.IntList, "Lazy", [T.IntList, "tmp0"]));]
+     (Ite(T.Int,
+          App(T.Int, "Le", [T.Int, "lenr'"; T.Int, "lenf'"]),
+          Var [T.Int, "lenf"; T.IntList, "f"; T.Int, "lenr'"; T.IntList, "r'"],
+          make_lets
+            [[T.Int, "tmp1"], App(T.Int, "Plus", [T.Int, "lenf"; T.Int, "lenr'"]);
+             [T.IntList, "tmp5"], App(T.IntList, "Reverse", [T.IntList, "r'"]);
+             [T.IntList, "tmp2"], App(T.IntList, "Concat", [T.IntList, "f"; T.IntList, "tmp5"]);
+             [T.Int, "tmp3"], Lit (I 0);
+             [T.IntList, "tmp6"], App(T.IntList, "Nil", []);
+             [T.IntList, "tmp4"], App(T.IntList, "Lazy", [T.IntList, "tmp6"]);
+            ]
+            (Var [T.Int, "tmp1"; T.IntList, "tmp2"; T.Int, "tmp3"; T.IntList, "tmp4"])
+         ))
+  )
+in
+let vc = func_to_vc [T.Int, "x1"; T.IntList, "x2"; T.Int, "x3"; T.IntList, "x4"] ast in
+let f, f', r, r' = map4 list_var ("f", "f'", "r", "r'") in
 let spec_tab = add_spec spec_tab "Snoc"
     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
     (Iff(Or[list_member f u; list_member r u],

@@ -71,8 +71,8 @@ module Helper = struct
   let int_eq a b = E.Atom (SE.Op (T.Bool, "==", [a;b]))
   let predefined_spec_tab =
     let spec_tab = StrMap.empty in
-    let spec_tab = add_spec spec_tab "plus" ["x";"y";"z"] [] (int_eq (int_plus x y) z) in
-    let spec_tab = add_spec spec_tab "le" ["x";"y"] [] (int_le x y) in
+    let spec_tab = add_spec spec_tab "Plus" ["x";"y";"z"] [] (int_eq (int_plus x y) z) in
+    let spec_tab = add_spec spec_tab "Le" ["x";"y"] [] (int_le x y) in
     let spec_tab = add_spec spec_tab "equal" ["x";"y"] [] (int_eq x y) in
     spec_tab
 end
