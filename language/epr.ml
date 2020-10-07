@@ -176,9 +176,18 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Implies (p1, p2) -> aux (Or [Not p1; p2])
       | Ite (p1, p2, p3) -> simp_ite (aux p1) (aux p2) (aux p3)
       | Not p -> Not (aux p)
-      | And ps -> And (List.map aux ps)
-      | Or ps -> Or (List.map aux ps)
-      | Iff (p1, p2) -> Iff (aux p1, aux p2)
+      | And ps ->
+        And (List.filter_map (function
+            | True -> None
+            | p -> Some p) (List.map aux ps))
+      | Or ps ->
+        let ps = List.map aux ps in
+        if List.exists (function True -> true | _ -> false) ps
+        then True
+        else Or ps
+      | Iff (p1, p2) ->
+        let p1, p2 = map_double aux (p1, p2) in
+        if eq p1 p2 then True else Iff (p1, p2)
       | True -> True
     in
     aux a

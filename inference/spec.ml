@@ -29,16 +29,6 @@ module SpecSyn (D: Dtree.Dtree) = struct
         try Some (inp @ (prog inp)) with InterExn _ -> None) inps in
     {RS.names = inptps @ outptps; RS.values = values}
 
-  let make_name tp =
-    let name =
-      match tp with
-      | T.Int -> Renaming.unique "x"
-      | T.IntList -> Renaming.unique "l"
-      | T.IntTree | T.IntTreeI | T.IntTreeB -> Renaming.unique "tr"
-      | T.Bool -> Renaming.unique "b"
-    in
-    tp, name
-
   let inp_limit num l =
     if List.length l > num then List.sublist l (0, num) else l
 
@@ -46,17 +36,17 @@ module SpecSyn (D: Dtree.Dtree) = struct
     let fv_num = 2 in
     let fv = List.map (fun n -> (T.Int, n)) @@ new_fv_name fv_num in
     let inptps, outptps = progtp in
-    let inptps = List.map make_name inptps in
-    let outptps = List.map make_name outptps in
-    let _ = List.iter (fun (_, name) -> printf "%s\n" name) inptps in
+    let inptps = List.map T.make_name inptps in
+    let outptps = List.map T.make_name outptps in
+    (* let _ = List.iter (fun (_, name) -> printf "%s\n" name) inptps in *)
     (* let feature_set = F.make_set (outptps @ inptps @ fv) in *)
     let feature_set = F.make_set (inptps @ outptps @ fv) in
-    let _ = printf "feature_set = %s\n" (F.layout_set feature_set) in
+    (* let _ = printf "feature_set = %s\n" (F.layout_set feature_set) in *)
     let targets = List.fold_left (fun r dt -> r @ (F.make_target dt fv)) [] outptps in
-    let _ = printf "targets = %s\n" (F.layout_set targets) in
-    let chooses, inps = R.gen_tpvars ~tpvars:inptps ~num:12 ~fv_num:fv_num in
+    (* let _ = printf "targets = %s\n" (F.layout_set targets) in *)
+    let chooses, inps = R.gen_tpvars ~tpvars:inptps ~num:15 ~fv_num:fv_num in
     let inps = inp_limit 150 inps in
-    let _ = printf "inp:%i\n" (List.length inps) in
+    (* let _ = printf "inp:%i\n" (List.length inps) in *)
     (* let _ = raise @@ InterExn "bad" in *)
     (* let _ = List.iter (fun vs -> printf "%s\n" (List.to_string V.layout vs)) inps in *)
     let samples = simulate prog inptps outptps inps in
@@ -108,6 +98,6 @@ module SpecSyn (D: Dtree.Dtree) = struct
       | [(T.Bool, _)] -> List.map get_tpvar_name inptps, body
       | _ ->
         List.map get_tpvar_name (inptps @ outptps), body in
-    let _ = printf "spec:%s\n" (Ast.layout_spec spec) in
+    (* let _ = printf "spec:%s\n" (Ast.layout_spec spec) in *)
     spec
 end

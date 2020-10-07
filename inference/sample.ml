@@ -44,7 +44,6 @@ module FeatureVector = struct
     let make_env names value = List.fold_left (fun m ((_, name), v) ->
         StrMap.add name v m
       ) StrMap.empty (List.combine names value) in
-    let _ = Printf.printf "of_real_samples\n" in
     let ss = List.map (fun value ->
         let m = make_env names value in
         List.map (fun feature -> F.exec feature m) feature_set) values in

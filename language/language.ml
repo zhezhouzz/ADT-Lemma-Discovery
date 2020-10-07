@@ -54,11 +54,25 @@ module Helper = struct
   let treel t u v = E.Atom (SE.Op (T.Bool, "tree_left", [t; u; v]))
   let treer t u v = E.Atom (SE.Op (T.Bool, "tree_right", [t; u; v]))
   let treep t u v = E.Atom (SE.Op (T.Bool, "tree_parallel", [t; u; v]))
+  let treeil t u v = E.Atom (SE.Op (T.Bool, "treei_left", [t; u; v]))
+  let treeir t u v = E.Atom (SE.Op (T.Bool, "treei_right", [t; u; v]))
+  let treeip t u v = E.Atom (SE.Op (T.Bool, "treei_parallel", [t; u; v]))
+  let treebl t u v = E.Atom (SE.Op (T.Bool, "treeb_left", [t; u; v]))
+  let treebr t u v = E.Atom (SE.Op (T.Bool, "treeb_right", [t; u; v]))
+  let treebp t u v = E.Atom (SE.Op (T.Bool, "treeb_parallel", [t; u; v]))
   let tree_parent t u v = E.Or [treel t u v; treer t u v]
   let tree_any_order t u v = E.Or [treel t u v; treer t u v; treep t u v]
+  let treei_any_order t u v = E.Or [treeil t u v; treeir t u v; treeip t u v]
+  let treeb_any_order t u v = E.Or [treebl t u v; treebr t u v; treebp t u v]
   let int_ge a b = E.Atom (SE.Op (T.Bool, ">=", [a;b]))
   let int_le a b = E.Atom (SE.Op (T.Bool, "<=", [a;b]))
   let int_lt a b = E.Atom (SE.Op (T.Bool, "<", [a;b]))
   let int_gt a b = E.Atom (SE.Op (T.Bool, ">", [a;b]))
   let int_eq a b = E.Atom (SE.Op (T.Bool, "==", [a;b]))
+  let predefined_spec_tab =
+    let spec_tab = StrMap.empty in
+    let spec_tab = add_spec spec_tab "plus" ["x";"y";"z"] [] (int_eq (int_plus x y) z) in
+    let spec_tab = add_spec spec_tab "le" ["x";"y"] [] (int_le x y) in
+    let spec_tab = add_spec spec_tab "equal" ["x";"y"] [] (int_eq x y) in
+    spec_tab
 end

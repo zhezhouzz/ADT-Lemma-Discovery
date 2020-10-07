@@ -10,7 +10,8 @@ module Randomgen : Randomgen = struct
 
   let unique_gen gen num eq =
     let rec aux r =
-      let trs = QCheck.Gen.generate ~n:num gen in
+      let trs = QCheck.Gen.generate ~rand:(Random.State.make [|Random.int 100|]) ~n:num gen in
+      (* let trs = QCheck.Gen.generate ~rand:(Random.get_state ()) ~n:num gen in *)
       let trs = List.remove_duplicates eq (r @ trs) in
       if List.length trs < num then aux trs else
          List.sublist trs (0, num)
@@ -19,15 +20,13 @@ module Randomgen : Randomgen = struct
 
   let randomgen_list (chooses: int list) (num: int) =
     let list_gen = QCheck.Gen.(list_size (int_bound 8) (oneofl chooses)) in
-    List.map (fun l -> V.L l) @@ unique_gen list_gen num IntList.eq
-    (* let s = QCheck.Gen.generate ~n:(2*num) list_gen in
-     * let s = [] :: s in
-     * let s = List.remove_duplicates IntList.eq s in
-     * if List.length s < num then raise @@ InterExn "randomgen_list" else
-     *   List.map (fun l -> V.L l) @@ List.sublist s (0, num) *)
+    let result = List.map (fun l -> V.L l) @@ unique_gen list_gen num IntList.eq in
+    (* let  _ = Printf.printf "list:\n";
+     *   List.iter (fun l -> Printf.printf "%s\n" (V.layout l)) result in *)
+    result
 
   let randomgen_tree (chooses: int list) (num: int) =
-    let _ = Printf.printf "chooses:%s\n" (IntList.to_string chooses) in
+    (* let _ = Printf.printf "chooses:%s\n" (IntList.to_string chooses) in *)
     let node a l r = Tree.Node (a, l, r) in
     let tree_gen =
       QCheck.Gen.((sized_size (int_bound 10)) @@ fix
@@ -43,7 +42,7 @@ module Randomgen : Randomgen = struct
     List.map (fun l -> V.T l) @@ unique_gen tree_gen num (Tree.eq (fun x y -> x == y))
 
   let randomgen_labeled_tree gen (chooses: int list) (num: int) =
-    let _ = Printf.printf "chooses:%s\n" (IntList.to_string chooses) in
+    (* let _ = Printf.printf "chooses:%s\n" (IntList.to_string chooses) in *)
     let node labal a l r = LabeledTree.Node (labal, a, l, r) in
     let tree_gen =
       QCheck.Gen.(
@@ -86,10 +85,10 @@ module Randomgen : Randomgen = struct
             | T.Bool -> intvars, dtvars, (tp, idx) :: bvars
             | _ -> raise @@ UndefExn "gen_tpvars"
         ) ([], [], []) tpvars in
-    let _ =
-      List.iter (fun (tp, idx) -> Printf.printf "tp(%s)|idx(%i)\n" (T.layout tp) idx) intvars in
-    let _ =
-      List.iter (fun (tp, idx) -> Printf.printf "tp(%s)|idx(%i)\n" (T.layout tp) idx) dtvars in
+    (* let _ =
+     *   List.iter (fun (tp, idx) -> Printf.printf "tp(%s)|idx(%i)\n" (T.layout tp) idx) intvars in
+     * let _ =
+     *   List.iter (fun (tp, idx) -> Printf.printf "tp(%s)|idx(%i)\n" (T.layout tp) idx) dtvars in *)
     let int_num = fv_num + (List.length intvars) + 1 in
     let chooses = List.init int_num (fun i -> i) in
     let bsamples = List.map (fun (tp, idx) ->

@@ -91,7 +91,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Iff (p1, p2) -> Iff (aux p1, aux p2)
       | SpecApply (spec_name, argsvalue) ->
         let args, body = StrMap.find "ast::application" spec_tab spec_name in
-        ForAll (E.subst_forallformula body args argsvalue)
+         ForAll (E.subst_forallformula body args argsvalue)
     in
     aux a
   let to_z3 ctx a spec_tab =

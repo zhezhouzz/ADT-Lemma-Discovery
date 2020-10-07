@@ -3,6 +3,7 @@
     (flags (:standard -w -32 -w -35 -w -27 -w -33 -w -26))))
 (tests
  (names
+ frontend
 ; language_test
 ; whole_test
 ; abduction_test
@@ -17,6 +18,7 @@
 ; bench_batchedqueue
 ; bench_bankersqueue
 ; bench_splayheap
- spec_infer)
- (libraries ounit2 solver inference)
+; spec_infer
+)
+ (libraries ounit2 solver inference frontend)
 )

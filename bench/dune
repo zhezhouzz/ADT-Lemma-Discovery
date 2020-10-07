@@ -12,5 +12,5 @@
  bankersqueue
  batchedqueue
  )
- (libraries ounit2 solver inference)
+ (libraries ounit2 solver inference frontend)
 )

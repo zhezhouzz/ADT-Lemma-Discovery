@@ -11,7 +11,6 @@ module SE = E.SE
 module T = Tp.Tp
 module V = Pred.Value
 open Language.Helper
-open Bench_utils
 ;;
 (* let rec partition pivot = function
  *   | E -> E, E
@@ -36,32 +35,19 @@ open Bench_utils
  *         else
  *           let small, big = partition pivot a1 in
  *           small, T (big, y, T (a2, x, b)) *)
-let ctx = init () in
 let t l e r result = SpecApply ("T", [l;e;r;result]) in
 let e result = SpecApply ("E", [result]) in
 let le x y = SpecApply ("Le", [x;y]) in
+let partition_pre a b c d = SpecApply ("PartitionPre", [a;b;c;d]) in
+let partition_post a b c d = SpecApply ("PartitionPost", [a;b;c;d]) in
+let partition a b c d = Implies (partition_pre a b c d, partition_post a b c d) in
 let a, b, a1, a2, b1, b2 = map6 tree_var ("a", "b", "a1", "a2", "b1", "b2") in
 let small, big, tr = map_triple tree_var ("small", "big", "tr") in
 let tmp1, tmp2, tmp3, tmp4 = map4 tree_var ("tmp1", "tmp2", "tmp3", "tmp4") in
 let tree1, tree2, tree3 = map_triple tree_var ("tree1","tree2","tree3") in
 let pivot = int_var "pivot" in
 let tmpe = tree_var "tmpe" in
-let spec_tab = predefined_spec_tab in
-let spec_tab = add_spec spec_tab "Le" ["x";"y"] [] (int_le x y) in
-let spec_tab, libt = register spec_tab
-    {name = "T"; intps = [T.IntTree;T.Int;T.IntTree]; outtps = [T.IntTree];
-     prog = function
-       | [V.T l; V.I a; V.T r] -> [V.T (Tree.Node (a, l, r))]
-       | _ -> raise @@ InterExn "bad prog"
-    } in
-let spec_tab, libe = register spec_tab
-    {name = "E"; intps = [T.IntTree;]; outtps = [T.Bool];
-     prog = function
-       | [V.T Tree.Leaf] -> [V.B true]
-       | [V.T _] -> [V.B false]
-       | _ -> raise @@ InterExn "bad prog"
-    } in
-let vc partition =
+let vc =
   And [
     Implies(e tr, partition pivot tr tr tr);
     Implies(t a x b tr,
@@ -96,22 +82,31 @@ let vc partition =
            )
   ]
 in
-let partition a b c d = SpecApply ("Partition", [a;b;c;d]) in
-let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
+let spec_tab = StrMap.empty in
+let spec_tab = add_spec spec_tab "Le" ["x";"y"] [] (int_le x y) in
+let spec_tab = add_spec spec_tab "PartitionPre" ["x";"tree1";"tree2";"tree3"] ["u"]
+    E.True
+in
+let spec_tab = add_spec spec_tab "PartitionPost" ["x";"tree1";"tree2";"tree3"] ["u";"v"]
     (E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u]))
 in
-let axiom = assertion ctx (vc partition) spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
-
-let partition a b c d = SpecApply ("Partition", [a;b;c;d]) in
-let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
-    (E.And [
-        E.Implies (E.And [tree_head tree2 u], int_le u x);
-        E.Implies (E.And [tree_head tree3 u], int_ge u x);
-        E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u])
-      ])
-in
-let axiom = assertion ctx (vc partition) spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let libt = {name = "T"; intps = [T.IntTree;T.Int;T.IntTree]; outtps = [T.IntTree];
+            prog = function
+              | [V.T l; V.I a; V.T r] -> [V.T (Tree.Node (a, l, r))]
+              | _ -> raise @@ InterExn "bad prog"
+           } in
+let libe = {name = "E"; intps = [T.IntTree;]; outtps = [T.Bool];
+            prog = function
+              | [V.T Tree.Leaf] -> [V.B true]
+              | [V.T _] -> [V.B false]
+              | _ -> raise @@ InterExn "bad prog"
+           } in
+let spec_tab_add spec_tab {name;intps;outtps;prog} =
+  StrMap.add name (Spec.infer ~progtp:(intps,outtps) ~prog:prog) spec_tab in
+let spec_tab = List.fold_left spec_tab_add spec_tab [libt;libe] in
+let _ = printf "vc:\n%s\n" (vc_layout vc) in
+let ctx =
+  Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
+let axiom = Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~dttp:T.IntTree in
+let _ = printf "axiom:\n\t%s\n" (E.layout_forallformula axiom) in
 ();;
-
