@@ -41,14 +41,26 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
   type free_variable = string
   type forallformula = free_variable list * t
 
+  (* let sym_and = "/\\"
+   * let sym_or = "\\/"
+   * let sym_not = "~"
+   * let sym_implies = "=>"
+   * let sym_iff = "<=>" *)
+
+  let sym_and = "&&"
+  let sym_or = "||"
+  let sym_not = "!"
+  let sym_implies = "==>"
+  let sym_iff = "<=>"
+
   let rec layout = function
     | True -> "true"
     | Atom bexpr -> sprintf "(%s)" (SE.layout bexpr)
-    | Implies (p1, p2) -> sprintf "(%s => %s)" (layout p1) (layout p2)
-    | And ps -> List.inner_layout (List.map layout ps) "/\\" "true"
-    | Or ps -> List.inner_layout (List.map layout ps) "\\/" "true"
-    | Not p -> "~"^(layout p)
-    | Iff (p1, p2) -> sprintf "(%s <=> %s)" (layout p1) (layout p2)
+    | Implies (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_implies (layout p2)
+    | And ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_and "true")
+    | Or ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_or "false")
+    | Not p -> sprintf "(%s)" (sym_not^(layout p))
+    | Iff (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_iff (layout p2)
     | Ite (p1, p2, p3) ->
       sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
 
@@ -58,35 +70,38 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
       | True -> "true"
       | Atom bexpr -> sprintf "%s%s" (mk_indent indent) (SE.layout bexpr)
       | Implies (Atom e1, Atom e2) ->
-        sprintf "%s(%s => %s)"
-          (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2))
+        sprintf "%s(%s %s %s)"
+          (mk_indent indent) (aux 0 (Atom e1)) sym_implies (aux 0 (Atom e2))
       | Implies (p1, p2) ->
-        sprintf "%s(\n%s => \n%s\n%s)"
-          (mk_indent indent) (aux (indent + 1) p1) (aux (indent + 1) p2) (mk_indent indent)
+        sprintf "%s(\n%s %s \n%s\n%s)"
+          (mk_indent indent) (aux (indent + 1) p1) sym_implies
+          (aux (indent + 1) p2) (mk_indent indent)
       | And [] -> raise @@ InterExn "epr does not involve void conj"
       | And [p] -> aux indent p
-      | And [Atom e1; Atom e2] -> sprintf "%s(%s /\\ %s)"
-                                    (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2))
+      | And [Atom e1; Atom e2] ->
+        sprintf "%s(%s %s %s)" (mk_indent indent) (aux 0 (Atom e1)) sym_and (aux 0 (Atom e2))
       | And [Atom e1; Atom e2; Atom e3] ->
-        sprintf "%s(%s /\\ %s /\\ %s)"
-          (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2)) (aux 0 (Atom e3))
+        sprintf "%s(%s %s %s %s %s)"
+          (mk_indent indent) (aux 0 (Atom e1)) sym_and
+          (aux 0 (Atom e2)) sym_and (aux 0 (Atom e3))
       | And ps -> sprintf "%s(\n%s\n%s)" (mk_indent indent)
-                    (List.inner_layout (List.map (aux (indent + 1)) ps) " /\\\n" "true")
+                    (List.inner_layout (List.map (aux (indent + 1)) ps) (" "^sym_and^"\n") "true")
                     (mk_indent indent)
       | Or [] -> raise @@ InterExn "epr does not involve void disconj"
       | Or [p] -> aux indent p
-      | Or [Atom e1; Atom e2] -> sprintf "%s(%s \\/ %s)"
-                                   (mk_indent indent)(aux 0 (Atom e1)) (aux 0 (Atom e2))
+      | Or [Atom e1; Atom e2] ->
+        sprintf "%s(%s %s %s)" (mk_indent indent)(aux 0 (Atom e1)) sym_or (aux 0 (Atom e2))
       | Or [Atom e1; Atom e2; Atom e3] ->
-        sprintf "%s(%s \\/ %s \\/ %s)"
-          (mk_indent indent) (aux 0 (Atom e1)) (aux 0 (Atom e2)) (aux 0 (Atom e3))
+        sprintf "%s(%s %s %s %s %s)"
+          (mk_indent indent) (aux 0 (Atom e1))
+          sym_or (aux 0 (Atom e2)) sym_or (aux 0 (Atom e3))
       | Or ps -> sprintf "%s(\n%s\n%s)" (mk_indent indent)
-                   (List.inner_layout (List.map (aux (indent + 1)) ps) " \\/\n" "false")
+                   (List.inner_layout (List.map (aux (indent + 1)) ps) (" "^sym_or^"\n") "false")
                    (mk_indent indent)
-      | Not p -> sprintf "%s~%s" (mk_indent indent) (aux 0 p)
+      | Not p -> sprintf "%s%s%s" (mk_indent indent) sym_not (aux 0 p)
       | Iff (p1, p2) ->
-        sprintf "%s(%s <=> \n%s)"
-          (mk_indent indent) (aux 0 p1) (aux (indent + 1) p2)
+        sprintf "%s(%s %s \n%s)"
+          (mk_indent indent) (aux 0 p1) sym_iff (aux (indent + 1) p2)
       | Ite (p1, p2, p3) ->
         sprintf "%s(ite%s\n%s\n%s)"
           (mk_indent indent) (aux 1 p1) (aux (indent + 4) p2) (aux (indent + 4) p3)

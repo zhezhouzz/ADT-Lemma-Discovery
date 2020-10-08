@@ -61,8 +61,7 @@ let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
         E.Iff(list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom = assertion ctx vc spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom1 = assertion ctx vc spec_tab in
 
 let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u";"v"]
      (E.And [
@@ -71,8 +70,7 @@ let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u";"v"]
                   list_order l3 u v);
       ])
 in
-let axiom = assertion ctx vc spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom2 = assertion ctx vc spec_tab in
 
 let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
      (E.And [
@@ -80,6 +78,6 @@ let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
         E.Implies (list_head l3 u, E.Or [list_head l1 u; list_head l2 u])
       ])
 in
-let axiom = assertion ctx vc spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom3 = assertion ctx vc spec_tab in
+let _ = to_verifier "customstack" [axiom1;axiom2;axiom3] T.IntList in
 ();;

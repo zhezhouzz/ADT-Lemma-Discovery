@@ -58,8 +58,7 @@ let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
                E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom = assertion ctx vc spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom1 = assertion ctx vc spec_tab in
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
     (E.And [
@@ -69,6 +68,6 @@ let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
                    Or[list_order l1 u v; list_order l2 v u])
       ])
 in
-let axiom = assertion ctx vc spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom2 = assertion ctx vc spec_tab in
+let _ = to_verifier "batchedqueue" [axiom1;axiom2] T.IntList in
 ();;

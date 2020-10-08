@@ -1,0 +1,42 @@
+datatype Tree<a> = Leaf | Node(elem: a, l: Tree<a>, r:Tree<a>)
+
+  /* Some functions on lists */
+
+  function tree_member<a>(xs: Tree<a>, e: a): bool
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) => if x == e then true else tree_member(l, e) || tree_member(r, e)
+  }
+
+  function tree_left<a>(xs: Tree<a>, u: a, v:a): bool
+    ensures tree_left(xs, u, v) ==> tree_member(xs, u);
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) => if x == u then tree_member(l, v) else tree_left(l, u, v) || tree_left (r, u, v)
+  }
+
+  function tree_right<a>(xs: Tree<a>, u: a, v:a): bool
+    ensures tree_right(xs, u, v) ==> tree_member(xs, u);
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) => if x == u then tree_member(r, v) else tree_right(l, u, v) || tree_right (r, u, v)
+  }
+
+  function tree_parallel<a>(xs: Tree<a>, u: a, v:a): bool
+    ensures tree_parallel(xs, u, v) ==> tree_member(xs, u) && tree_member(xs, v);
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) =>
+        (tree_member(l, u) && tree_member(r, v)) || tree_parallel(l, u, v) || tree_parallel(r, u, v)
+  }
+
+  function tree_head<a>(xs: Tree<a>, e: a): bool
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) => if x == e then true else false
+  }

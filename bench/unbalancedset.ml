@@ -70,8 +70,7 @@ let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"]
         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
       ])
 in
-let axiom = assertion ctx (vc insert) spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom1 = assertion ctx (vc insert) spec_tab in
 
 let insert tree1 tree2 tree3 = SpecApply ("Insert", [tree1;tree2;tree3]);
 in
@@ -83,6 +82,6 @@ let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"]
         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
       ])
 in
-let axiom = assertion ctx (vc insert) spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom2 = assertion ctx (vc insert) spec_tab in
+let _ = to_verifier "unbalancedset" [axiom1;axiom2] T.IntTree in
 ();;

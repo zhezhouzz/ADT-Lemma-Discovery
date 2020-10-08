@@ -37,7 +37,7 @@ let spec_tab, _ = register spec_tab
 let spec_tab, _ = register spec_tab
     {name = "Lazy"; intps = [T.IntList]; outtps = [T.IntList];
      prog = function
-       | [V.L l] -> [V.L l]
+       | [V.L l] -> Lazy.force (lazy [V.L l])
        | _ -> raise @@ InterExn "bad prog"
     } in
 let spec_tab, _ = register spec_tab
@@ -87,8 +87,7 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
         ))
 in
-let axiom = assertion ctx vc spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom1 = assertion ctx vc spec_tab in
 
 let spec_tab = add_spec spec_tab "Snoc"
     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
@@ -96,6 +95,6 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[list_member f' u; list_member r' u]
         ))
 in
-let axiom = assertion ctx vc spec_tab in
-let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+let axiom2 = assertion ctx vc spec_tab in
+let _ = to_verifier "bankersqueue" [axiom1;axiom2] T.IntList in
 ();;

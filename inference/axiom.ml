@@ -182,7 +182,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
           raise @@ InterExn "main_loop: too many iterations"
         else counter:= (!counter) - 1 in
       let p_size, n_size = map_double Hashtbl.length (positives, negatives) in
-      (* let _ = Printf.printf "p_size:%i n_size:%i\n" p_size n_size in *)
+      let _ = Printf.printf "p_size:%i n_size:%i\n" p_size n_size in
       let axiom =
         D.to_forallformula @@
         if (p_size == 0) && (n_size == 0) then D.T
@@ -202,7 +202,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
          *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
          *   printf "neg:\n";
          *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) negatives in *)
-        let _ = pos_update positives negatives feature_set dt fv chooses 10 in
+        let _ = pos_update positives negatives feature_set dt fv chooses 100 in
         (* let _ =
          *   printf "pos:\n";
          *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;

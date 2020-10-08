@@ -156,6 +156,8 @@ module Epr (E: EprTree.EprTree): Epr = struct
     aux (desugar a)
 
   let simplify_ite a =
+    let desugar_ite (p1, p2, p3) =
+      And [Implies (p1, p2); Implies (Not p1, p3)] in
     let simp_ite p1 p2 p3 =
       match p2, p3 with
       | True, True -> True
@@ -164,11 +166,13 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Not True, True -> Not p1
       | Not True, Not True -> Not True
       | Not True, p3 -> And [Not p1; p3]
-      | p2, True -> Or [Not p1; p2]
+      | p2, True -> Implies (p1, p2)
       | p2, Not True -> And [p1; p2]
       | x1, Not x2 ->
-        if eq x1 x2 then Iff (x1, x2) else Ite (p1, p2, p3)
-      | _ -> Ite (p1, p2, p3)
+        if eq x1 x2
+        then Iff (x1, x2)
+        else desugar_ite (p1, p2, p3)
+      | _ -> desugar_ite (p1, p2, p3)
     in
     let rec aux a =
       match a with
@@ -190,6 +194,18 @@ module Epr (E: EprTree.EprTree): Epr = struct
         if eq p1 p2 then True else Iff (p1, p2)
       | True -> True
     in
-    aux a
+    let rec simplify_same = function
+      | Implies(p1, Implies(p2, p3)) -> simplify_same (Implies(And[p1;p2], p3))
+      | Implies(p1, p2) -> Implies(simplify_same p1, simplify_same p2)
+      | Ite (_, _, _) -> raise @@ InterExn "simplify_same"
+      | Atom _ as x -> x
+      | Not(Not(p)) -> simplify_same p
+      | Not(p) -> Not(simplify_same p)
+      | And ps -> And (List.map simplify_same ps)
+      | Or ps -> Or (List.map simplify_same ps)
+      | Iff (p1, p2) -> Iff (simplify_same p1, simplify_same p2)
+      | True -> True
+    in
+    simplify_same (aux a)
   let forallformula_simplify_ite (fv, e) = fv, simplify_ite e
 end
