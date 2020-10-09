@@ -10,24 +10,28 @@ datatype LabeledTree<a> = Leaf | Node(elem: a, l: LabeledTree<a>, r:LabeledTree<
   }
 
   function treeb_left<a>(xs: LabeledTree<a>, u: a, v:a): bool
-    ensures treeb_left(xs, u, v) ==> treeb_member(xs, u);
+    // ensures treeb_left(xs, u, v) ==> treeb_member(xs, u);
   {
+    if !(treeb_member(xs, u)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) => if x == u then treeb_member(l, v) else treeb_left(l, u, v) || treeb_left (r, u, v)
   }
 
   function treeb_right<a>(xs: LabeledTree<a>, u: a, v:a): bool
-    ensures treeb_right(xs, u, v) ==> treeb_member(xs, u);
+    // ensures treeb_right(xs, u, v) ==> treeb_member(xs, u);
   {
+    if !(treeb_member(xs, u)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) => if x == u then treeb_member(r, v) else treeb_right(l, u, v) || treeb_right (r, u, v)
   }
 
   function treeb_parallel<a>(xs: LabeledTree<a>, u: a, v:a): bool
-    ensures treeb_parallel(xs, u, v) ==> treeb_member(xs, u) && treeb_member(xs, v);
+    // ensures treeb_parallel(xs, u, v) ==> treeb_member(xs, u) && treeb_member(xs, v);
   {
+    if !(treeb_member(xs, u)) then false else
+    if !(treeb_member(xs, v)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) =>

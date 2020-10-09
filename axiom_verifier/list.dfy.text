@@ -11,6 +11,8 @@ datatype List<a> = Nil | Cons(head: a, tail: List<a>)
 
   function list_order<a>(xs: List<a>, u: a, v:a): bool
   {
+      if !list_member(xs, u) then false else
+      if !list_member(xs, v) then false else
     match xs
       case Nil => false
       case Cons(x, xrest) => if x == u then list_member(xrest, v) else list_order(xrest, u, v)

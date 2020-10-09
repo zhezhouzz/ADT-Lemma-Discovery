@@ -28,7 +28,7 @@ let read_whole_file filename =
   s
 
 let to_verifier name axioms dttp =
-  let path = "axiom_verifier/" in
+  let path = (Sys.getenv "DUNE_ROOT") ^ "/axiom_verifier/" in
   let headfile, dtname = get_head dttp in
   let headfile = path ^ headfile in
   let methods =
@@ -54,7 +54,7 @@ let assertion ctx vc spec_tab =
 let init () =
   let _ = Random.init 0 in
   let ctx =
-    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
+    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "19999")] in
   ctx
 
 let spec_tab_add spec_tab {name;intps;outtps;prog} =

@@ -35,4 +35,10 @@ order([1;2], 3, 1) && order([1;2], 3, 2) && order([1;2], 3, 3)
 
 ## Test
 
-run `dune runtest`.
+run 
+
+```
+DUNE_ROOT=`pwd` dune test
+```
+
+.

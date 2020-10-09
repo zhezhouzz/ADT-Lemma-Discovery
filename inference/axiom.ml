@@ -202,7 +202,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
          *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
          *   printf "neg:\n";
          *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) negatives in *)
-        let _ = pos_update positives negatives feature_set dt fv chooses 100 in
+        let _ = pos_update positives negatives feature_set dt fv chooses 150 in
         (* let _ =
          *   printf "pos:\n";
          *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;

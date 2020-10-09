@@ -1,6 +1,7 @@
 (env
   (dev
-    (flags (:standard -w -32 -w -35 -w -27 -w -33 -w -26))))
+    (flags (:standard -w -32 -w -35 -w -27 -w -33 -w -26)))
+)
 (tests
  (names
  customstack

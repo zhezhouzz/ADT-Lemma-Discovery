@@ -80,10 +80,10 @@ let spec_tab_add spec_tab {name;intps;outtps;prog} =
 let spec_tab = List.fold_left spec_tab_add spec_tab
     [libcons;libnil;liblazy;libreverse;libconcat] in
 let _ = printf "%s\n" (A.layout vc) in
-let ctx =
-   Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
- let _ = StrMap.iter (fun name spec ->
-     printf "%s\n\n" (A.layout_spec_entry name spec)) spec_tab in
- let axiom = Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab in
- let _ = printf "axiom:\n\t%s\n" (A.E.layout_forallformula axiom) in
+(* let ctx =
+ *    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
+ *  let _ = StrMap.iter (fun name spec ->
+ *      printf "%s\n\n" (A.layout_spec_entry name spec)) spec_tab in
+ *  let axiom = Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab in
+ *  let _ = printf "axiom:\n\t%s\n" (A.E.layout_forallformula axiom) in *)
  ();;

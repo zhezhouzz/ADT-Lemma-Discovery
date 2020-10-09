@@ -10,24 +10,28 @@ datatype LabeledTree<a> = Leaf | Node(elem: a, l: LabeledTree<a>, r:LabeledTree<
   }
 
   function treei_left<a>(xs: LabeledTree<a>, u: a, v:a): bool
-    ensures treei_left(xs, u, v) ==> treei_member(xs, u);
+    // ensures treei_left(xs, u, v) ==> treei_member(xs, u);
   {
+    if !(treei_member(xs, u)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) => if x == u then treei_member(l, v) else treei_left(l, u, v) || treei_left (r, u, v)
   }
 
   function treei_right<a>(xs: LabeledTree<a>, u: a, v:a): bool
-    ensures treei_right(xs, u, v) ==> treei_member(xs, u);
+    // ensures treei_right(xs, u, v) ==> treei_member(xs, u);
   {
+    if !(treei_member(xs, u)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) => if x == u then treei_member(r, v) else treei_right(l, u, v) || treei_right (r, u, v)
   }
 
   function treei_parallel<a>(xs: LabeledTree<a>, u: a, v:a): bool
-    ensures treei_parallel(xs, u, v) ==> treei_member(xs, u) && treei_member(xs, v);
+    // ensures treei_parallel(xs, u, v) ==> treei_member(xs, u) && treei_member(xs, v);
   {
+    if !(treei_member(xs, u)) then false else
+    if !(treei_member(xs, v)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) =>
