@@ -52,11 +52,6 @@ let spec_tab, _ = register spec_tab
        | [V.L l1; V.L l2] -> [V.L (l1 @ l2)]
        | _ -> raise @@ InterExn "bad prog"
     } in
-let make_lets l body =
-  List.fold_right (fun (names, es) body ->
-      Let(names, es, body)
-    ) l body
-in
 let ast =
   ("Snoc", [T.Int, "lenf"; T.IntList, "f"; T.Int, "lenr"; T.IntList, "r"; T.Int, "x";],
    make_lets
@@ -87,7 +82,7 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
         ))
 in
-let axiom1 = assertion ctx vc spec_tab in
+let axiom1 = assertion ctx vc spec_tab true in
 
 let spec_tab = add_spec spec_tab "Snoc"
     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
@@ -95,6 +90,6 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[list_member f' u; list_member r' u]
         ))
 in
-let axiom2 = assertion ctx vc spec_tab in
-let _ = to_verifier "bankersqueue" [axiom1;axiom2] T.IntList in
+let axiom2 = assertion ctx vc spec_tab true in
+let _ = to_verifier "bankersqueue" [axiom1;axiom2] in
 ();;

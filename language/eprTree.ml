@@ -51,7 +51,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
   let sym_or = "||"
   let sym_not = "!"
   let sym_implies = "==>"
-  let sym_iff = "<=>"
+  let sym_iff = "<==>"
 
   let rec layout = function
     | True -> "true"

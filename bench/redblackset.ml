@@ -85,7 +85,7 @@ let spec_tab = add_spec spec_tab "Balance"  ["r1";"tree1";"x";"tree2";"tree3"] [
               );
       ])
 in
-let axiom1 = assertion ctx (vc balance) spec_tab in
+let axiom1 = assertion ctx (vc balance) spec_tab true in
 
 let balance a b c d e =
   Implies (SpecApply ("BalancePre", [a;b;c;d;e]), SpecApply ("BalancePost", [a;b;c;d;e])) in
@@ -106,6 +106,6 @@ let spec_tab = add_spec spec_tab "BalancePost" ["r1";"tree1";"x";"tree2";"tree3"
               );
       ])
 in
-let axiom2 = assertion ctx (vc balance) spec_tab in
-let _ = to_verifier "redblackset" [axiom1;axiom2] T.IntTreeB in
+let axiom2 = assertion ctx (vc balance) spec_tab true in
+let _ = to_verifier "redblackset" [axiom1;axiom2] in
 ();;

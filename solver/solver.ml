@@ -9,7 +9,8 @@ let solver_result solver =
   | UNSATISFIABLE -> true, None
   | UNKNOWN ->
     (* raise (InterExn "time out!") *)
-  Printf.printf "\ttimeout\n"; false, None
+    (* Printf.printf "\ttimeout\n"; *)
+    false, None
   | SATISFIABLE ->
     match Solver.get_model solver with
     | None -> raise (InterExn "never happen")

@@ -27,9 +27,9 @@ module AxiomSyn (D: Dtree.Dtree) = struct
   type typed_var = (Tp.Tp.t * string)
   open Z3
 
-  let max_main_loop_times = 20
+  let max_main_loop_with_fixed_fv_times = 20
 
-  let counter = ref max_main_loop_times
+  let counter = ref max_main_loop_with_fixed_fv_times
 
   let check_unbounded_dts unbounded_dts =
     match unbounded_dts with
@@ -51,7 +51,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     interval
 
   let infer ~ctx ~vc ~spectable =
-    let fv_num = 2 in
+    (* let fv_num = 2 in *)
     let _, vars = Ast.extract_variables vc in
     let unbounded_dts = List.filter (fun (tp, _) -> T.is_dt tp) vars in
     let dttp = match unbounded_dts with
@@ -67,6 +67,9 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     let unbounded_ints, neg_vc_skolemized =
       Ast.skolemize @@ Ast.application (Ast.to_nnf (Ast.Not vc)) spectable in
     let unbounded_ints = unbounded_ints @ fvints in
+    let _ = printf "unbounded_int(%i):%s\n" (List.length unbounded_ints)
+        (StrList.to_string unbounded_ints) in
+    let fv_num_max = List.length unbounded_ints in
     (* let _ = printf "unbounded_ints:%s\n" (StrList.to_string unbounded_ints) in
      * let _ = printf "unbounded_dts:%s\n" (StrList.to_string unbounded_dts) in *)
     let neg_vc_with_ax axiom =
@@ -133,7 +136,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
                     Hashtbl.fold (fun vec _ vecs -> (false, vec) :: vecs) neg []} in
       D.classify data
     in
-    let sampling axiom_epr feature_set dt fv chooses num =
+    let sampling fv_num axiom_epr feature_set dt fv chooses num =
       let samples = R.gen ~chooses:chooses ~num:num ~tp:dttp in
       (* let _ = List.iter (fun s -> printf "[%s]\n" (V.layout s)) samples in *)
       let vecs =
@@ -150,11 +153,11 @@ module AxiomSyn (D: Dtree.Dtree) = struct
         List.cross samples (List.choose_n (List.map (fun i -> V.I i) chooses) fv_num) in
       vecs
     in
-    let pos_update pos neg feature_set dt fv chooses num =
+    let pos_update fv_num pos neg feature_set dt fv chooses num =
       let rec aux () =
         let axiom_epr = Epr.simplify_ite @@ D.to_epr @@ pn_to_axiom_epr feature_set pos neg in
         (* let _ = printf "axiom_epr:%s\n" (Epr.layout axiom_epr) in *)
-        let ps = sampling axiom_epr feature_set dt fv chooses num in
+        let ps = sampling fv_num axiom_epr feature_set dt fv chooses num in
         (* let _ = List.iter (fun vec -> printf "%s\n" (boollist_to_string vec)) ps in *)
         match ps with
         | [] -> ()
@@ -172,51 +175,61 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       in
       aux ()
     in
-    let fv = List.map (fun n -> (T.Int, n)) @@ List.init fv_num (fun i -> sprintf "u_%i" i) in
-    let feature_set = F.make_set ([dt] @ fv) in
-    (* let _ = printf "set:%s\n" (F.layout_set feature_set) in *)
-    let positives = Hashtbl.create 1000 in
-    let negatives = Hashtbl.create 1000 in
-    let rec main_loop () =
-      let _ = if (!counter) <= 0 then
-          raise @@ InterExn "main_loop: too many iterations"
-        else counter:= (!counter) - 1 in
-      let p_size, n_size = map_double Hashtbl.length (positives, negatives) in
-      let _ = Printf.printf "p_size:%i n_size:%i\n" p_size n_size in
-      let axiom =
-        D.to_forallformula @@
-        if (p_size == 0) && (n_size == 0) then D.T
-        else pn_to_axiom_epr feature_set positives negatives in
-      let valid, _ = S.check ctx (neg_vc_with_ax axiom) in
-      if valid then axiom else
-        let range = (0, (List.length fv)) in
-        let chooses = List.init ((List.length fv) + 1) (fun i -> i) in
-        let _, m = S.check ctx (neg_vc_with_constraint range axiom) in
-        let m = match m with None -> raise @@ InterExn "bad range" | Some m -> m in
-        (* let _ = printf "model:%s\n" (Model.to_string m) in *)
-        let counter_vecs = get_from_model m feature_set unbounded_dts chooses dt fv in
-        (* let _ = List.iter (fun vec -> printf "%s\n" (boollist_to_string vec)) counter_vecs in *)
-        let _ = neg_update positives negatives counter_vecs in
-        (* let _ =
-         *   printf "pos:\n";
-         *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
-         *   printf "neg:\n";
-         *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) negatives in *)
-        let _ = pos_update positives negatives feature_set dt fv chooses 150 in
-        (* let _ =
-         *   printf "pos:\n";
-         *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
-         *   printf "neg:\n";
-         *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) negatives in *)
-        if (Hashtbl.length positives == p_size) &&
-           (Hashtbl.length negatives == n_size)
-        then raise @@ InterExn "bad fv num"
-        else
-          main_loop ()
+    let rec main_loop fv_num =
+      (* let _ = printf "fv_num=%i\n" fv_num in *)
+      if fv_num > fv_num_max then None else
+        let fv = List.map (fun n -> (T.Int, n)) @@ List.init fv_num (fun i -> sprintf "u_%i" i) in
+        let feature_set = F.make_set ([dt] @ fv) in
+        (* let _ = printf "set:%s\n" (F.layout_set feature_set) in *)
+        let positives = Hashtbl.create 10000 in
+        let negatives = Hashtbl.create 10000 in
+        let rec main_loop_with_fixed_fv () =
+          (* let _ = if (!counter) <= 0 then
+           *     raise @@ InterExn "main_loop_with_fixed_fv: too many iterations"
+           *   else counter:= (!counter) - 1 in *)
+          let p_size, n_size = map_double Hashtbl.length (positives, negatives) in
+          (* let _ = Printf.printf "p_size:%i n_size:%i\n" p_size n_size in *)
+          let axiom =
+            D.to_forallformula @@
+            if (p_size == 0) && (n_size == 0) then D.T
+            else pn_to_axiom_epr feature_set positives negatives in
+          let valid, _ = S.check ctx (neg_vc_with_ax axiom) in
+          if valid
+          then Some (dttp, Epr.forallformula_simplify_ite axiom)
+          else
+            let rec limited_smt_check upper_bound =
+              (* let _ = printf "upper_bound = %i\n" upper_bound in *)
+              let range = (0, upper_bound) in
+              let chooses = List.init ((List.length fv) + 1) (fun i -> i) in
+              let _, m = S.check ctx (neg_vc_with_constraint range axiom) in
+              match m with
+              | None -> limited_smt_check (upper_bound + 1)
+              | Some m -> chooses, m
+            in
+            let chooses, m = limited_smt_check (List.length fv) in
+            (* let _ = printf "model:%s\n" (Model.to_string m) in *)
+            let counter_vecs = get_from_model m feature_set unbounded_dts chooses dt fv in
+            (* let _ = List.iter (fun vec -> printf "%s\n" (boollist_to_string vec)) counter_vecs in *)
+            let _ = neg_update positives negatives counter_vecs in
+            (* let _ =
+             *   printf "pos:\n";
+             *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
+             *   printf "neg:\n";
+             *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) negatives in *)
+            let _ = pos_update fv_num positives negatives feature_set dt fv chooses 150 in
+            (* let _ =
+             *   printf "pos:\n";
+             *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
+             *   printf "neg:\n";
+             *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) negatives in *)
+            if (Hashtbl.length positives == p_size) &&
+               (Hashtbl.length negatives == n_size)
+            then
+              main_loop (fv_num + 1)
+            else
+              main_loop_with_fixed_fv ()
+        in
+        main_loop_with_fixed_fv ()
     in
-    let axiom = main_loop () in
-    let axiom = Epr.forallformula_simplify_ite axiom in
-    (* let _ = printf "axiom:%s\n" (Epr.layout_forallformula axiom) in
-     * let _ = printf "axiom:%s\n" (Expr.to_string (Epr.forallformula_to_z3 ctx axiom)) in *)
-    axiom
+    main_loop 1
 end

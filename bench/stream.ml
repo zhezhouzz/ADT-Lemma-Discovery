@@ -66,12 +66,12 @@ in
 
 let reverse a b c = SpecApply ("Reverse", [a;b;c]) in
 
-let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u";"v"]
+let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
     (E.And [
         E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom1 = assertion ctx (vc reverse) spec_tab in
+let axiom1 = assertion ctx (vc reverse) spec_tab true in
 
 let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u";"v"]
     (E.And [
@@ -82,6 +82,21 @@ let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u";"v"]
         E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom2 = assertion ctx (vc reverse) spec_tab in
-let _ = to_verifier "stream" [axiom1;axiom2] T.IntList in
+let axiom2 = assertion ctx (vc reverse) spec_tab true in
+
+let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
+    (E.And [
+        E.Iff (list_member l3 u, list_member l1 u);
+      ])
+in
+let axiom3 = assertion ctx (vc reverse) spec_tab false in
+
+let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
+    (E.And [
+        E.Iff (list_member l3 u, list_member l2 u);
+      ])
+in
+let axiom3 = assertion ctx (vc reverse) spec_tab false in
+
+let _ = to_verifier "stream" [axiom1;axiom2] in
 ();;

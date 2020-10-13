@@ -74,7 +74,7 @@ let merge tree1 tree2 tree3 = SpecApply ("Merge", [tree1;tree2;tree3]) in
 let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"]
     (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]))
 in
-let axiom1 = assertion ctx (vc merge) spec_tab in
+let axiom1 = assertion ctx (vc merge) spec_tab true in
 
 let merge tree1 tree2 tree3 = SpecApply ("Merge", [tree1;tree2;tree3]) in
 let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"; "v"]
@@ -84,6 +84,6 @@ let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"; "v"]
         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
       ])
 in
-let axiom2 = assertion ctx (vc merge) spec_tab in
-let _ = to_verifier "leftistheap" [axiom1;axiom2] T.IntTreeI in
+let axiom2 = assertion ctx (vc merge) spec_tab true in
+let _ = to_verifier "leftistheap" [axiom1;axiom2] in
 ();;

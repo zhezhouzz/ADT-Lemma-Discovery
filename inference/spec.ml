@@ -33,9 +33,16 @@ module SpecSyn (D: Dtree.Dtree) = struct
     if List.length l > num then List.sublist l (0, num) else l
 
   let infer ~progtp ~prog =
-    let fv_num = 2 in
-    let fv = List.map (fun n -> (T.Int, n)) @@ new_fv_name fv_num in
     let inptps, outptps = progtp in
+    (* let _ = printf "\n%s\n%s\n"
+     *     (List.to_string (fun tp -> sprintf "(%s)" (T.layout tp)) inptps)
+     *     (List.to_string (fun tp -> sprintf "(%s)" (T.layout tp)) outptps)
+     * in *)
+    let fv_num =
+      match outptps with
+      | [T.Bool] -> 1
+      | _ -> 2 in
+    let fv = List.map (fun n -> (T.Int, n)) @@ new_fv_name fv_num in
     let inptps = List.map T.make_name inptps in
     let outptps = List.map T.make_name outptps in
     (* let _ = List.iter (fun (_, name) -> printf "%s\n" name) inptps in *)

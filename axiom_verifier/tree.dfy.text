@@ -13,6 +13,7 @@ datatype Tree<a> = Leaf | Node(elem: a, l: Tree<a>, r:Tree<a>)
     // ensures tree_left(xs, u, v) ==> tree_member(xs, u);
   {
     if !(tree_member(xs, u)) then false else
+    if !(tree_member(xs, v)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) => if x == u then tree_member(l, v) else tree_left(l, u, v) || tree_left (r, u, v)
@@ -22,6 +23,7 @@ datatype Tree<a> = Leaf | Node(elem: a, l: Tree<a>, r:Tree<a>)
     // ensures tree_right(xs, u, v) ==> tree_member(xs, u);
   {
     if !(tree_member(xs, u)) then false else
+    if !(tree_member(xs, v)) then false else
     match xs
       case Leaf => false
       case Node(x, l, r) => if x == u then tree_member(r, v) else tree_right(l, u, v) || tree_right (r, u, v)
