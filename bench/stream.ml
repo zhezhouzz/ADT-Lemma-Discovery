@@ -68,7 +68,7 @@ let reverse a b c = SpecApply ("Reverse", [a;b;c]) in
 
 let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
     (E.And [
-        E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
+        E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
 let axiom1 = assertion ctx (vc reverse) spec_tab true in

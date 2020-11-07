@@ -281,6 +281,14 @@ module List = struct
     match List.nth_opt l i with
     | Some v -> v
     | None -> raise @@ InterExn "List.nth"
+
+  let power_set_b n =
+    let rec aux (cur: bool t t) n: bool t t =
+      if n <= 0 then cur else
+        aux ((map (fun l -> true:: l) cur) @ (map (fun l -> false:: l) cur)) (n - 1)
+    in
+    aux [[true]; [false]] (n-1)
+
 end
 
 module Tree = struct

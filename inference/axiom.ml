@@ -50,47 +50,47 @@ module AxiomSyn (D: Dtree.Dtree) = struct
              l @ [geE (name_to_var u) s'; geE e' (name_to_var u)]) [] exists_fv)) in
     interval
 
-  let infer ~ctx ~vc ~spectable =
-    (* let fv_num = 2 in *)
-    let _, vars = Ast.extract_variables vc in
-    let unbounded_dts = List.filter (fun (tp, _) -> T.is_dt tp) vars in
-    let dttp = match unbounded_dts with
-      | [] -> raise @@ InterExn "no data type exists"
-      | (tp, _) :: t ->
-        if List.for_all (fun (tp', _) -> T.eq tp tp') t then tp else
-          raise @@ UndefExn "axiom dttp"
+
+  let neg_update_raw ctx pos neg model feature_set dt fv =
+    let make_exists ctx forallvars body =
+      if List.length forallvars == 0 then body else
+        Quantifier.expr_of_quantifier
+          (Quantifier.mk_exists_const ctx forallvars
+             body
+             (Some 1)
+             [] [] None None)
     in
-    let dt = dttp, "dt" in
-    let fvints = List.filter_map (fun (tp, name) ->
-        match tp with T.Int -> Some name | _ -> None) vars in
-    let dttp, unbounded_dts = check_unbounded_dts unbounded_dts in
-    let unbounded_ints, neg_vc_skolemized =
-      Ast.skolemize @@ Ast.application (Ast.to_nnf (Ast.Not vc)) spectable in
-    let unbounded_ints = unbounded_ints @ fvints in
-    let _ = printf "unbounded_int(%i):%s\n" (List.length unbounded_ints)
-        (StrList.to_string unbounded_ints) in
-    let fv_num_max = List.length unbounded_ints in
-    (* let _ = printf "unbounded_ints:%s\n" (StrList.to_string unbounded_ints) in
-     * let _ = printf "unbounded_dts:%s\n" (StrList.to_string unbounded_dts) in *)
-    let neg_vc_with_ax axiom =
-      Boolean.mk_and ctx [
-        Ast.to_z3 ctx (Ast.Not vc) spectable;
-        Epr.forallformula_to_z3 ctx axiom] in
-    let neg_vc_with_constraint range axiom =
-      let constraints = interval ctx unbounded_ints range in
-      (* let _ = printf "constraints = %s\n" (Expr.to_string constraints) in
-       * let _ = printf "neg_vc_skolemized = %s\n"
-       *     (Expr.to_string (Ast.to_z3 ctx neg_vc_skolemized spectable)) in *)
-      Boolean.mk_and ctx [
-        constraints;
-        Ast.to_z3 ctx neg_vc_skolemized spectable;
-        Epr.forallformula_to_z3 ctx axiom] in
-    let get_from_model model feature_set dtnames chooses dt fv =
+    let make_query feature_vector =
+      let body = List.fold_left (fun res (b, feature) ->
+          let lit = Epr.to_z3 ctx (F.to_epr feature) in
+          if b then lit :: res else (Z3.Boolean.mk_not ctx lit) :: res
+        ) [] (List.combine feature_vector feature_set) in
+      let body = Z3.Boolean.mk_and ctx body in
+      let var = List.map (fun (_, n) -> Z3.Boolean.mk_const_s ctx n) (dt :: fv) in
+      make_exists ctx var body
+    in
+    let feature_vectors = List.power_set_b (List.length feature_set) in
+    let if_neg = ref false in
+    let _ = List.iter (fun v ->
+        let q = make_query v in
+        (* let _ = printf "q=%s\n" (Expr.to_string q) in *)
+        match Hashtbl.find_opt pos v, Hashtbl.find_opt neg v with
+        | None, None ->
+          (match Model.eval model q true with
+           | None -> ()
+           | Some _ -> if_neg := true; Hashtbl.add neg v ()
+          )
+        | _, _ -> ()
+      ) feature_vectors
+    in
+    !if_neg
+
+  let neg_update_opt ctx pos neg model feature_set dtnames chooses dt fv =
       let chooses = List.map (fun i -> SE.Literal (T.Int, SE.L.Int i)) chooses in
       (* let _ = printf "chooses:%s\n" (List.to_string SE.layout chooses) in
        * let _ = List.iter (fun dtname ->
        *     printf "%s = %i\n" dtname (S.get_int_name ctx model dtname)) dtnames in *)
-      let vecs =
+      let counter_vecs =
         List.remove_duplicates (fun vec vec' ->
             List.eq (fun x y -> x == y) vec vec') @@
         List.map (fun m ->
@@ -110,9 +110,6 @@ module AxiomSyn (D: Dtree.Dtree) = struct
         List.cross
           dtnames (List.choose_n_eq (fun x y -> x == y) chooses (List.length fv)) in
       (* let _ = printf "len(vecs) = %i\n" (List.length vecs) in *)
-      vecs
-    in
-    let neg_update pos neg counter_vecs =
       let neg_counter = ref 0 in
       let if_updated = ref false in
       let _ = List.iter (fun s ->
@@ -125,10 +122,44 @@ module AxiomSyn (D: Dtree.Dtree) = struct
               Hashtbl.add neg s ()
         ) counter_vecs
       in
-      (* let _ = List.iter (fun vec -> printf "%s\n" (boollist_to_string vec)) counter_vecs in *)
-      (* printf "neg_update:%i\n" (!neg_counter); *)
       ()
+
+  let infer ~ctx ~vc ~spectable =
+    (* let fv_num = 2 in *)
+    let _, vars = Ast.extract_variables vc in
+    let unbounded_dts = List.filter (fun (tp, _) -> T.is_dt tp) vars in
+    let dttp = match unbounded_dts with
+      | [] -> raise @@ InterExn "no data type exists"
+      | (tp, _) :: t ->
+        if List.for_all (fun (tp', _) -> T.eq tp tp') t then tp else
+          raise @@ UndefExn "axiom dttp"
     in
+    let dt = dttp, "dt" in
+    let fvints = List.filter_map (fun (tp, name) ->
+        match tp with T.Int -> Some name | _ -> None) vars in
+    let dttp, unbounded_dts = check_unbounded_dts unbounded_dts in
+    let unbounded_ints, neg_vc_skolemized =
+      Ast.skolemize @@ Ast.application (Ast.to_nnf (Ast.Not vc)) spectable in
+    let unbounded_ints = unbounded_ints @ fvints in
+    (* let _ = printf "unbounded_int(%i):%s\n" (List.length unbounded_ints)
+     *     (StrList.to_string unbounded_ints) in *)
+    (* let fv_num_max = List.length unbounded_ints in *)
+    let fv_num_max = 2 in
+    (* let _ = printf "unbounded_ints:%s\n" (StrList.to_string unbounded_ints) in
+     * let _ = printf "unbounded_dts:%s\n" (StrList.to_string unbounded_dts) in *)
+    let neg_vc_with_ax axiom =
+      Boolean.mk_and ctx [
+        Ast.to_z3 ctx (Ast.Not vc) spectable;
+        Epr.forallformula_to_z3 ctx axiom] in
+    let neg_vc_with_constraint range axiom =
+      let constraints = interval ctx unbounded_ints range in
+      (* let _ = printf "constraints = %s\n" (Expr.to_string constraints) in
+       * let _ = printf "neg_vc_skolemized = %s\n"
+       *     (Expr.to_string (Ast.to_z3 ctx neg_vc_skolemized spectable)) in *)
+      Boolean.mk_and ctx [
+        constraints;
+        Ast.to_z3 ctx neg_vc_skolemized spectable;
+        Epr.forallformula_to_z3 ctx axiom] in
     let pn_to_axiom_epr feature_set pos neg =
       let data = {FV.dfeature_set = feature_set;
                   FV.labeled_vecs =
@@ -208,9 +239,10 @@ module AxiomSyn (D: Dtree.Dtree) = struct
             in
             let chooses, m = limited_smt_check (List.length fv) in
             (* let _ = printf "model:%s\n" (Model.to_string m) in *)
-            let counter_vecs = get_from_model m feature_set unbounded_dts chooses dt fv in
-            (* let _ = List.iter (fun vec -> printf "%s\n" (boollist_to_string vec)) counter_vecs in *)
-            let _ = neg_update positives negatives counter_vecs in
+            let _ = neg_update_opt ctx positives negatives
+                m feature_set unbounded_dts chooses dt fv in
+            (* let _ = neg_update_raw ctx positives negatives
+             *     m feature_set dt fv in *)
             (* let _ =
              *   printf "pos:\n";
              *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
@@ -225,7 +257,13 @@ module AxiomSyn (D: Dtree.Dtree) = struct
             if (Hashtbl.length positives == p_size) &&
                (Hashtbl.length negatives == n_size)
             then
-              main_loop (fv_num + 1)
+              (* let _ = printf "raw\n" in *)
+              if neg_update_raw ctx positives negatives m feature_set dt fv
+              then
+                let _ = pos_update fv_num positives negatives feature_set dt fv chooses 150 in
+                main_loop_with_fixed_fv ()
+              else
+                main_loop (fv_num + 1)
             else
               main_loop_with_fixed_fv ()
         in

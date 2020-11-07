@@ -98,6 +98,20 @@ let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
 in
 let axiom3 = assertion ctx vc spec_tab true in
 
+let spec_tab, stack_tail = register spec_tab
+    {name = "StackTail"; intps = [T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.L l] -> [V.L []]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let axiom5 = assertion ctx vc spec_tab false in
+let spec_tab, stack_tail = register spec_tab
+    {name = "StackTail"; intps = [T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.L (h:: t)] -> [V.L t]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+
 let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
     (E.And [
         E.Iff(list_member l3 u, list_member l1 u);

@@ -63,7 +63,7 @@ let assertion ctx vc spec_tab expected =
   | _ -> raise @@ InterExn "bench: wrong result"
 
 let init () =
-  let _ = Random.init 1 in
+  let _ = Random.init 0 in
   let ctx =
     Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "19999")] in
   ctx

@@ -72,10 +72,10 @@ let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"]
 in
 let axiom1 = assertion ctx (vc insert) spec_tab true in
 
-let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"]
+let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"; "v"]
     (E.And [
-        E.Implies(tree_member tree1 x,
-                  E.Iff (tree_member tree1 u, tree_member tree2 u)
+        E.Implies(tree_head tree1 x,
+                  E.Implies (treel tree1 u v, treel tree2 u v)
                  );
         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
       ])
