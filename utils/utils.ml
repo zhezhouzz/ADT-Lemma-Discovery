@@ -289,6 +289,25 @@ module List = struct
     in
     aux [[true]; [false]] (n-1)
 
+  let power_set_b_fold f default n =
+    let vec = Array.init n (fun _ -> false) in
+    let rec to_zero idx =
+      if idx < 0 then () else
+        (Array.set vec idx false; to_zero (idx - 1))
+    in
+    let rec incr idx =
+      if idx >= n then false else
+      if vec.(idx) then incr (idx + 1) else
+        (Array.set vec idx true;
+         to_zero (idx - 1);
+         (* Printf.printf "vec[0] = %b; vec[1] = %b\n" vec.(0) vec.(1); *)
+         true)
+    in
+    let rec aux r =
+      let r = f r vec in
+      if incr 0 then aux r else r
+    in
+    aux default
 end
 
 module Tree = struct
@@ -495,6 +514,8 @@ end
 module StrList = struct
   let eq l1 l2 = List.eq String.equal l1 l2
   let to_string l = List.to_string (fun x -> x) l
+  let search errinfo l a =
+    List.find errinfo (fun (k,_) -> String.equal k a) l
 end
 
 let list_list_foldl l0 l1 default0 default1 f0 f1 =

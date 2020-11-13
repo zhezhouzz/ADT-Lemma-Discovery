@@ -20,6 +20,7 @@ open Bench_utils
  *   | T (rank1, x, a1, b1), T (rank2, y, a2, b2) ->
  *     if Elem.leq x y then makeT x a1 (merge b1 tree2)
  *     else makeT y a2 (merge tree1 b2) *)
+let testname = "leftistheap" in
 let ctx = init () in
 let t rank x a b tr = SpecApply ("T", [rank;x;a;b;tr]) in
 let e tr = SpecApply ("E", [tr]) in
@@ -74,7 +75,7 @@ let merge tree1 tree2 tree3 = SpecApply ("Merge", [tree1;tree2;tree3]) in
 let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"]
     (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]))
 in
-let axiom1 = assertion ctx (vc merge) spec_tab true in
+let axiom1 = assertion ctx (vc merge) spec_tab true testname "axiom1" in
 
 let merge tree1 tree2 tree3 = SpecApply ("Merge", [tree1;tree2;tree3]) in
 let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"; "v"]
@@ -84,6 +85,6 @@ let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"; "v"]
         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
       ])
 in
-let axiom2 = assertion ctx (vc merge) spec_tab true in
-let _ = to_verifier "leftistheap" [axiom1;axiom2] in
+let axiom2 = assertion ctx (vc merge) spec_tab true testname "axiom2" in
+let _ = to_verifier testname [axiom1;axiom2] in
 ();;

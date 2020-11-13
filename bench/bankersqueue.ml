@@ -14,6 +14,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast;;
 ;;
+let testname = "bankersqueue" in
 (* let snoc (lenf, f, lenr, r) x =
  *   let lenr = lenr + 1 in
  *   let r = lazy (Cons (x, r)) in
@@ -82,7 +83,7 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
         ))
 in
-let axiom1 = assertion ctx vc spec_tab true in
+let axiom1 = assertion ctx vc spec_tab true testname "axiom1" in
 
 let spec_tab = add_spec spec_tab "Snoc"
     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
@@ -90,6 +91,6 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[list_member f' u; list_member r' u]
         ))
 in
-let axiom2 = assertion ctx vc spec_tab true in
-let _ = to_verifier "bankersqueue" [axiom1;axiom2] in
+let axiom2 = assertion ctx vc spec_tab true testname "axiom2" in
+let _ = to_verifier testname [axiom1;axiom2] in
 ();;

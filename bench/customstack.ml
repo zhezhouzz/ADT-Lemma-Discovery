@@ -14,6 +14,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
+let testname = "customstack" in
 (* let rec concat l1 l2 =
  *   if is_empty l1 then l2
  *   else cons (stack_head l1) (concat (stack_tail l1) l2) *)
@@ -79,7 +80,7 @@ let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
         E.Iff(list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom1 = assertion ctx vc spec_tab true in
+let axiom1 = assertion ctx vc spec_tab true testname "axiom1" in
 
 let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u";"v"]
      (E.And [
@@ -88,15 +89,14 @@ let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u";"v"]
                   list_order l3 u v);
       ])
 in
-let axiom2 = assertion ctx vc spec_tab true in
-
+let axiom2 = assertion ctx vc spec_tab true testname "axiom2" in
 let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
      (E.And [
         E.Iff(list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
         E.Implies (list_head l3 u, E.Or [list_head l1 u; list_head l2 u])
       ])
 in
-let axiom3 = assertion ctx vc spec_tab true in
+let axiom3 = assertion ctx vc spec_tab true testname "axiom3" in
 
 let spec_tab, stack_tail = register spec_tab
     {name = "StackTail"; intps = [T.IntList]; outtps = [T.IntList];
@@ -104,7 +104,7 @@ let spec_tab, stack_tail = register spec_tab
        | [V.L l] -> [V.L []]
        | _ -> raise @@ InterExn "bad prog"
     } in
-let axiom5 = assertion ctx vc spec_tab false in
+let axiom4 = assertion ctx vc spec_tab false testname "axiom4" in
 let spec_tab, stack_tail = register spec_tab
     {name = "StackTail"; intps = [T.IntList]; outtps = [T.IntList];
      prog = function
@@ -117,13 +117,13 @@ let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
         E.Iff(list_member l3 u, list_member l1 u);
       ])
 in
-let axiom4 = assertion ctx vc spec_tab false in
+let axiom5 = assertion ctx vc spec_tab false testname "axiom5" in
 
 let spec_tab = add_spec spec_tab "Concat" ["l1";"l2";"l3"] ["u"]
     (E.And [
         E.Iff(list_member l3 u, list_member l2 u);
       ])
 in
-let axiom5 = assertion ctx vc spec_tab false in
-let _ = to_verifier "customstack" [axiom1;axiom2;axiom3] in
+let axiom6 = assertion ctx vc spec_tab false testname "axiom6" in
+let _ = to_verifier testname [axiom1;axiom2;axiom3] in
 ();;

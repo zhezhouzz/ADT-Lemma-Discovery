@@ -13,6 +13,7 @@ module V = Pred.Value
 open Language.Helper
 open Bench_utils
 ;;
+let testname = "stream" in
 (* let rec reverse' acc s =
  *   lazy (
  *     match s with
@@ -71,7 +72,7 @@ let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
         E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom1 = assertion ctx (vc reverse) spec_tab true in
+let axiom1 = assertion ctx (vc reverse) spec_tab true testname "axiom1" in
 
 let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u";"v"]
     (E.And [
@@ -82,21 +83,21 @@ let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u";"v"]
         E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom2 = assertion ctx (vc reverse) spec_tab true in
+let axiom2 = assertion ctx (vc reverse) spec_tab true testname "axiom2" in
 
 let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
     (E.And [
         E.Iff (list_member l3 u, list_member l1 u);
       ])
 in
-let axiom3 = assertion ctx (vc reverse) spec_tab false in
+let axiom3 = assertion ctx (vc reverse) spec_tab false testname "axiom3" in
 
 let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
     (E.And [
         E.Iff (list_member l3 u, list_member l2 u);
       ])
 in
-let axiom3 = assertion ctx (vc reverse) spec_tab false in
+let axiom4 = assertion ctx (vc reverse) spec_tab false testname "axiom4" in
 
-let _ = to_verifier "stream" [axiom1;axiom2] in
+let _ = to_verifier testname [axiom1;axiom2] in
 ();;

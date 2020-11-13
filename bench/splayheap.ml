@@ -13,6 +13,7 @@ module V = Pred.Value
 open Language.Helper
 open Bench_utils
 ;;
+let testname = "splayheap" in
 (* let rec partition pivot = function
  *   | E -> E, E
  *   | T (a, x, b) as tr ->
@@ -100,7 +101,7 @@ let partition a b c d = SpecApply ("Partition", [a;b;c;d]) in
 let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
     (E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u]))
 in
-let axiom1 = assertion ctx (vc partition) spec_tab true in
+let axiom1 = assertion ctx (vc partition) spec_tab true testname "axiom1" in
 
 let partition a b c d = SpecApply ("Partition", [a;b;c;d]) in
 let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
@@ -110,7 +111,7 @@ let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
         E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u])
       ])
 in
-let axiom2 = assertion ctx (vc partition) spec_tab true in
-let _ = to_verifier "splayheap" [axiom1;axiom2] in
+let axiom2 = assertion ctx (vc partition) spec_tab true testname "axiom2" in
+let _ = to_verifier testname [axiom1;axiom2] in
 ();;
 

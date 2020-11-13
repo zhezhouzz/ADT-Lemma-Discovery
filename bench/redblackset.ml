@@ -14,6 +14,7 @@ module V = Pred.Value
 open Language.Helper
 open Bench_utils
 ;;
+let testname = "redblackset" in
 (* let balance = function
  *   | B, T (R, T (R, a, x, b), y, c), z, d -> T (R, T (B, a, x, b), y, T (B, c, z, d))
  *   | B, T (R, E, x, T (R, b, y, c)), z, d -> T (R, T (B, E, x, b), y, T (B, c, z, d))
@@ -85,7 +86,7 @@ let spec_tab = add_spec spec_tab "Balance"  ["r1";"tree1";"x";"tree2";"tree3"] [
               );
       ])
 in
-let axiom1 = assertion ctx (vc balance) spec_tab true in
+let axiom1 = assertion ctx (vc balance) spec_tab true testname "axiom1" in
 
 let balance a b c d e =
   Implies (SpecApply ("BalancePre", [a;b;c;d;e]), SpecApply ("BalancePost", [a;b;c;d;e])) in
@@ -106,6 +107,6 @@ let spec_tab = add_spec spec_tab "BalancePost" ["r1";"tree1";"x";"tree2";"tree3"
               );
       ])
 in
-let axiom2 = assertion ctx (vc balance) spec_tab true in
-let _ = to_verifier "redblackset" [axiom1;axiom2] in
+let axiom2 = assertion ctx (vc balance) spec_tab true testname "axiom1" in
+let _ = to_verifier testname [axiom1;axiom2] in
 ();;
