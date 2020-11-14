@@ -46,3 +46,9 @@ datatype Tree<a> = Leaf | Node(elem: a, l: Tree<a>, r:Tree<a>)
       case Leaf => false
       case Node(x, l, r) => if x == e then true else false
   }
+
+
+  function tree_once<a>(xs: Tree<a>, e: a): bool
+  {
+    tree_member(xs, e) && !(tree_left(xs, e, e) || tree_right(xs, e, e) || tree_parallel(xs, e, e))
+  }

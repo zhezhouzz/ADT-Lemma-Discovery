@@ -80,14 +80,27 @@ module List = struct
   let to_string f l =
     fold_lefti (fun res i a -> if i == 0 then res ^ (f a) else res ^ "," ^ (f a)) "" l
 
+  let rec element_unique f l e =
+    match l with
+    | [] -> None
+    | h :: t -> if f e h then Some t else element_unique f t e
+
+  let once f l e =
+    match element_unique f l e with
+    | None -> false
+    | Some t ->
+      (match element_unique f t e with
+       | None -> true
+       | Some _ -> false)
+
   let rec double_exists f l =
-    let rec aux e = function
-      | [] -> false
-      | h :: t -> if f e h then true else aux e t
-    in
     match l with
     | [] -> false
-    | h :: t -> if aux h t then true else double_exists f t
+    | h :: t ->
+      (match element_unique f t h with
+       | None -> double_exists f t
+       | Some _ -> true
+      )
 
   let rec check_list_unique eq l =
     let rec aux e = function
@@ -385,6 +398,10 @@ module Tree = struct
   let flatten_forall compare t =
     List.remove_duplicates compare (flatten t)
   let union l0 l1 = List.union (fun x y -> x == y) l0 l1
+
+  let once f tr e =
+    let l = flatten tr in
+    List.once f l e
 end
 
 module LabeledTree = struct
@@ -461,6 +478,9 @@ module LabeledTree = struct
   let flatten_forall compare t =
     List.remove_duplicates compare (flatten t)
   let union l0 l1 = List.union (fun x y -> x == y) l0 l1
+  let once f tr e =
+    let l = flatten tr in
+    List.once f l e
 end
 
 module IntList = struct

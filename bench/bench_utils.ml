@@ -58,17 +58,17 @@ let record_stat stat name subname =
   let oc = open_out_gen [Open_append; Open_creat] 0o666 outfile in
   fprintf oc "%s-%s & %s \\\\ \\hline \n" name subname (Axiom.layout_entry entry);close_out oc
 
-let assertion ctx vc spec_tab expected filename name =
-  (* let _ = printf "vc:\n%s\n" (vc_layout vc) in
-   * let _ = StrMap.iter (fun name spec ->
-   *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in *)
-  let axiom = Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab
-      ~startX:1 ~maxX:3 ~sampledata:15 in
+let assertion ctx vc spec_tab preds expected filename name =
+  let _ = printf "vc:\n%s\n" (vc_layout vc) in
+  let _ = StrMap.iter (fun name spec ->
+      printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
+  let axiom = Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~preds:preds
+      ~startX:1 ~maxX:3 ~sampledata:150 in
   match axiom, expected with
   | (_, None), false -> printf "connot infer axiom\n"; None
   | (stat, Some (dttp, axiom)), true ->
     let _ = record_stat stat filename name in
-    (* let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in *)
+    let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
     Some (dttp, axiom)
   | _ -> raise @@ InterExn "bench: wrong result"
 

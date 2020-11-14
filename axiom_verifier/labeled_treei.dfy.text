@@ -46,3 +46,8 @@ datatype LabeledTree<a> = Leaf | Node(elem: a, l: LabeledTree<a>, r:LabeledTree<
       case Leaf => false
       case Node(x, l, r) => if x == e then true else false
   }
+
+  function treei_once<a>(xs: LabeledTree<a>, e: a): bool
+  {
+    treei_member(xs, e) && !(treei_left(xs, e, e) || treei_right(xs, e, e) || treei_parallel(xs, e, e))
+  }

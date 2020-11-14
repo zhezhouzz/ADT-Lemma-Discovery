@@ -46,3 +46,8 @@ datatype LabeledTree<a> = Leaf | Node(elem: a, l: LabeledTree<a>, r:LabeledTree<
       case Leaf => false
       case Node(x, l, r) => if x == e then true else false
   }
+
+  function treeb_once<a>(xs: LabeledTree<a>, e: a): bool
+  {
+    treeb_member(xs, e) && !(treeb_left(xs, e, e) || treeb_right(xs, e, e) || treeb_parallel(xs, e, e))
+  }

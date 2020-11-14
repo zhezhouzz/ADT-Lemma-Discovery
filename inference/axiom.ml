@@ -34,6 +34,7 @@ module type AxiomSyn = sig
     ctx:Z3.context ->
     vc:Language.SpecAst.t ->
     spectable:Language.SpecAst.spec Utils.StrMap.t ->
+    preds: string list ->
     startX:int->
     maxX:int->
     sampledata:int ->
@@ -445,7 +446,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     in
     ()
 
-  let infer ~ctx ~vc ~spectable ~startX ~maxX ~sampledata =
+  let infer ~ctx ~vc ~spectable ~preds ~startX ~maxX ~sampledata =
     let fv_num = startX in
     let _, vars = Ast.extract_variables vc in
     let unbounded_dts = List.filter (fun (tp, _) -> T.is_dt tp) vars in
@@ -535,7 +536,8 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       (* let _ = printf "fv_num=%i\n" fv_num in *)
       if fv_num > maxX then total_stat, None else
         let fv = List.map (fun n -> (T.Int, n)) @@ List.init fv_num (fun i -> sprintf "u_%i" i) in
-        let feature_set = F.make_set ([dt] @ fv) in
+        (* let feature_set = F.make_set ([dt] @ fv) in *)
+        let feature_set = F.make_set_from_preds preds dt fv in
         (* let _ = printf "set:%s\n" (F.layout_set feature_set) in *)
         (* let _ = raise @@ InterExn "zz" in *)
         let positives = Hashtbl.create 10000 in

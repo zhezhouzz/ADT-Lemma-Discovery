@@ -13,6 +13,7 @@ module type Feature = sig
   val eq: t -> t -> bool
   val get_vars: t -> string list * string list
   val make_set: (Tp.Tp.t * string) list -> set
+  val make_set_from_preds: string list -> (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
   val make_target: (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
   val subst:string Utils.StrMap.t -> t -> t
 end
@@ -79,6 +80,32 @@ module Feature : Feature = struct
     | Pr (_, dts, args) -> dts, args
     | Eq (a, b) -> [], [a;b]
     | Bo _ -> [], []
+
+  let make_set_from_preds preds (_, dtname) basicnames =
+    let _, basicnames = List.split basicnames in
+    let make_eq_features elems =
+      List.map (fun (a, b) -> Eq (a, b)) @@
+      List.remove_duplicates (fun (a, b) (a', b') ->
+          (a == a' && b = b') || (a == b' && b == a')) @@
+      List.filter (fun (a, b) -> a <> b) @@
+      List.cross elems elems
+    in
+    let make_pr_features preds dt elems =
+      let aux info =
+        let args_set = List.combination_l elems info.P.num_int in
+        let args_set =
+          if info.P.permu then
+            List.concat (List.map (fun l -> List.permutation l) args_set)
+          else args_set
+        in
+        List.map (fun args -> Pr (info.P.name, [dt], args)) args_set
+      in
+      List.fold_left (fun r info -> r @ (aux info)) []
+        (List.map P.find_pred_info_by_name preds)
+    in
+    let pr_features = make_pr_features preds dtname basicnames in
+    let eq_features = make_eq_features basicnames in
+    pr_features @ eq_features
 
   let make_set vars =
     let variable_split (dts, elems, bs) (tp, name) =

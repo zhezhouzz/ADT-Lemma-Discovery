@@ -28,28 +28,34 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {name="list_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
     {name="list_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
     {name="list_order"; num_dt=1; num_int=2; permu=true; dttp=T.IntList};
+    {name="list_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
 
     {name="tree_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
     {name="tree_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
     {name="tree_left"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
     {name="tree_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
     {name="tree_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
+    {name="tree_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
 
     {name="treei_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
     {name="treei_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
     {name="treei_left"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
     {name="treei_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
     {name="treei_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
+    {name="treei_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
 
     {name="treeb_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
     {name="treeb_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
     {name="treeb_left"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};
     {name="treeb_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};
-    {name="treeb_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};]
+    {name="treeb_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};
+    {name="treeb_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
+  ]
   (* desugared *)
   let raw_preds_info = [
     {raw_name="member"; raw_num_args=2;};
     {raw_name="head"; raw_num_args=2;};
+    {raw_name="once"; raw_num_args=2;};
     {raw_name="order"; raw_num_args=5;}]
   let apply_layout (pred, dt, args) =
     sprintf "%s(%s, %s)" pred (V.layout dt) (List.to_string V.layout args)
@@ -96,6 +102,14 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | (V.TB t, V.I e) -> LabeledTree.exists (fun x -> x == e) t
     | _ -> raise @@ InterExn "member_apply"
 
+  let once_apply (dt: V.t) (e: V.t) =
+    match (dt, e) with
+    | (V.L l, V.I e) -> List.once (fun x y -> x == y) l e
+    | (V.T t, V.I e) -> Tree.once (fun x y -> x == y) t e
+    | (V.TI t, V.I e) -> LabeledTree.once (fun x y -> x == y) t e
+    | (V.TB t, V.I e) -> LabeledTree.once (fun x y -> x == y) t e
+    | _ -> raise @@ InterExn "once_apply"
+
   let order_apply (dt: V.t) i0 i1 (e0: V.t) (e1: V.t) =
     let eq x y = x == y in
     match (dt, i0, i1, e0, e1) with
@@ -121,6 +135,7 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | "member" | "==" | "order" | "head" -> pred, []
     | "list_member"  | "tree_member" | "treei_member" | "treeb_member"  -> "member", []
     | "list_head" | "tree_head" | "treei_head" | "treeb_head" -> "head", []
+    | "list_once" | "tree_once" | "treei_once" | "treeb_once" -> "once", []
     | "list_order" -> "order", [0;1]
     | "tree_left" | "treei_left" | "treeb_left" -> "order", [0;1]
     | "tree_right" | "treei_right" | "treeb_right" -> "order", [0;2]
@@ -136,9 +151,10 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     match pred, args with
     | "member", [arg] -> member_apply dt arg
     | "head", [arg] -> head_apply dt arg
+    | "once", [arg] -> once_apply dt arg
     | "order", [V.I i0; V.I i1; arg0; arg1] -> order_apply dt i0 i1 arg0 arg1
     | "==", [arg0; arg1] -> eq_apply arg0 arg1
-    | _ -> raise @@ InterExn "apply"
+    | _ -> raise @@ InterExn (sprintf "apply_:%s(%s)" pred (List.to_string V.layout args))
 
   let apply ((pred, dt, args) : t * V.t * V.t list) : bool =
     let (pred, dt, args) = desugar_ (pred, dt, args) in
