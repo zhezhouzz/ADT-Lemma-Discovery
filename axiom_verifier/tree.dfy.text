@@ -52,3 +52,35 @@ datatype Tree<a> = Leaf | Node(elem: a, l: Tree<a>, r:Tree<a>)
   {
     tree_member(xs, e) && !(tree_left(xs, e, e) || tree_right(xs, e, e) || tree_parallel(xs, e, e))
   }
+
+  function tree_leaf<a>(xs: Tree<a>, e: a): bool
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) =>
+        ((
+        match l
+          case Node(a, b, c) => false
+          case Leaf => (
+            match r
+              case Node(a, b, c) => false
+              case Leaf => true)
+                ) && (x == e)) ||
+                (tree_leaf(l, e)) || (tree_leaf(r, e))
+  }
+
+  function tree_node<a>(xs: Tree<a>, e: a): bool
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) =>
+        ((
+        match l
+          case Node(a, b, c) => true
+          case Leaf => (
+            match r
+              case Node(a, b, c) => true
+              case Leaf => false)
+                ) && (x == e)) ||
+                (tree_node(l, e)) || (tree_node(r, e))
+  }

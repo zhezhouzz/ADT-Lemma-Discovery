@@ -51,3 +51,35 @@ datatype LabeledTree<a> = Leaf | Node(elem: a, l: LabeledTree<a>, r:LabeledTree<
   {
     treei_member(xs, e) && !(treei_left(xs, e, e) || treei_right(xs, e, e) || treei_parallel(xs, e, e))
   }
+
+  function treei_leaf<a>(xs: LabeledTree<a>, e: a): bool
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) =>
+        ((
+        match l
+          case Node(a, b, c) => false
+          case Leaf => (
+            match r
+              case Node(a, b, c) => false
+              case Leaf => true)
+                ) && (x == e)) ||
+                (treei_leaf(l, e)) || (treei_leaf(r, e))
+  }
+
+  function treei_node<a>(xs: LabeledTree<a>, e: a): bool
+  {
+    match xs
+      case Leaf => false
+      case Node(x, l, r) =>
+        ((
+        match l
+          case Node(a, b, c) => true
+          case Leaf => (
+            match r
+              case Node(a, b, c) => true
+              case Leaf => false)
+                ) && (x == e)) ||
+                (treei_node(l, e)) || (treei_node(r, e))
+  }

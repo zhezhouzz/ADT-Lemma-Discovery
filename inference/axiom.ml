@@ -369,8 +369,8 @@ module AxiomSyn (D: Dtree.Dtree) = struct
         let search n = snd @@ StrList.search "feature_to_q" cc n in
         match feature with
         | F.Bo _ -> raise @@ InterExn "never happen"
-        | F.Eq (a, b) ->
-          (SE.Op (T.Bool, "==", List.map search [a;b]))
+        | F.Base (op, a, b) ->
+          (SE.Op (T.Bool, op, List.map search [a;b]))
         | F.Pr (p, [_], args) ->
           (SE.Op (T.Bool, p, dtc :: (List.map search args)))
         | F.Pr (_, _, _) -> raise @@ InterExn "never happen"
@@ -446,7 +446,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     in
     ()
 
-  let infer ~ctx ~vc ~spectable ~preds ~startX ~maxX ~sampledata =
+  let infer ~ctx ~vc ~spectable ~preds ~bpreds ~startX ~maxX ~sampledata ~samplebound =
     let fv_num = startX in
     let _, vars = Ast.extract_variables vc in
     let unbounded_dts = List.filter (fun (tp, _) -> T.is_dt tp) vars in
@@ -489,7 +489,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       D.classify data
     in
     let sampling fv_num axiom_epr feature_set dt fv chooses num =
-      let samples = R.gen ~chooses:chooses ~num:num ~tp:dttp in
+      let samples = R.gen ~chooses:chooses ~num:num ~tp:dttp ~bound:samplebound in
       (* let _ = List.iter (fun s -> printf "[%s]\n" (V.layout s)) samples in *)
       let vecs =
         List.map (fun m ->
@@ -537,8 +537,8 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       if fv_num > maxX then total_stat, None else
         let fv = List.map (fun n -> (T.Int, n)) @@ List.init fv_num (fun i -> sprintf "u_%i" i) in
         (* let feature_set = F.make_set ([dt] @ fv) in *)
-        let feature_set = F.make_set_from_preds preds dt fv in
-        (* let _ = printf "set:%s\n" (F.layout_set feature_set) in *)
+        let feature_set = F.make_set_from_preds preds bpreds dt fv in
+        let _ = printf "set:%s\n" (F.layout_set feature_set) in
         (* let _ = raise @@ InterExn "zz" in *)
         let positives = Hashtbl.create 10000 in
         let negatives = Hashtbl.create 10000 in

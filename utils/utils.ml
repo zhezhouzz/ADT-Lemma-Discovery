@@ -77,6 +77,12 @@ module List = struct
     | [] -> raise @@ InterExn "list_last"
     | h :: _ -> h
 
+  let lastb l e =
+    let l = List.rev l in
+    match l with
+    | [] -> false
+    | h :: _ -> h == e
+
   let to_string f l =
     fold_lefti (fun res i a -> if i == 0 then res ^ (f a) else res ^ "," ^ (f a)) "" l
 
@@ -347,6 +353,28 @@ module Tree = struct
     in
     aux tr
 
+  let rec leaf eq t u =
+    let nochild l r =
+      match l, r with
+      | Leaf, Leaf -> true
+      | _, _ -> false
+    in
+    match t with
+    | Leaf -> false
+    | Node (a, l ,r) ->
+      ((eq a u) && (nochild l r)) || (leaf eq l u) || (leaf eq r u)
+
+  let rec node eq t u =
+    let haschild l r =
+      match l, r with
+      | Node (_,_,_), _ | _, Node (_,_,_) -> true
+      | _, _ -> false
+    in
+    match t with
+    | Leaf -> false
+    | Node (a, l ,r) ->
+      ((eq a u) && (haschild l r)) || (node eq l u) || (node eq r u)
+
   let left_child eq t u v =
     let rec aux before t =
       if before then true else
@@ -426,6 +454,28 @@ module LabeledTree = struct
         Printf.sprintf "{%s, %s, %s}" (aux l) (f a) (aux r)
     in
     aux tr
+
+  let rec leaf eq t u =
+    let nochild l r =
+      match l, r with
+      | Leaf, Leaf -> true
+      | _, _ -> false
+    in
+    match t with
+    | Leaf -> false
+    | Node (_, a, l ,r) ->
+      ((eq a u) && (nochild l r)) || (leaf eq l u) || (leaf eq r u)
+
+  let rec node eq t u =
+    let haschild l r =
+      match l, r with
+      | Node (_,_,_,_), _ | _, Node (_,_,_,_) -> true
+      | _, _ -> false
+    in
+    match t with
+    | Leaf -> false
+    | Node (_, a, l ,r) ->
+      ((eq a u) && (haschild l r)) || (node eq l u) || (node eq r u)
 
   let left_child eq t u v =
     let rec aux before t =

@@ -53,14 +53,15 @@ let vc =
            ]
           )
 in
-let preds = ["list_member"; "list_order"; "list_head"; "list_once"] in
+let preds = ["list_member"; "list_order"; "list_head"; "list_once"; "list_last"] in
+let bpreds = ["=="] in
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
     (E.And [
         E.Iff (Or[list_member l3 u; list_head l1 u; list_member l4 u;],
                E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let axiom1 = assertion ctx vc spec_tab preds true testname "axiom1" in
+let axiom1 = assertion ctx vc spec_tab preds bpreds true testname "axiom1" in
 let _ = to_verifier testname [axiom1] in
 let _ = raise @@ InterExn "zz" in
 
@@ -72,17 +73,17 @@ let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
                    Or[list_order l1 u v; list_order l2 v u])
       ])
 in
-let axiom2 = assertion ctx vc spec_tab preds true testname "axiom2" in
+let axiom2 = assertion ctx vc spec_tab preds bpreds true testname "axiom2" in
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
     (E.Iff (Or[list_member l3 u; list_member l4 u],
                E.Or [list_member l1 u; list_member l2 u]))
 in
-let axiom3 = assertion ctx vc spec_tab preds false testname "axiom3" in
+let axiom3 = assertion ctx vc spec_tab preds bpreds false testname "axiom3" in
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
     (E.Implies (list_head l1 u, list_head l4 u))
 in
-let axiom4 = assertion ctx vc spec_tab preds false testname "axiom4" in
+let axiom4 = assertion ctx vc spec_tab preds bpreds false testname "axiom4" in
 let _ = to_verifier testname [axiom1;axiom2] in
 ();;

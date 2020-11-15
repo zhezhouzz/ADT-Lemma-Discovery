@@ -201,9 +201,14 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Atom _ as x -> x
       | Not(Not(p)) -> simplify_same p
       | Not(p) -> Not(simplify_same p)
-      | And ps -> And (List.map simplify_same ps)
+      | And ps ->
+        And (List.filter_map (function
+            | True -> None
+            | p -> Some p) (List.map simplify_same ps))
       | Or ps -> Or (List.map simplify_same ps)
-      | Iff (p1, p2) -> Iff (simplify_same p1, simplify_same p2)
+      | Iff (p1, p2) ->
+        let p1, p2 = simplify_same p1, simplify_same p2 in
+        if eq p1 p2 then True else Iff (p1, p2)
       | True -> True
     in
     simplify_same (aux a)

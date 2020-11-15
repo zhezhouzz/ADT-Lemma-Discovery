@@ -65,7 +65,8 @@ module FeatureVector = struct
     let extract_feature = function
       | F.Pr (pred, [x], _) -> pred, x
       | F.Pr (_, _, _) -> raise @@ UndefExn "feature_vector_remove_field"
-      | F.Eq (x, _) -> "==", x
+      | F.Base ("==", x, _) -> "==", x
+      | F.Base (_, _, _) -> raise @@ InterExn "never happen(remove_field)"
       | F.Bo x -> "id", x
     in
     let farr = Array.of_list feature_set in

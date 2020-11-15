@@ -29,6 +29,7 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {name="list_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
     {name="list_order"; num_dt=1; num_int=2; permu=true; dttp=T.IntList};
     {name="list_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
+    {name="list_last"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
 
     {name="tree_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
     {name="tree_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
@@ -36,6 +37,8 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {name="tree_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
     {name="tree_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTree};
     {name="tree_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
+    {name="tree_leaf"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
+    {name="tree_node"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
 
     {name="treei_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
     {name="treei_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
@@ -43,6 +46,8 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {name="treei_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
     {name="treei_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeI};
     {name="treei_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
+    {name="treei_leaf"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
+    {name="treei_node"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeI};
 
     {name="treeb_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
     {name="treeb_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
@@ -50,11 +55,16 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {name="treeb_right"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};
     {name="treeb_parallel"; num_dt=1; num_int=2; permu=true; dttp=T.IntTreeB};
     {name="treeb_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
+    {name="treeb_leaf"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
+    {name="treeb_node"; num_dt=1; num_int=1; permu=false; dttp=T.IntTreeB};
   ]
   (* desugared *)
   let raw_preds_info = [
     {raw_name="member"; raw_num_args=2;};
     {raw_name="head"; raw_num_args=2;};
+    {raw_name="last"; raw_num_args=2;};
+    {raw_name="leaf"; raw_num_args=2;};
+    {raw_name="node"; raw_num_args=2;};
     {raw_name="once"; raw_num_args=2;};
     {raw_name="order"; raw_num_args=5;}]
   let apply_layout (pred, dt, args) =
@@ -68,11 +78,24 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
   let layout name = name
 
   let tp_to_preds tp =
-      List.filter_map (fun info ->
-          if T.is_dt tp && T.eq info.dttp tp
-          then Some info
-          else None
-        ) preds_info
+    let pres =
+    match tp with
+    | T.IntTreeB ->
+      ["treeb_head"; "treeb_member"; "treeb_left"; "treeb_right"; "treeb_parallel";]
+    | T.IntTreeI ->
+      ["treei_head"; "treei_member"; "treei_left"; "treei_right"; "treei_parallel";]
+    | T.IntTree ->
+      ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";]
+    | T.IntList ->
+      ["list_head"; "list_member"; "list_order";]
+    | _ -> []
+    in
+    List.map find_pred_info_by_name pres
+      (* List.filter_map (fun info ->
+       *     if T.is_dt tp && T.eq info.dttp tp
+       *     then Some info
+       *     else None
+       *   ) preds_info *)
 
   let head_apply (dt: V.t) (e: V.t) =
     match (dt, e) with
@@ -110,6 +133,25 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | (V.TB t, V.I e) -> LabeledTree.once (fun x y -> x == y) t e
     | _ -> raise @@ InterExn "once_apply"
 
+  let last_apply (dt: V.t) (e: V.t) =
+    match (dt, e) with
+    | (V.L l, V.I e) -> List.lastb l e
+    | _ -> raise @@ InterExn "last_apply"
+
+  let leaf_apply (dt: V.t) (e: V.t) =
+    match (dt, e) with
+    | (V.T t, V.I e) -> Tree.leaf (fun x y -> x == y) t e
+    | (V.TI t, V.I e) -> LabeledTree.leaf (fun x y -> x == y) t e
+    | (V.TB t, V.I e) -> LabeledTree.leaf (fun x y -> x == y) t e
+    | _ -> raise @@ InterExn "leaf_apply"
+
+  let node_apply (dt: V.t) (e: V.t) =
+    match (dt, e) with
+    | (V.T t, V.I e) -> Tree.node (fun x y -> x == y) t e
+    | (V.TI t, V.I e) -> LabeledTree.node (fun x y -> x == y) t e
+    | (V.TB t, V.I e) -> LabeledTree.node (fun x y -> x == y) t e
+    | _ -> raise @@ InterExn "node_apply"
+
   let order_apply (dt: V.t) i0 i1 (e0: V.t) (e1: V.t) =
     let eq x y = x == y in
     match (dt, i0, i1, e0, e1) with
@@ -135,6 +177,9 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | "member" | "==" | "order" | "head" -> pred, []
     | "list_member"  | "tree_member" | "treei_member" | "treeb_member"  -> "member", []
     | "list_head" | "tree_head" | "treei_head" | "treeb_head" -> "head", []
+    | "list_last" -> "last", []
+    | "tree_node" | "treei_node" | "treeb_node" -> "node", []
+    | "tree_leaf" | "treei_leaf" | "treeb_leaf" -> "leaf", []
     | "list_once" | "tree_once" | "treei_once" | "treeb_once" -> "once", []
     | "list_order" -> "order", [0;1]
     | "tree_left" | "treei_left" | "treeb_left" -> "order", [0;1]
@@ -151,6 +196,9 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     match pred, args with
     | "member", [arg] -> member_apply dt arg
     | "head", [arg] -> head_apply dt arg
+    | "last", [arg] -> last_apply dt arg
+    | "leaf", [arg] -> leaf_apply dt arg
+    | "node", [arg] -> node_apply dt arg
     | "once", [arg] -> once_apply dt arg
     | "order", [V.I i0; V.I i1; arg0; arg1] -> order_apply dt i0 i1 arg0 arg1
     | "==", [arg0; arg1] -> eq_apply arg0 arg1
