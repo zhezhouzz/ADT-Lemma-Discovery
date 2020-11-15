@@ -20,7 +20,7 @@ open Bench_utils
  *   | T (rank1, x, a1, b1), T (rank2, y, a2, b2) ->
  *     if Elem.leq x y then makeT x a1 (merge b1 tree2)
  *     else makeT y a2 (merge tree1 b2) *)
-let testname = "leftistheap" in
+let testname = "leftisthp" in
 let ctx = init () in
 let t rank x a b tr = SpecApply ("T", [rank;x;a;b;tr]) in
 let e tr = SpecApply ("E", [tr]) in

@@ -14,7 +14,7 @@ module V = Pred.Value
 open Language.Helper
 open Bench_utils
 ;;
-let testname = "redblackset" in
+let testname = "rbset" in
 (* let balance = function
  *   | B, T (R, T (R, a, x, b), y, c), z, d -> T (R, T (B, a, x, b), y, T (B, c, z, d))
  *   | B, T (R, E, x, T (R, b, y, c)), z, d -> T (R, T (B, E, x, b), y, T (B, c, z, d))

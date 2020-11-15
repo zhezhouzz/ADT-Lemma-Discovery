@@ -14,7 +14,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast;;
 ;;
-let testname = "bankersqueue" in
+let testname = "bankersq" in
 (* let snoc (lenf, f, lenr, r) x =
  *   let lenr = lenr + 1 in
  *   let r = lazy (Cons (x, r)) in

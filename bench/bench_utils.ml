@@ -65,14 +65,14 @@ let record_stat stat time_delta name subname =
   fprintf oc "%s-%s & %s & %.3f\\\\ \\hline \n" name subname (Axiom.layout_entry entry) time_delta;
   close_out oc
 
-let assertion ctx vc spec_tab preds bpreds sampledata bound expected filename name =
+let assertion ?(startX=1) ?(maxX=3) ctx vc spec_tab preds bpreds sampledata bound expected filename name  =
   (* let _ = printf "vc:\n%s\n" (vc_layout vc) in
    * let _ = StrMap.iter (fun name spec ->
    *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in *)
   let axiom, time_delta = time
     (fun _ ->
        Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~preds:preds ~bpreds:bpreds
-         ~startX:1 ~maxX:3 ~sampledata:sampledata ~samplebound:bound) () in
+         ~startX:startX ~maxX:maxX ~sampledata:sampledata ~samplebound:bound) () in
   match axiom, expected with
   | (_, None), false -> printf "connot infer axiom\n"; None
   | (stat, Some (dttp, axiom)), true ->

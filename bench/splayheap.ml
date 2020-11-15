@@ -13,7 +13,7 @@ module V = Pred.Value
 open Language.Helper
 open Bench_utils
 ;;
-let testname = "splayheap" in
+let testname = "splayhp" in
 (* let rec partition pivot = function
  *   | E -> E, E
  *   | T (a, x, b) as tr ->

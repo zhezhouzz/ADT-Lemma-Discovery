@@ -14,7 +14,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "uniquelist" in
+let testname = "uniquel" in
 (* Fixpoint set_add (a:A) (x:set) : set :=
  *   match x with
  *   | nil => a :: nil

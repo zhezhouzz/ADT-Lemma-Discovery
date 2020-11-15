@@ -13,7 +13,7 @@ module V = Pred.Value
 open Language.Helper
 open Bench_utils
 ;;
-let testname = "batchedqueue" in
+let testname = "batchedq" in
 (* let tail =
  *   match r with
  *   | [], _ -> raise Empty
@@ -64,6 +64,24 @@ in
 let axiom1 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"; "list_last"; "list_next"]
     bpreds 150 8 true testname "axiom1" in
+
+let axiom3 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 150 8 true testname "3" in
+let axiom4 = assertion ~startX:4 ~maxX:4 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 200 7 true testname "4" in
+let axiom5 = assertion ~startX:5 ~maxX:5 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 200 7 true testname "5" in
+let axiom6 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head";"list_last";]
+    bpreds 150 8 true testname "6" in
+let axiom7 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head";"list_last";"list_next"]
+    bpreds 150 8 true testname "7" in
+let _ = raise @@ InterExn "zz" in
+
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
     (E.And [
