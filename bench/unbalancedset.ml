@@ -36,27 +36,27 @@ let spec_tab, libt = register spec_tab
        | [V.T l; V.I a; V.T r] -> [V.T (Tree.Node (a, l, r))]
        | _ -> raise @@ InterExn "bad prog"
     } in
-let libt = add_spec spec_tab "T" ["tree0";"x";"tree1";"tree2"] ["u"; "v"]
-  (And [
-     Iff (tree_head tree2 u, int_eq x u);
-     Iff (tree_member tree2 u, Or [treer tree2 x u; treer tree2 x u; tree_head tree2 u]);
-     Iff (treel tree2 u v, Or [
-         treel tree0  u v;
-         treel tree1 u v;
-         And [tree_head tree2 u; tree_member tree0 v];
-       ]);
-     Iff (treer tree2 u v, Or [
-         treer tree0 u v;
-         treer tree1 u v;
-         And [tree_head tree2 u; tree_member tree0 v];
-       ]);
-     Iff (treep tree2 u v, Or [
-         treep tree0 u v;
-         treep tree1 u v;
-         And [treel tree2 x u; treer tree2 x v];
-       ]);
-  ])
-in
+(* let spec_tab = add_spec spec_tab "T" ["tree0";"x";"tree1";"tree2"] ["u"; "v"]
+ *   (And [
+ *      Iff (tree_head tree2 u, int_eq x u);
+ *      Iff (tree_member tree2 u, Or [treel tree2 x u; treer tree2 x u; tree_head tree2 u]);
+ *      Iff (treel tree2 u v, Or [
+ *          treel tree0  u v;
+ *          treel tree1 u v;
+ *          And [tree_head tree2 u; tree_member tree0 v];
+ *        ]);
+ *      Iff (treer tree2 u v, Or [
+ *          treer tree0 u v;
+ *          treer tree1 u v;
+ *          And [tree_head tree2 u; tree_member tree1 v];
+ *        ]);
+ *      Iff (treep tree2 u v, Or [
+ *          treep tree0 u v;
+ *          treep tree1 u v;
+ *          And [treel tree2 x u; treer tree2 x v];
+ *        ]);
+ *   ])
+ * in *)
 let spec_tab, libe = register spec_tab
     {name = "E"; intps = [T.IntTree;]; outtps = [T.Bool];
      prog = function
@@ -108,7 +108,7 @@ let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"]
         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
       ])
 in
-let axiom1 = assertion ctx (vc insert) spec_tab preds bpreds 1000 4 true testname "axiom1" in
+let axiom1 = assertion ctx (vc insert) spec_tab preds bpreds 500 5 true testname "axiom1" in
 
 let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"; "v"]
     (E.And [
@@ -118,7 +118,7 @@ let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"; "v"]
         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
       ])
 in
-let axiom2 = assertion ctx (vc insert) spec_tab preds bpreds 1000 4 true testname "axiom2" in
+let axiom2 = assertion ctx (vc insert) spec_tab preds bpreds 500 5 true testname "axiom2" in
 
 (* let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] []
  *     (E.Not (tree_member tree2 x))

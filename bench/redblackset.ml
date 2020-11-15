@@ -29,7 +29,7 @@ let t br l e r result = SpecApply ("T", [br;l;e;r;result]) in
 let e result = SpecApply ("E", [result]) in
 let a, b, c, d = map4 treeb_var ("a", "b", "c", "d") in
 let tmp1, tmp2, tmp3, tmp4 = map4 treeb_var ("tmp1", "tmp2", "tmp3", "tmp4") in
-let tree1, tree2, tree3 = map_triple treeb_var ("tree1", "tree2", "tree3") in
+let tree0, tree1, tree2, tree3 = map4 treeb_var ("tree0", "tree1", "tree2", "tree3") in
 let tmpe = treeb_var "tmpe" in
 let r1, r2= map_double bool_var ("r1", "r2") in
 let red r = SpecApply ("R", [r]) in
@@ -39,13 +39,34 @@ let blackb r = E.Not(redb r) in
 let spec_tab = StrMap.empty in
 let spec_tab = add_spec spec_tab "R" ["a"] [] (redb a) in
 let spec_tab = add_spec spec_tab "B" ["a"] [] (blackb a) in
-let spec_tab, libt = register spec_tab
-    {name = "T"; intps = [T.Bool; T.IntTreeB; T.Int; T.IntTreeB];
-     outtps = [T.IntTreeB];
-     prog = function
-       | [V.B r; V.TB a; V.I x; V.TB b] -> [V.TB (LabeledTree.Node(r,x,a,b))]
-       | _ -> raise @@ InterExn "bad prog"
-    } in
+(* let spec_tab, libt = register spec_tab
+ *     {name = "T"; intps = [T.Bool; T.IntTreeB; T.Int; T.IntTreeB];
+ *      outtps = [T.IntTreeB];
+ *      prog = function
+ *        | [V.B r; V.TB a; V.I x; V.TB b] -> [V.TB (LabeledTree.Node(r,x,a,b))]
+ *        | _ -> raise @@ InterExn "bad prog"
+ *     } in *)
+let spec_tab = add_spec spec_tab "T" ["r1"; "tree0";"x";"tree1";"tree2"] ["u"; "v"]
+    (And [
+        Iff (treeb_head tree2 u, int_eq x u);
+        Iff (treeb_member tree2 u, Or [treebl tree2 x u; treebr tree2 x u; treeb_head tree2 u]);
+        Iff (treebl tree2 u v, Or [
+            treebl tree0  u v;
+            treebl tree1 u v;
+            And [treeb_head tree2 u; treeb_member tree0 v];
+          ]);
+        Iff (treebr tree2 u v, Or [
+            treebr tree0 u v;
+            treebr tree1 u v;
+            And [treeb_head tree2 u; treeb_member tree1 v];
+          ]);
+        Iff (treebp tree2 u v, Or [
+            treebp tree0 u v;
+            treebp tree1 u v;
+            And [treebl tree2 x u; treebr tree2 x v];
+          ]);
+      ])
+in
 let spec_tab, libe = register spec_tab
     {name = "E"; intps = [T.IntTreeB]; outtps = [T.Bool];
      prog = function
@@ -78,6 +99,10 @@ let vc balance =
           ]
          )
 in
+let preds = ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
+             (* "tree_node" *)
+            ] in
+let bpreds = ["=="] in
 let balance a b c d e = SpecApply ("Balance", [a;b;c;d;e]) in
 let spec_tab = add_spec spec_tab "Balance"  ["r1";"tree1";"x";"tree2";"tree3"] ["u"]
     (E.And [
@@ -86,7 +111,7 @@ let spec_tab = add_spec spec_tab "Balance"  ["r1";"tree1";"x";"tree2";"tree3"] [
               );
       ])
 in
-let axiom1 = assertion ctx (vc balance) spec_tab true testname "axiom1" in
+let axiom1 = assertion ctx (vc balance) spec_tab preds bpreds 100 4 true testname "axiom1" in
 
 let balance a b c d e =
   Implies (SpecApply ("BalancePre", [a;b;c;d;e]), SpecApply ("BalancePost", [a;b;c;d;e])) in
@@ -107,6 +132,6 @@ let spec_tab = add_spec spec_tab "BalancePost" ["r1";"tree1";"x";"tree2";"tree3"
               );
       ])
 in
-let axiom2 = assertion ctx (vc balance) spec_tab true testname "axiom1" in
+let axiom2 = assertion ctx (vc balance) spec_tab  preds bpreds 100 4 true testname "axiom2" in
 let _ = to_verifier testname [axiom1;axiom2] in
 ();;
