@@ -131,16 +131,6 @@ let ins x l1 y tree1 tree2 = SpecApply ("Ins", [x;l1;y;tree1;tree2]) in
 let preds = ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
             ] in
 let bpreds = ["=="] in
-(* test *)
-(* let spec_tab = add_spec spec_tab "Ins" ["x";"tree1";"tree2"] ["u"; "v"]
- *     (E.And [
- *         E.Implies(tree_member tree1 x,
- *                   E.Implies (treel tree1 u v, treel tree2 u v)
- *                  );
- *         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
- *       ])
- * in
- * let axiom2 = assertion ctx (vc ins) spec_tab true in *)
 
 let spec_tab = add_spec spec_tab "Ins" ["x";"l1";"y";"tree1";"tree2"] ["u"]
     (E.And [
@@ -148,7 +138,7 @@ let spec_tab = add_spec spec_tab "Ins" ["x";"l1";"y";"tree1";"tree2"] ["u"]
         (* E.Implies (Or [tree_member tree1 u; int_eq u y; int_eq u x], tree_member tree2 u); *)
       ])
 in
-let axiom1 = assertion ctx (vc ins) spec_tab preds bpreds 100 5 true testname "axiom1" in
+let axiom1 = assertion ctx (vc ins) spec_tab preds bpreds 340 5 true testname "axiom1" in
 
 let _ = to_verifier testname [axiom1] in
 ();;
