@@ -38,8 +38,8 @@ module Value: Value = struct
       | (B x, B y) -> x == y
       | (L x, L y) -> List.eq (fun x y -> x == y) x y
       | (T x, T y) -> Tree.eq (fun x y -> x == y) x y
-      | (TI x, TI y) -> LabeledTree.eq (fun x y -> x == y) x y
-      | (TB x, TB y) -> LabeledTree.eq (fun x y -> x == y) x y
+      | (TI x, TI y) -> LabeledTree.eq (fun x y -> x == y) (fun x y -> x == y) x y
+      | (TB x, TB y) -> LabeledTree.eq (fun x y -> x == y) (fun x y -> x == y) x y
       | (_, _) -> false
     in
     aux (x, y)

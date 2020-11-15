@@ -509,11 +509,11 @@ module LabeledTree = struct
     in
     aux t
 
-  let eq compare t1 t2 =
+  let eq lcompare compare t1 t2 =
     let rec aux = function
       | (Leaf, Leaf) -> true
-      | (Node (_, a1, l1, r1), Node (_, a2, l2, r2)) ->
-        if compare a1 a2 then
+      | (Node (lab1, a1, l1, r1), Node (lab2, a2, l2, r2)) ->
+        if compare a1 a2 && lcompare lab1 lab2 then
           if aux (l1, l2)
           then aux (r1, r2)
           else false

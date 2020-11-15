@@ -490,6 +490,8 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     let sampling fv_num axiom_epr feature_set dt fv chooses num =
       let samples = R.gen ~chooses:chooses ~num:num ~tp:dttp ~bound:samplebound in
       (* let _ = List.iter (fun s -> printf "[%s]\n" (V.layout s)) samples in *)
+      (* let _ = printf "samples:%i\n" (List.length samples) in *)
+      (* let _ = raise @@ InterExn "zz" in *)
       let tab = Hashtbl.create 10000 in
       let aux dtv c =
         List.map (fun m ->
@@ -505,6 +507,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       let counter = ref 0 in
       let _ = List.iter (fun dtv ->
           let vecs = aux dtv c in
+          (* let _ = printf "vecs:%i\n" (List.length vecs) in *)
           let _ = counter := (!counter) + (List.length vecs) in
           List.iter (fun vec ->
               match Hashtbl.find_opt tab vec with
@@ -512,6 +515,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
               | None -> Hashtbl.add tab vec ()
             ) vecs
         ) samples in
+      (* let _ = raise @@ InterExn "zz" in *)
       (* let vecs =
        *   List.map (fun m ->
        *       List.map (fun feature -> F.exec feature m) feature_set) @@

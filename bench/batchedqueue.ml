@@ -63,7 +63,7 @@ let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
 in
 let axiom1 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"; "list_last"; "list_next"]
-    bpreds 300 6 true testname "axiom1" in
+    bpreds 150 8 true testname "axiom1" in
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
     (E.And [
@@ -75,7 +75,7 @@ let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
 in
 let axiom2 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"; "list_next"]
-    bpreds 300 6 true testname "axiom2" in
+    bpreds 200 8 true testname "axiom2" in
 
 (* let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
  *     (E.Iff (Or[list_member l3 u; list_member l4 u],

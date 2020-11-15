@@ -18,7 +18,9 @@ module Randomgen : Randomgen = struct
     in
     aux []
 
-  let randomgen_list (chooses: int list) (num: int) (bound: int) =
+  let randomgen_list (_: int list) (num: int) (bound: int) =
+    (* let _ = Printf.printf "chooses:%s\n" (IntList.to_string chooses) in *)
+    let chooses = [0;1;2] in
     let list_gen = QCheck.Gen.(list_size (int_bound bound) (oneofl chooses)) in
     let result = List.map (fun l -> V.L l) @@
       [] :: (unique_gen list_gen num IntList.eq) in
@@ -43,8 +45,10 @@ module Randomgen : Randomgen = struct
     List.map (fun l -> V.T l) @@
     Tree.Leaf :: (unique_gen tree_gen num (Tree.eq (fun x y -> x == y)))
 
-  let randomgen_labeled_tree gen (chooses: int list) (num: int) (bound: int) =
+  let randomgen_labeled_tree gen (_: int list) (num: int) (bound: int) =
     (* let _ = Printf.printf "chooses:%s\n" (IntList.to_string chooses) in *)
+    let chooses = [0;1;2] in
+    (* let _ = raise @@ InterExn "zz" in *)
     let node labal a l r = LabeledTree.Node (labal, a, l, r) in
     let tree_gen =
       QCheck.Gen.(
@@ -59,7 +63,7 @@ module Randomgen : Randomgen = struct
                               (self (n - 1)) (self (n - 1))]
                     ))
     in
-    unique_gen tree_gen num (LabeledTree.eq (fun x y -> x == y))
+    unique_gen tree_gen num (LabeledTree.eq (fun x y -> x == y) (fun x y -> x == y))
 
   let randomgen_labeled_treei chooses bound num =
     List.map (fun l -> V.TI l) @@
@@ -67,7 +71,7 @@ module Randomgen : Randomgen = struct
 
   let randomgen_labeled_treeb chooses bound num =
     List.map (fun l -> V.TB l) @@
-    LabeledTree.Leaf :: (randomgen_labeled_tree (QCheck.Gen.oneofl [true;false]) chooses num bound)
+    LabeledTree.Leaf :: (randomgen_labeled_tree (QCheck.Gen.oneofl [true]) chooses num bound)
 
   let gen ~chooses ~num ~tp ~bound =
     match tp with
