@@ -63,8 +63,8 @@ let spec_tab = add_spec spec_tab "SetAdd" ["x";"l1";"l2"] ["u";]
       ])
 in
 let axiom1 = assertion ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head"; "list_last";]
-    bpreds 150 6 true testname "axiom1" in
+    ["list_member"; "list_order"; "list_head";]
+    bpreds 50 6 true testname "axiom1" in
 
 let spec_tab = add_spec spec_tab "SetAdd" ["x";"l1";"l2"] ["u";]
     (E.And [
@@ -73,7 +73,7 @@ let spec_tab = add_spec spec_tab "SetAdd" ["x";"l1";"l2"] ["u";]
       ])
 in
 let axiom2 = assertion ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head"; "list_once";]
+    ["list_member"; "list_order"; "list_head";"list_once"]
     bpreds 90 6 true testname "axiom2" in
 
 let _ = to_verifier testname [axiom1;axiom2] in
