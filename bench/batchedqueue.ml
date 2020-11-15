@@ -65,6 +65,9 @@ let axiom1 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"; "list_last"; "list_next"]
     bpreds 150 8 true testname "axiom1" in
 
+let axiom3 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 150 8 true testname "2" in
 let axiom3 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"]
     bpreds 150 8 true testname "3" in

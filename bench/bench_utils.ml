@@ -62,7 +62,7 @@ let record_stat stat time_delta name subname =
   let path = (Sys.getenv "DUNE_ROOT") ^ "/stat_ouput/" in
   let outfile = sprintf "%s%s.stat" path filename in
   let oc = open_out_gen [Open_append; Open_creat] 0o666 outfile in
-  fprintf oc "%s-%s & %s & %.3f\\\\ \\hline \n" name subname (Axiom.layout_entry entry) time_delta;
+  fprintf oc "%s-%s & %s & %.2f\\\\ \\hline \n" name subname (Axiom.layout_entry entry) time_delta;
   close_out oc
 
 let assertion ?(startX=1) ?(maxX=3) ctx vc spec_tab preds bpreds sampledata bound expected filename name  =
