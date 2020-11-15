@@ -178,8 +178,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     | [] -> raise @@ UndefExn "unbounded_dts"
     | (tp, name) :: t ->
       tp, List.fold_left (fun r (tp', name') ->
-          if T.eq tp' tp then name' :: r else
-            raise @@ UndefExn "unbounded_dts"
+          if T.eq tp' tp then name' :: r else r
         ) [name] t
 
   let interval ctx exists_fv (s, e) =
@@ -452,8 +451,8 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     let dttp = match unbounded_dts with
       | [] -> raise @@ InterExn "no data type exists"
       | (tp, _) :: t ->
-        if List.for_all (fun (tp', _) -> T.eq tp tp') t then tp else
-          raise @@ UndefExn "axiom dttp"
+        if List.for_all (fun (tp', _) -> T.eq tp tp') t then tp else T.IntTree
+          (* raise @@ UndefExn "axiom dttp" *)
     in
     let dt = dttp, "dt" in
     let fvints = List.filter_map (fun (tp, name) ->
@@ -461,6 +460,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     let dttp, unbounded_dts = check_unbounded_dts unbounded_dts in
     let unbounded_ints, neg_vc_skolemized =
       Ast.skolemize @@ Ast.application (Ast.to_nnf (Ast.Not vc)) spectable in
+    (* let _ = printf "vc:%s\n" (Ast.layout neg_vc_skolemized) in *)
     let unbounded_ints = unbounded_ints @ fvints in
     (* let _ = printf "unbounded_int(%i):%s\n" (List.length unbounded_ints)
      *     (StrList.to_string unbounded_ints) in *)
@@ -568,7 +568,6 @@ module AxiomSyn (D: Dtree.Dtree) = struct
         (* let feature_set = F.make_set ([dt] @ fv) in *)
         let feature_set = F.make_set_from_preds preds bpreds dt fv in
         (* let _ = printf "set:%s\n" (F.layout_set feature_set) in *)
-        (* let _ = raise @@ InterExn "zz" in *)
         let positives = Hashtbl.create 10000 in
         let negatives = Hashtbl.create 10000 in
         let rec main_loop_with_fixed_fv stat =
@@ -618,6 +617,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
              *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) positives;
              *   printf "neg:\n";
              *   Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) negatives in *)
+            (* let _ = if fv_num == 3 then raise @@ InterExn "zz" else () in *)
             let negSample = update_negSample negSample stat.numIter negatives in
             if (Hashtbl.length positives == p_size) &&
                (Hashtbl.length negatives == n_size)

@@ -71,11 +71,15 @@ let vc merge = And [
       merge tree1 tree2 tree3)
   ]
 in
+let bpreds = ["=="] in
 let merge tree1 tree2 tree3 = SpecApply ("Merge", [tree1;tree2;tree3]) in
 let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"]
     (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]))
 in
-let axiom1 = assertion ctx (vc merge) spec_tab true testname "axiom1" in
+let axiom1 = assertion ctx (vc merge) spec_tab
+    ["treei_head"; "treei_member"; "treei_left"; "treei_right"; "treei_parallel";
+      "treei_node";]
+    bpreds 400 5 true testname "axiom1" in
 
 let merge tree1 tree2 tree3 = SpecApply ("Merge", [tree1;tree2;tree3]) in
 let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"; "v"]
@@ -85,6 +89,8 @@ let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"; "v"]
         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
       ])
 in
-let axiom2 = assertion ctx (vc merge) spec_tab true testname "axiom2" in
+let axiom2 = assertion ctx (vc merge) spec_tab
+    ["treei_head"; "treei_member"; "treei_left"; "treei_right"; "treei_parallel";]
+    bpreds 340 5 true testname "axiom2" in
 let _ = to_verifier testname [axiom1;axiom2] in
 ();;

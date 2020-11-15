@@ -76,6 +76,8 @@ let ast =
   )
 in
 let vc = func_to_vc [T.Int, "x1"; T.IntList, "x2"; T.Int, "x3"; T.IntList, "x4"] ast in
+let preds = ["list_once"; "list_member"; "list_order"; "list_head"; "list_last"; "list_next"] in
+let bpreds = ["=="] in
 let f, f', r, r' = map4 list_var ("f", "f'", "r", "r'") in
 let spec_tab = add_spec spec_tab "Snoc"
     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
@@ -83,7 +85,9 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
         ))
 in
-let axiom1 = assertion ctx vc spec_tab true testname "axiom1" in
+let axiom1 = assertion ctx vc spec_tab
+    ["list_once"; "list_member"; "list_order"; "list_last"; "list_head"]
+    bpreds 125 6 true testname "axiom1" in
 
 let spec_tab = add_spec spec_tab "Snoc"
     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
@@ -91,6 +95,8 @@ let spec_tab = add_spec spec_tab "Snoc"
          Or[list_member f' u; list_member r' u]
         ))
 in
-let axiom2 = assertion ctx vc spec_tab true testname "axiom2" in
+let axiom2 = assertion ctx vc spec_tab
+    ["list_member"; "list_order"; "list_next"; "list_head"; ]
+    bpreds 180 7 true testname "axiom2" in
 let _ = to_verifier testname [axiom1;axiom2] in
 ();;

@@ -436,6 +436,12 @@ module LabeledTree = struct
   type ('a, 'b) t =
     | Leaf
     | Node of ('b * 'a * ('a, 'b) t * ('a, 'b) t)
+
+  let rec from_tree label t =
+    match t with
+    | Tree.Leaf -> Leaf
+    | Tree.Node (a, l, r) -> Node(label, a, from_tree label l, from_tree label r)
+
   let exists f t =
     let rec aux before t =
       if before then true else

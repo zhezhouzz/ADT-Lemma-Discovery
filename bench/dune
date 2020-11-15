@@ -12,6 +12,8 @@
  redblackset
  bankersqueue
  batchedqueue
+ trie
+ uniquelist
  )
  (libraries ounit2 solver inference frontend)
 )

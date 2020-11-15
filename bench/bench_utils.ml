@@ -14,6 +14,12 @@ open Language.Helper
 open Frontend.Fast.Fast
 ;;
 
+let time f x =
+  let t = Sys.time() in
+  let fx = f x in
+  let delta = (Sys.time() -. t) in
+  fx, delta
+
 let get_head dttp =
   match dttp with
   | T.IntList -> "list.dfy.text", "List"
@@ -50,25 +56,28 @@ let to_verifier name axioms =
       let oc = open_out outfile in
       fprintf oc "%s\n%s" head methods;close_out oc
 
-let record_stat stat name subname =
+let record_stat stat time_delta name subname =
   let filename = "stat" in
   let entry = Axiom.make_stat_entry stat in
   let path = (Sys.getenv "DUNE_ROOT") ^ "/stat_ouput/" in
   let outfile = sprintf "%s%s.stat" path filename in
   let oc = open_out_gen [Open_append; Open_creat] 0o666 outfile in
-  fprintf oc "%s-%s & %s \\\\ \\hline \n" name subname (Axiom.layout_entry entry);close_out oc
+  fprintf oc "%s-%s & %s & %.3f\\\\ \\hline \n" name subname (Axiom.layout_entry entry) time_delta;
+  close_out oc
 
 let assertion ctx vc spec_tab preds bpreds sampledata bound expected filename name =
-  let _ = printf "vc:\n%s\n" (vc_layout vc) in
-  let _ = StrMap.iter (fun name spec ->
-      printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in
-  let axiom = Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~preds:preds ~bpreds:bpreds
-      ~startX:1 ~maxX:2 ~sampledata:sampledata ~samplebound:bound in
+  (* let _ = printf "vc:\n%s\n" (vc_layout vc) in
+   * let _ = StrMap.iter (fun name spec ->
+   *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in *)
+  let axiom, time_delta = time
+    (fun _ ->
+       Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~preds:preds ~bpreds:bpreds
+         ~startX:1 ~maxX:3 ~sampledata:sampledata ~samplebound:bound) () in
   match axiom, expected with
   | (_, None), false -> printf "connot infer axiom\n"; None
   | (stat, Some (dttp, axiom)), true ->
-    let _ = record_stat stat filename name in
-    let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+    let _ = record_stat stat time_delta filename name in
+    (* let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in *)
     Some (dttp, axiom)
   | _ -> raise @@ InterExn "bench: wrong result"
 

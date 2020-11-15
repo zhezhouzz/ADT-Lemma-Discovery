@@ -89,7 +89,7 @@ let vc insert =
   ] in
 let insert tree1 tree2 tree3 = SpecApply ("Insert", [tree1;tree2;tree3]) in
 let preds = ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
-             "tree_node"
+             "tree_node"; "tree_once"
             ] in
 let bpreds = ["=="] in
 (* test *)
@@ -118,7 +118,9 @@ let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] ["u"; "v"]
         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
       ])
 in
-let axiom2 = assertion ctx (vc insert) spec_tab preds bpreds 500 5 true testname "axiom2" in
+let axiom2 = assertion ctx (vc insert) spec_tab
+    ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";]
+    bpreds 450 5 true testname "axiom2" in
 
 (* let spec_tab = add_spec spec_tab "Insert" ["x";"tree1";"tree2"] []
  *     (E.Not (tree_member tree2 x))

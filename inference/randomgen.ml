@@ -3,7 +3,7 @@ module type Randomgen = sig
   val gen_tpvars: tpvars:(Tp.Tp.t*string) list -> num: int -> fv_num:int -> bound:int -> int list * Pred.Value.t list list
 end
 
-module Randomgen : Randomgen = struct
+module Randomgen = struct
   open Utils
   module V = Pred.Value
   module T = Tp.Tp
@@ -18,9 +18,9 @@ module Randomgen : Randomgen = struct
     in
     aux []
 
-  let randomgen_list (_: int list) (num: int) (bound: int) =
+  let randomgen_list (chooses: int list) (num: int) (bound: int) =
     (* let _ = Printf.printf "chooses:%s\n" (IntList.to_string chooses) in *)
-    let chooses = [0;1;2] in
+    (* let chooses = [0;1;2] in *)
     let list_gen = QCheck.Gen.(list_size (int_bound bound) (oneofl chooses)) in
     let result = List.map (fun l -> V.L l) @@
       [] :: (unique_gen list_gen num IntList.eq) in
@@ -42,7 +42,6 @@ module Randomgen : Randomgen = struct
                               (self (n - 1)) (self (n - 1))]
                     ))
     in
-    List.map (fun l -> V.T l) @@
     Tree.Leaf :: (unique_gen tree_gen num (Tree.eq (fun x y -> x == y)))
 
   let randomgen_labeled_tree gen (_: int list) (num: int) (bound: int) =
@@ -66,20 +65,19 @@ module Randomgen : Randomgen = struct
     unique_gen tree_gen num (LabeledTree.eq (fun x y -> x == y) (fun x y -> x == y))
 
   let randomgen_labeled_treei chooses bound num =
-    List.map (fun l -> V.TI l) @@
-    LabeledTree.Leaf :: (randomgen_labeled_tree (QCheck.Gen.oneofl [0]) chooses num bound)
+    List.map (fun t -> LabeledTree.from_tree 0 t) (randomgen_tree chooses bound num)
 
   let randomgen_labeled_treeb chooses bound num =
-    List.map (fun l -> V.TB l) @@
-    LabeledTree.Leaf :: (randomgen_labeled_tree (QCheck.Gen.oneofl [true]) chooses num bound)
+    List.map (fun t -> LabeledTree.from_tree true t)
+      (randomgen_tree chooses bound num)
 
   let gen ~chooses ~num ~tp ~bound =
     match tp with
     | T.Int -> List.map (fun i -> V.I i) chooses
     | T.IntList -> randomgen_list chooses num bound
-    | T.IntTree -> randomgen_tree chooses num bound
-    | T.IntTreeI -> randomgen_labeled_treei chooses num bound
-    | T.IntTreeB -> randomgen_labeled_treeb chooses num bound
+    | T.IntTree -> List.map (fun l -> V.T l) @@ randomgen_tree chooses num bound
+    | T.IntTreeI -> List.map (fun l -> V.TI l) @@ randomgen_labeled_treei chooses num bound
+    | T.IntTreeB -> List.map (fun l -> V.TB l) @@ randomgen_labeled_treeb chooses num bound
     | T.Bool -> [V.B true; V.B false]
 
   let gen_tpvars ~tpvars ~num ~fv_num ~bound =
