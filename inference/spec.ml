@@ -52,7 +52,7 @@ module SpecSyn (D: Dtree.Dtree) = struct
     let targets = List.fold_left (fun r dt -> r @ (F.make_target dt fv)) [] outptps in
     (* let _ = printf "targets = %s\n" (F.layout_set targets) in *)
     let chooses, inps = R.gen_tpvars ~tpvars:inptps ~num:15 ~fv_num:fv_num
-        ~bound:10
+        ~bound:7
     in
     let inps = inp_limit 150 inps in
     (* let _ = printf "inp:%i\n" (List.length inps) in *)

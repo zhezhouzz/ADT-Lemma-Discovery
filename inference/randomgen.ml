@@ -67,7 +67,7 @@ module Randomgen : Randomgen = struct
 
   let randomgen_labeled_treeb chooses bound num =
     List.map (fun l -> V.TB l) @@
-    LabeledTree.Leaf :: (randomgen_labeled_tree (QCheck.Gen.oneofl [true]) chooses num bound)
+    LabeledTree.Leaf :: (randomgen_labeled_tree (QCheck.Gen.oneofl [true;false]) chooses num bound)
 
   let gen ~chooses ~num ~tp ~bound =
     match tp with

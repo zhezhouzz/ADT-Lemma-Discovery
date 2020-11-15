@@ -41,3 +41,15 @@ datatype List<a> = Nil | Cons(head: a, tail: List<a>)
     list_member(xs, e) && !list_order(xs, e, e)
   }
 
+  function list_next<a>(xs: List<a>, u: a, v: a): bool
+  {
+    match xs
+      case Nil => false
+      case Cons(h1, t1) =>
+        (match t1
+      case Nil => false
+      case Cons(h2, t2) =>
+        if u == h1 && v == h2 then true else list_next(t1, u, v)
+        )
+  }
+

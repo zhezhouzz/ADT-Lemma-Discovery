@@ -4,5 +4,5 @@
 
 (library
  (name ml)
- (libraries Str Bigarray)
+ (libraries str bigarray)
 )

@@ -30,6 +30,7 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {name="list_order"; num_dt=1; num_int=2; permu=true; dttp=T.IntList};
     {name="list_once"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
     {name="list_last"; num_dt=1; num_int=1; permu=false; dttp=T.IntList};
+    {name="list_next"; num_dt=1; num_int=2; permu=true; dttp=T.IntList};
 
     {name="tree_head"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
     {name="tree_member"; num_dt=1; num_int=1; permu=false; dttp=T.IntTree};
@@ -63,6 +64,7 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     {raw_name="member"; raw_num_args=2;};
     {raw_name="head"; raw_num_args=2;};
     {raw_name="last"; raw_num_args=2;};
+    {raw_name="next"; raw_num_args=3;};
     {raw_name="leaf"; raw_num_args=2;};
     {raw_name="node"; raw_num_args=2;};
     {raw_name="once"; raw_num_args=2;};
@@ -138,6 +140,18 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | (V.L l, V.I e) -> List.lastb l e
     | _ -> raise @@ InterExn "last_apply"
 
+  let next_apply (dt: V.t) (u: V.t) (v: V.t) =
+    match (dt, u, v) with
+    | (V.L l, V.I u, V.I v) ->
+      let rec aux l =
+        match l with
+        | [] -> false
+        | [_] -> false
+        | x :: y :: t -> if x == u && y == v then true else aux (y :: t)
+      in
+      aux l
+    | _ -> raise @@ InterExn "last_apply"
+
   let leaf_apply (dt: V.t) (e: V.t) =
     match (dt, e) with
     | (V.T t, V.I e) -> Tree.leaf (fun x y -> x == y) t e
@@ -178,6 +192,7 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | "list_member"  | "tree_member" | "treei_member" | "treeb_member"  -> "member", []
     | "list_head" | "tree_head" | "treei_head" | "treeb_head" -> "head", []
     | "list_last" -> "last", []
+    | "list_next" -> "next", []
     | "tree_node" | "treei_node" | "treeb_node" -> "node", []
     | "tree_leaf" | "treei_leaf" | "treeb_leaf" -> "leaf", []
     | "list_once" | "tree_once" | "treei_once" | "treeb_once" -> "once", []
@@ -197,6 +212,7 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | "member", [arg] -> member_apply dt arg
     | "head", [arg] -> head_apply dt arg
     | "last", [arg] -> last_apply dt arg
+    | "next", [arg0; arg1] -> next_apply dt arg0 arg1
     | "leaf", [arg] -> leaf_apply dt arg
     | "node", [arg] -> node_apply dt arg
     | "once", [arg] -> once_apply dt arg

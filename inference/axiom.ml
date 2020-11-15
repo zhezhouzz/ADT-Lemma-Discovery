@@ -160,12 +160,11 @@ module AxiomSyn (D: Dtree.Dtree) = struct
          etr_num_possample = 0;etr_num_pfev_in_possample = 0} stat
 
   let layout_entry stat_entry =
-    sprintf "$%i$ & $%i$ & $%i$ & $%i$ & $%i$ & $%i$ & $%i$ & $%i$ & $%i$ & $%i$"
-      stat_entry.etr_numMainIter stat_entry.etr_numX stat_entry.etr_numFeatureset
+    sprintf "($%i$, $%i$) & $%i$ & $%i$ & $%i$ & $%i$ & $%i$ & $%i$"
+      stat_entry.etr_numX stat_entry.etr_numFeatureset
       stat_entry.etr_numCex
       stat_entry.etr_num_pfev_in_negsample
       stat_entry.etr_num_nfev_in_negsample
-      stat_entry.etr_num_totalfev_in_negsample
       stat_entry.etr_num_sampling_iter
       stat_entry.etr_num_possample
       stat_entry.etr_num_pfev_in_possample
@@ -407,7 +406,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     (* let _ = raise @@ InterExn "zz" in *)
     if_neg, totalvec
 
-  let neg_update_opt ctx pos neg model feature_set dtnames chooses dt fv =
+  let neg_update_opt ctx pos neg model feature_set dtnames chooses dt fv iter =
     let chooses = List.map (fun i -> SE.Literal (T.Int, SE.L.Int i)) chooses in
     (* let _ = printf "chooses:%s\n" (List.to_string SE.layout chooses) in
      * let _ = List.iter (fun dtname ->
@@ -441,10 +440,10 @@ module AxiomSyn (D: Dtree.Dtree) = struct
           match Hashtbl.find_opt neg s with
           | Some _ -> ()
           | None -> if_updated := true; neg_counter := (!neg_counter) + 1;
-            Hashtbl.add neg s ()
+            Hashtbl.add neg s iter
       ) counter_vecs
     in
-    ()
+    true, List.length counter_vecs
 
   let infer ~ctx ~vc ~spectable ~preds ~bpreds ~startX ~maxX ~sampledata ~samplebound =
     let fv_num = startX in
@@ -491,17 +490,39 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     let sampling fv_num axiom_epr feature_set dt fv chooses num =
       let samples = R.gen ~chooses:chooses ~num:num ~tp:dttp ~bound:samplebound in
       (* let _ = List.iter (fun s -> printf "[%s]\n" (V.layout s)) samples in *)
-      let vecs =
+      let tab = Hashtbl.create 10000 in
+      let aux dtv c =
         List.map (fun m ->
             List.map (fun feature -> F.exec feature m) feature_set) @@
         List.filter_map (fun m ->
             if Epr.exec axiom_epr m then None else Some m) @@
-        List.map (fun (dtv, argsv) ->
+        List.map (fun (argsv) ->
             List.fold_left (fun m ((_, name), v) ->
                 StrMap.add name v m
-              ) (StrMap.add (snd dt) dtv StrMap.empty) (List.combine fv argsv)) @@
-        List.cross samples (List.choose_n (List.map (fun i -> V.I i) chooses) fv_num) in
-      vecs
+              ) (StrMap.add (snd dt) dtv StrMap.empty) (List.combine fv argsv)) c
+      in
+      let c =  (List.choose_n (List.map (fun i -> V.I i) chooses) fv_num) in
+      let counter = ref 0 in
+      let _ = List.iter (fun dtv ->
+          let vecs = aux dtv c in
+          let _ = counter := (!counter) + (List.length vecs) in
+          List.iter (fun vec ->
+              match Hashtbl.find_opt tab vec with
+              | Some _ -> ()
+              | None -> Hashtbl.add tab vec ()
+            ) vecs
+        ) samples in
+      (* let vecs =
+       *   List.map (fun m ->
+       *       List.map (fun feature -> F.exec feature m) feature_set) @@
+       *   List.filter_map (fun m ->
+       *       if Epr.exec axiom_epr m then None else Some m) @@
+       *   List.map (fun (dtv, argsv) ->
+       *       List.fold_left (fun m ((_, name), v) ->
+       *           StrMap.add name v m
+       *         ) (StrMap.add (snd dt) dtv StrMap.empty) (List.combine fv argsv)) @@
+       *   List.cross samples (List.choose_n (List.map (fun i -> V.I i) chooses) fv_num) in *)
+      tab, !counter
     in
     let pos_update fv_num pos neg feature_set dt fv chooses num numiter =
       let oldpos = Hashtbl.length pos in
@@ -509,24 +530,28 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       let rec aux counter =
         let axiom_epr = Epr.simplify_ite @@ D.to_epr @@ pn_to_axiom_epr feature_set pos neg in
         (* let _ = printf "axiom_epr:%s\n" (Epr.layout axiom_epr) in *)
-        let ps = sampling fv_num axiom_epr feature_set dt fv chooses num in
-        let _ = samplesize := (!samplesize) + (List.length ps) in
-        let ps = List.remove_duplicates (fun vec vec' ->
-            List.eq (fun x y -> x == y) vec vec') ps in
+        let ps, lenps = sampling fv_num axiom_epr feature_set dt fv chooses num in
+        let _ = samplesize := (!samplesize) + lenps in
+        (* let ps = List.remove_duplicates (fun vec vec' ->
+         *     List.eq (fun x y -> x == y) vec vec') ps in *)
         (* let _ = List.iter (fun vec -> printf "%s\n" (boollist_to_string vec)) ps in *)
-        match ps with
-        | [] -> counter
-        | _ ->
-          let _ = List.iter (fun s ->
-              match Hashtbl.find_opt pos s with
-              | Some _ -> ()
-              | None -> Hashtbl.add pos s numiter) ps in
-          let _ = List.iter (fun s ->
-              match Hashtbl.find_opt neg s with
-              | Some _ -> Hashtbl.remove neg s
-              | None -> ()) ps in
+        if Hashtbl.length ps == 0
+        then counter
+        else
+          let _ = Hashtbl.iter (fun vec _ ->
+              let _ =
+                (match Hashtbl.find_opt pos vec with
+                 | Some _ -> ()
+                 | None -> Hashtbl.add pos vec numiter)
+              in
+              let _ =
+                (match Hashtbl.find_opt neg vec with
+                 | Some _ -> Hashtbl.remove neg vec
+                 | None -> ())
+              in
+              ()
+            ) ps in
           aux (counter + 1)
-          (* () *)
       in
       let times = aux 0 in
       let newpos = (Hashtbl.length pos) - oldpos in
@@ -538,7 +563,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
         let fv = List.map (fun n -> (T.Int, n)) @@ List.init fv_num (fun i -> sprintf "u_%i" i) in
         (* let feature_set = F.make_set ([dt] @ fv) in *)
         let feature_set = F.make_set_from_preds preds bpreds dt fv in
-        let _ = printf "set:%s\n" (F.layout_set feature_set) in
+        (* let _ = printf "set:%s\n" (F.layout_set feature_set) in *)
         (* let _ = raise @@ InterExn "zz" in *)
         let positives = Hashtbl.create 10000 in
         let negatives = Hashtbl.create 10000 in
@@ -554,6 +579,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
             D.to_forallformula @@
             if (p_size == 0) && (n_size == 0) then D.T
             else pn_to_axiom_epr feature_set positives negatives in
+          (* let _ = printf "axiom:\n\t%s\n" (Epr.pretty_layout_forallformula axiom) in *)
           let valid, _ = S.check ctx (neg_vc_with_ax axiom) in
           if valid
           then (total_stat @ [stat]), Some (dttp, Epr.forallformula_simplify_ite axiom)
@@ -569,10 +595,10 @@ module AxiomSyn (D: Dtree.Dtree) = struct
             in
             let chooses, m = limited_smt_check (List.length fv) in
             (* let _ = printf "model:%s\n" (Model.to_string m) in *)
-            (* let _ = neg_update_opt ctx positives negatives
-             *     m feature_set unbounded_dts chooses dt fv in *)
-            let _, totalvec = neg_update_raw2 ctx positives negatives
-                m feature_set dt fv unbounded_dts stat.numIter in
+            let _, totalvec = neg_update_opt ctx positives negatives
+                m feature_set unbounded_dts chooses dt fv stat.numIter in
+            (* let _, totalvec = neg_update_raw2 ctx positives negatives
+             *     m feature_set dt fv unbounded_dts stat.numIter in *)
             let negSample = stat.negSample @ [{posvec = 0; negvec = 0; totalvec = totalvec}] in
             (* let _ =
              *   printf "pos:\n";
