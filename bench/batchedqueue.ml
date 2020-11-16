@@ -68,6 +68,7 @@ let axiom1 = assertion ctx vc spec_tab
 let axiom3 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"]
     bpreds 150 8 true testname "2" in
+let _ = raise @@ InterExn "zz" in
 let axiom3 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"]
     bpreds 150 8 true testname "3" in
@@ -83,6 +84,7 @@ let axiom6 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
 let axiom7 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
     ["list_member"; "list_order"; "list_head";"list_last";"list_next"]
     bpreds 150 8 true testname "7" in
+let _ = to_verifier testname [axiom3;axiom4;axiom5;axiom6;axiom7;] in
 let _ = raise @@ InterExn "zz" in
 
 

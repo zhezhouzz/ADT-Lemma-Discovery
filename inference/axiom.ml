@@ -161,7 +161,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
 
   let layout_entry stat_entry =
     sprintf "($%i$, $%i$) & $%i$ & $%i$ & $%i$ & $%i$ & $%i$ "
-      stat_entry.etr_numX stat_entry.etr_numFeatureset
+      (stat_entry.etr_numX + 1) stat_entry.etr_numFeatureset
       stat_entry.etr_numCex
       stat_entry.etr_num_pfev_in_negsample
       stat_entry.etr_num_nfev_in_negsample

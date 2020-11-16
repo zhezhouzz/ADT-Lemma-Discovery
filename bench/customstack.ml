@@ -14,7 +14,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "customstk" in
+let testname = "custstk" in
 (* let rec concat l1 l2 =
  *   if is_empty l1 then l2
  *   else cons (stack_head l1) (concat (stack_tail l1) l2) *)

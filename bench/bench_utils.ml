@@ -77,7 +77,7 @@ let assertion ?(startX=1) ?(maxX=3) ctx vc spec_tab preds bpreds sampledata boun
   | (_, None), false -> printf "connot infer axiom\n"; None
   | (stat, Some (dttp, axiom)), true ->
     let _ = record_stat stat time_delta filename name in
-    (* let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in *)
+    let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
     Some (dttp, axiom)
   | _ -> raise @@ InterExn "bench: wrong result"
 
