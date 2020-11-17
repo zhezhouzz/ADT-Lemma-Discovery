@@ -121,12 +121,21 @@ forall u v,(
 )
 ```
 
+##### equal
+
+```
+equal(x,y):=
+((x==y))
+```
+
 #### assertion-1
 
 ```
 Partition(x,tree1,tree2,tree3):=
-forall u,(tree_member(tree1,u) <==> 
- (tree_member(tree2,u) || tree_member(tree3,u)))
+forall u,(
+ tree_member(tree1,u) ==> 
+ (tree_member(tree2,u) || tree_member(tree3,u))
+)
 ```
 
 #### lemma-1
@@ -138,10 +147,16 @@ forall dt u_1 u_0,(
   (
    tree_member(dt,u_0) ||
    (
-    !tree_left(dt,u_0,u_1) &&
+    !tree_right(dt,u_0,u_1) &&
     (
-     !tree_right(dt,u_1,u_0) &&
-     !tree_right(dt,u_0,u_1)
+     !tree_left(dt,u_0,u_1) &&
+     (
+      !tree_left(dt,u_1,u_0) &&
+      (
+       !tree_right(dt,u_1,u_0) &&
+       !tree_parallel(dt,u_0,u_1)
+      )
+     )
     )
    )
   )
@@ -149,18 +164,21 @@ forall dt u_1 u_0,(
  (
   !tree_member(dt,u_1) ==> 
   (
-   !tree_head(dt,u_1) &&
+   !tree_right(dt,u_1,u_0) &&
    (
-    (u_1==u_0) ||
+    !tree_left(dt,u_1,u_0) &&
     (
-     !tree_left(dt,u_1,u_0) &&
+     !tree_head(dt,u_1) &&
      (
-      !tree_left(dt,u_0,u_1) &&
+      !tree_right(dt,u_0,u_1) &&
       (
-       !tree_right(dt,u_0,u_1) &&
+       !tree_left(dt,u_0,u_1) &&
        (
-        !tree_right(dt,u_1,u_0) &&
-        (tree_head(dt,u_0) ==> tree_member(dt,u_0))
+        tree_head(dt,u_0) ==> 
+        (
+         tree_member(dt,u_0) &&
+         !tree_parallel(dt,u_1,u_0)
+        )
        )
       )
      )
@@ -175,6 +193,222 @@ forall dt u_1 u_0,(
 
 ```
 Partition(x,tree1,tree2,tree3):=
+forall u,(
+ (tree_member(tree2,u) || tree_member(tree3,u)) ==> 
+ tree_member(tree1,u)
+)
+```
+
+#### lemma-2
+
+```
+forall dt u_0 u_1,(
+ (
+  tree_left(dt,u_0,u_1) ==> 
+  (
+   tree_member(dt,u_0) &&
+   (
+    tree_parallel(dt,u_1,u_0) ||
+    (
+     tree_left(dt,u_1,u_0) ||
+     (
+      tree_parallel(dt,u_0,u_1) ||
+      (
+       tree_head(dt,u_1) ||
+       (
+        (
+         (tree_head(dt,u_0) && tree_right(dt,u_1,u_0)) ==> 
+         !tree_right(dt,u_0,u_1)
+        ) &&
+        (
+         !tree_head(dt,u_0) ==> 
+         tree_member(dt,u_1)
+        )
+       )
+      )
+     )
+    )
+   )
+  )
+ ) &&
+ (
+  !tree_left(dt,u_0,u_1) ==> 
+  (
+   (
+    tree_member(dt,u_1) ==> 
+    (
+     tree_head(dt,u_0) ||
+     (
+      (u_1==u_0) ||
+      (
+       (
+        tree_member(dt,u_0) ==> 
+        (
+         tree_parallel(dt,u_0,u_1) ||
+         (
+          tree_parallel(dt,u_1,u_0) ||
+          (
+           (
+            (tree_right(dt,u_0,u_1) && tree_left(dt,u_1,u_0)) ==> 
+            !tree_right(dt,u_1,u_0)
+           ) &&
+           (
+            !tree_right(dt,u_0,u_1) ==> 
+            (tree_left(dt,u_1,u_0) || tree_right(dt,u_1,u_0))
+           )
+          )
+         )
+        )
+       ) &&
+       (
+        !tree_member(dt,u_0) ==> 
+        (
+         !tree_left(dt,u_1,u_0) &&
+         (
+          !tree_right(dt,u_1,u_0) &&
+          !tree_parallel(dt,u_1,u_0)
+         )
+        )
+       )
+      )
+     )
+    )
+   ) &&
+   (
+    !tree_member(dt,u_1) ==> 
+    (
+     !tree_left(dt,u_1,u_0) &&
+     (
+      !tree_right(dt,u_0,u_1) &&
+      (
+       !tree_head(dt,u_1) &&
+       (
+        !tree_parallel(dt,u_1,u_0) &&
+        (
+         tree_member(dt,u_0) ||
+         (
+          (u_1==u_0) ||
+          (
+           !tree_head(dt,u_0) &&
+           !tree_right(dt,u_1,u_0)
+          )
+         )
+        )
+       )
+      )
+     )
+    )
+   )
+  )
+ )
+)
+```
+
+#### assertion-3
+
+```
+Partition(x,tree1,tree2,tree3):=
+forall u,(tree_member(tree1,u) <==> 
+ (tree_member(tree2,u) || tree_member(tree3,u)))
+```
+
+#### lemma-3
+
+```
+forall dt u_1 u_0,(
+ (
+  (u_1==u_0) ==> 
+  (
+   tree_member(dt,u_1) ||
+   (
+    !tree_head(dt,u_1) &&
+    (
+     !tree_left(dt,u_1,u_0) &&
+     !tree_parallel(dt,u_1,u_0)
+    )
+   )
+  )
+ ) &&
+ (
+  !(u_1==u_0) ==> 
+  (
+   (
+    tree_member(dt,u_1) ==> 
+    (
+     tree_left(dt,u_0,u_1) ||
+     (
+      tree_head(dt,u_0) ||
+      (
+       (tree_right(dt,u_0,u_1) ==> tree_member(dt,u_0)) &&
+       (
+        !tree_right(dt,u_0,u_1) ==> 
+        (
+         (
+          tree_member(dt,u_0) ==> 
+          (
+           tree_right(dt,u_1,u_0) ||
+           (
+            tree_left(dt,u_1,u_0) ||
+            (tree_parallel(dt,u_1,u_0) || tree_parallel(dt,u_0,u_1))
+           )
+          )
+         ) &&
+         (
+          !tree_member(dt,u_0) ==> 
+          (
+           !tree_right(dt,u_1,u_0) &&
+           (
+            !tree_parallel(dt,u_0,u_1) &&
+            (
+             !tree_left(dt,u_1,u_0) &&
+             !tree_parallel(dt,u_1,u_0)
+            )
+           )
+          )
+         )
+        )
+       )
+      )
+     )
+    )
+   ) &&
+   (
+    !tree_member(dt,u_1) ==> 
+    (
+     !tree_parallel(dt,u_1,u_0) &&
+     (
+      !tree_parallel(dt,u_0,u_1) &&
+      (
+       !tree_left(dt,u_0,u_1) &&
+       (
+        !tree_right(dt,u_0,u_1) &&
+        (
+         tree_member(dt,u_0) ||
+         (
+          !tree_head(dt,u_0) &&
+          (
+           !tree_head(dt,u_1) &&
+           (
+            !tree_left(dt,u_1,u_0) &&
+            !tree_right(dt,u_1,u_0)
+           )
+          )
+         )
+        )
+       )
+      )
+     )
+    )
+   )
+  )
+ )
+)
+```
+
+#### assertion-4
+
+```
+PartitionPre(x,tree1,tree2,tree3):=
 forall u v,(
  (
   tree_left(tree1,u,v) ==> 
@@ -184,7 +418,332 @@ forall u v,(
   tree_right(tree1,u,v) ==> 
   (u<=v)
  )
-) ==>
+)
+==>
+forall u v,(
+ (
+  tree_member(tree2,u) ==> 
+  (u<=x)
+ ) &&
+ (
+  tree_member(tree3,u) ==> 
+  (u>=x)
+ )
+)
+```
+
+#### lemma-4
+
+```
+forall dt u_1 u_0,(
+ (
+  (u_1==u_0) ==> 
+  (
+   tree_member(dt,u_1) ||
+   (
+    !tree_head(dt,u_1) &&
+    (
+     !tree_left(dt,u_1,u_0) &&
+     !tree_right(dt,u_1,u_0)
+    )
+   )
+  )
+ ) &&
+ (
+  !(u_1==u_0) ==> 
+  (
+   (
+    tree_member(dt,u_1) ==> 
+    (
+     tree_member(dt,u_0) ||
+     (
+      !tree_right(dt,u_1,u_0) &&
+      (
+       !tree_left(dt,u_1,u_0) &&
+       (
+        tree_head(dt,u_1) ==> 
+        (
+         !tree_left(dt,u_0,u_1) &&
+         !tree_right(dt,u_0,u_1)
+        )
+       )
+      )
+     )
+    )
+   ) &&
+   (
+    !tree_member(dt,u_1) ==> 
+    (
+     (
+      tree_member(dt,u_0) ==> 
+      (
+       !tree_right(dt,u_1,u_0) &&
+       (
+        !tree_left(dt,u_1,u_0) &&
+        (
+         tree_head(dt,u_0) ||
+         (
+          !tree_left(dt,u_0,u_1) &&
+          !tree_right(dt,u_0,u_1)
+         )
+        )
+       )
+      )
+     ) &&
+     (
+      !tree_member(dt,u_0) ==> 
+      (
+       !tree_head(dt,u_1) &&
+       (
+        !tree_head(dt,u_0) &&
+        (
+         !tree_right(dt,u_1,u_0) &&
+         (
+          !tree_right(dt,u_0,u_1) &&
+          (
+           !tree_left(dt,u_1,u_0) &&
+           (
+            !tree_left(dt,u_0,u_1) &&
+            (
+             !tree_parallel(dt,u_1,u_0) &&
+             !tree_parallel(dt,u_0,u_1)
+            )
+           )
+          )
+         )
+        )
+       )
+      )
+     )
+    )
+   )
+  )
+ )
+)
+```
+
+#### assertion-5
+
+```
+PartitionPre(x,tree1,tree2,tree3):=
+forall u v,(
+ (
+  tree_left(tree1,u,v) ==> 
+  (u>=v)
+ ) &&
+ (
+  tree_right(tree1,u,v) ==> 
+  (u<=v)
+ )
+)
+==>
+forall u v,(
+ (
+  tree_member(tree2,u) ==> 
+  (u<=x)
+ ) &&
+ (
+  tree_member(tree3,u) ==> 
+  (u>=x)
+ ) &&
+ (
+  tree_member(tree1,u) ==> 
+  (tree_member(tree2,u) || tree_member(tree3,u))
+ )
+)
+```
+
+#### lemma-5
+
+```
+forall dt u_1 u_0,(
+ (
+  tree_head(dt,u_1) ==> 
+  (
+   tree_member(dt,u_0) ||
+   (
+    tree_member(dt,u_1) &&
+    (
+     !tree_left(dt,u_1,u_0) &&
+     !tree_right(dt,u_1,u_0)
+    )
+   )
+  )
+ ) &&
+ (
+  !tree_head(dt,u_1) ==> 
+  (
+   (
+    (u_1==u_0) ==> 
+    (
+     tree_member(dt,u_1) ||
+     !tree_right(dt,u_1,u_0)
+    )
+   ) &&
+   (
+    !(u_1==u_0) ==> 
+    (
+     (
+      tree_left(dt,u_1,u_0) ==> 
+      (tree_member(dt,u_0) && tree_member(dt,u_1))
+     ) &&
+     (
+      !tree_left(dt,u_1,u_0) ==> 
+      (
+       (
+        tree_right(dt,u_1,u_0) ==> 
+        (
+         tree_head(dt,u_0) ||
+         (tree_member(dt,u_1) && tree_member(dt,u_0))
+        )
+       ) &&
+       (
+        !tree_right(dt,u_1,u_0) ==> 
+        (
+         (
+          tree_head(dt,u_0) ==> 
+          (
+           tree_member(dt,u_1) ||
+           (
+            tree_member(dt,u_0) &&
+            (
+             !tree_left(dt,u_0,u_1) &&
+             !tree_right(dt,u_0,u_1)
+            )
+           )
+          )
+         ) &&
+         (
+          !tree_head(dt,u_0) ==> 
+          (
+           (tree_left(dt,u_0,u_1) ==> tree_member(dt,u_1)) &&
+           (
+            !tree_left(dt,u_0,u_1) ==> 
+            (
+             (
+              tree_member(dt,u_0) ==> 
+              (
+               tree_parallel(dt,u_1,u_0) ||
+               (
+                (tree_member(dt,u_1) ==> tree_parallel(dt,u_0,u_1)) &&
+                (
+                 !tree_member(dt,u_1) ==> 
+                 !tree_right(dt,u_0,u_1)
+                )
+               )
+              )
+             ) &&
+             (
+              !tree_member(dt,u_0) ==> 
+              !tree_right(dt,u_0,u_1)
+             )
+            )
+           )
+          )
+         )
+        )
+       )
+      )
+     )
+    )
+   )
+  )
+ )
+)
+```
+
+#### assertion-6
+
+```
+PartitionPre(x,tree1,tree2,tree3):=
+forall u v,(
+ (
+  tree_left(tree1,u,v) ==> 
+  (u>=v)
+ ) &&
+ (
+  tree_right(tree1,u,v) ==> 
+  (u<=v)
+ )
+)
+==>
+forall u v,(
+ (
+  tree_member(tree2,u) ==> 
+  (u<=x)
+ ) &&
+ (
+  tree_member(tree3,u) ==> 
+  (u>=x)
+ ) &&
+ (
+  (tree_member(tree2,u) || tree_member(tree3,u)) ==> 
+  tree_member(tree1,u)
+ )
+)
+```
+
+#### lemma-6
+
+```
+forall dt u_1 u_0,(
+ (
+  tree_member(dt,u_1) ==> 
+  (
+   tree_member(dt,u_0) ||
+   (
+    !tree_right(dt,u_0,u_1) &&
+    (
+     !tree_left(dt,u_1,u_0) &&
+     (
+      !tree_left(dt,u_0,u_1) &&
+      !tree_right(dt,u_1,u_0)
+     )
+    )
+   )
+  )
+ ) &&
+ (
+  !tree_member(dt,u_1) ==> 
+  (
+   !tree_right(dt,u_1,u_0) &&
+   (
+    !tree_left(dt,u_1,u_0) &&
+    (
+     !tree_right(dt,u_0,u_1) &&
+     (
+      !tree_left(dt,u_0,u_1) &&
+      (
+       tree_member(dt,u_0) ||
+       (
+        !tree_head(dt,u_1) &&
+        !tree_head(dt,u_0)
+       )
+      )
+     )
+    )
+   )
+  )
+ )
+)
+```
+
+#### assertion-7
+
+```
+PartitionPre(x,tree1,tree2,tree3):=
+forall u v,(
+ (
+  tree_left(tree1,u,v) ==> 
+  (u>=v)
+ ) &&
+ (
+  tree_right(tree1,u,v) ==> 
+  (u<=v)
+ )
+)
+==>
+PartitionPost(x,tree1,tree2,tree3):=
 forall u v,(
  (
   tree_member(tree2,u) ==> 
@@ -199,25 +758,31 @@ forall u v,(
 )
 ```
 
-#### lemma-2
+#### lemma-7
 
 ```
 forall dt u_1 u_0,(
  (
-  tree_right(dt,u_1,u_0) ==> 
-  (tree_member(dt,u_1) && tree_member(dt,u_0))
+  tree_head(dt,u_1) ==> 
+  (
+   tree_member(dt,u_0) ||
+   (
+    tree_member(dt,u_1) &&
+    (
+     !tree_right(dt,u_0,u_1) &&
+     !tree_left(dt,u_0,u_1)
+    )
+   )
+  )
  ) &&
  (
-  !tree_right(dt,u_1,u_0) ==> 
+  !tree_head(dt,u_1) ==> 
   (
    (
     (u_1==u_0) ==> 
     (
      tree_member(dt,u_1) ||
-     (
-      !tree_head(dt,u_1) &&
-      !tree_left(dt,u_1,u_0)
-     )
+     !tree_right(dt,u_1,u_0)
     )
    ) &&
    (
@@ -226,26 +791,47 @@ forall dt u_1 u_0,(
      (
       tree_member(dt,u_1) ==> 
       (
-       tree_member(dt,u_0) ||
+       tree_head(dt,u_0) ||
        (
-        !tree_left(dt,u_1,u_0) &&
-        !tree_left(dt,u_0,u_1)
+        (
+         tree_member(dt,u_0) ==> 
+         (
+          tree_parallel(dt,u_1,u_0) ||
+          (
+           tree_parallel(dt,u_0,u_1) ||
+           (
+            tree_right(dt,u_1,u_0) ||
+            (
+             tree_left(dt,u_1,u_0) ||
+             (tree_left(dt,u_0,u_1) || tree_right(dt,u_0,u_1))
+            )
+           )
+          )
+         )
+        ) &&
+        (
+         !tree_member(dt,u_0) ==> 
+         (
+          !tree_right(dt,u_1,u_0) &&
+          !tree_left(dt,u_1,u_0)
+         )
+        )
        )
       )
      ) &&
      (
       !tree_member(dt,u_1) ==> 
       (
-       !tree_left(dt,u_1,u_0) &&
+       !tree_right(dt,u_0,u_1) &&
        (
         !tree_left(dt,u_0,u_1) &&
         (
-         !tree_right(dt,u_0,u_1) &&
+         !tree_right(dt,u_1,u_0) &&
          (
           tree_member(dt,u_0) ||
           (
-           !tree_head(dt,u_1) &&
-           !tree_head(dt,u_0)
+           !tree_head(dt,u_0) &&
+           !tree_left(dt,u_1,u_0)
           )
          )
         )

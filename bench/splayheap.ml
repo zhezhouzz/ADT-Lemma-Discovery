@@ -132,6 +132,7 @@ let bpreds = ["=="] in
 
 let partition a b c d = SpecApply ("Partition", [a;b;c;d]) in
 let _ = print_vc_spec (vc partition) spec_tab in
+
 let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
     (E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u]))
 in
@@ -140,7 +141,7 @@ let axiom1 = assertion ctx (vc partition) spec_tab
     ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
      (* "tree_left" *)
     ]
-    bpreds 100 6 true testname "axiom1" in
+    bpreds 110 6 true testname "1" in
 
 let partition a b c d =
   Implies (SpecApply ("PartitionPre", [a;b;c;d]), SpecApply ("PartitionPost", [a;b;c;d])) in
@@ -155,7 +156,6 @@ let spec_tab = add_spec spec_tab "PartitionPost" ["x";"tree1";"tree2";"tree3"] [
       E.And [
         E.Implies (E.And [tree_member tree2 u], int_le u x);
         E.Implies (E.And [tree_member tree3 u], int_ge u x);
-        E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u])
       ]
     )
 in
@@ -163,7 +163,22 @@ let _ = printf_assertion spec_tab ["PartitionPre";"PartitionPost"] in
 let axiom2 = assertion ctx (vc partition) spec_tab
     ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
     ]
-    bpreds 100 6 true  testname "axiom2" in
-let _ = to_verifier testname [axiom1;axiom2] in
+    bpreds 115 6 true  testname "2" in
+
+let spec_tab = add_spec spec_tab "PartitionPost" ["x";"tree1";"tree2";"tree3"] ["u"; "v"]
+    (
+      E.And [
+        E.Implies (E.And [tree_member tree2 u], int_le u x);
+        E.Implies (E.And [tree_member tree3 u], int_ge u x);
+        E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u])
+      ]
+    )
+in
+let _ = printf_assertion spec_tab ["PartitionPre";"PartitionPost"] in
+let axiom3 = assertion ctx (vc partition) spec_tab
+    ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
+    ]
+    bpreds 100 7 true  testname "3" in
+let _ = to_verifier testname [axiom1;axiom2;axiom3;] in
 ();;
 
