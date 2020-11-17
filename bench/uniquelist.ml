@@ -15,14 +15,11 @@ open Bench_utils
 open Frontend.Fast.Fast
 ;;
 let testname = "uniquel" in
-(* Fixpoint set_add (a:A) (x:set) : set :=
+(* let rec set_add a x =
  *   match x with
- *   | nil => a :: nil
+ *   | [] -> [a]
  *   | a1 :: x1 =>
- *     match Aeq_dec a a1 with
- *     | left _ => a1 :: x1
- *     | right _ => a1 :: set_add a x1
- * end *)
+ *     if a == a1 then a1 :: x1 else a1 :: (set_add a x1) *)
 let ctx = init () in
 let spec_tab = predefined_spec_tab in
 let _eq a b = SpecApply ("Eq", [a;b]) in
@@ -56,12 +53,13 @@ let vc =
 in
 let preds = ["list_once"; "list_member"; "list_order"; "list_head"; "list_last"; "list_next"] in
 let bpreds = ["=="] in
-
+let _ = print_vc_spec vc spec_tab in
 let spec_tab = add_spec spec_tab "SetAdd" ["x";"l1";"l2"] ["u";]
     (E.And [
         E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
       ])
 in
+let _ = printf_assertion spec_tab ["SetAdd"] in
 let axiom1 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head";]
     bpreds 50 6 true testname "axiom1" in
@@ -72,6 +70,7 @@ let spec_tab = add_spec spec_tab "SetAdd" ["x";"l1";"l2"] ["u";]
         E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
       ])
 in
+let _ = printf_assertion spec_tab ["SetAdd"] in
 let axiom2 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head";"list_once"]
     bpreds 90 6 true testname "axiom2" in

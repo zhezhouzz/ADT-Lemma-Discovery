@@ -14,23 +14,27 @@ open Language.Helper
 open Bench_utils
 ;;
 let testname = "trie" in
-(* Fixpoint ins {A: Type} default (i: positive) (a: A) (m: trie A): trie A :=
+(* let rec ins default i a m =
  *   match m with
- *   | Leaf ⇒
- *       match i with
- *       | xH ⇒ Node Leaf a Leaf
- *       | xO i' ⇒ Node (ins default i' a Leaf) default Leaf
- *       | xI i' ⇒ Node Leaf default (ins default i' a Leaf)
- * end
- * | Node l o r ⇒
- *     match i with
- *     | xH ⇒ Node l a r
- *     | xO i' ⇒ Node (ins default i' a l) o r
- *     | xI i' ⇒ Node l o (ins default i' a r)
- * end *)
+ *   | Trie.Leaf ->
+ *     (match i with
+ *      | [] -> Trie.Node(Trie.Leaf, a, Trie.Leaf)
+ *      | z :: i' ->
+ *        if z > 0
+ *        then Trie.Node(ins default i' a Trie.Leaf, default, Trie.Leaf)
+ *        else Trie.Node(Trie.Leaf, default, ins default i' a Trie.Leaf)
+ *     )
+ *   | Trie.Node(l, y, r) ->
+ *     (match i with
+ *      | [] -> Trie.Node(l, a, r)
+ *      | z :: i' ->
+ *        if z > 0
+ *        then Trie.Node(ins default i' a l, y, r)
+ *        else Trie.Node(l, y, ins default i' a r)
+ *     ) *)
 let ctx = init () in
-let t l e r result = SpecApply ("T", [l;e;r;result]) in
-let e tr = SpecApply ("E", [tr]) in
+let t l e r result = SpecApply ("TrieT", [l;e;r;result]) in
+let e tr = SpecApply ("TrieE", [tr]) in
 let lt a b = SpecApply ("Lt", [a;b]) in
 let tree0 = tree_var "tree0" in
 let tree1, tree2, tree3, tree4, tree5 =
@@ -53,7 +57,7 @@ let spec_tab, is_empty = register spec_tab
        | _ -> raise @@ InterExn "bad prog"
     } in
 let spec_tab, libt = register spec_tab
-    {name = "T"; intps = [T.IntTree;T.Int;T.IntTree]; outtps = [T.IntTree];
+    {name = "TrieT"; intps = [T.IntTree;T.Int;T.IntTree]; outtps = [T.IntTree];
      prog = function
        | [V.T l; V.I a; V.T r] -> [V.T (Tree.Node (a, l, r))]
        | _ -> raise @@ InterExn "bad prog"
@@ -80,7 +84,7 @@ let spec_tab, libt = register spec_tab
  *       ])
  * in *)
 let spec_tab, libe = register spec_tab
-    {name = "E"; intps = [T.IntTree;]; outtps = [T.Bool];
+    {name = "TrieE"; intps = [T.IntTree;]; outtps = [T.Bool];
      prog = function
        | [V.T Tree.Leaf] -> [V.B true]
        | [V.T _] -> [V.B false]
@@ -128,6 +132,7 @@ let vc ins =
          )
 in
 let ins x l1 y tree1 tree2 = SpecApply ("Ins", [x;l1;y;tree1;tree2]) in
+let _ = print_vc_spec (vc ins) spec_tab in
 let preds = ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
             ] in
 let bpreds = ["=="] in
@@ -138,6 +143,7 @@ let spec_tab = add_spec spec_tab "Ins" ["x";"l1";"y";"tree1";"tree2"] ["u"]
         (* E.Implies (Or [tree_member tree1 u; int_eq u y; int_eq u x], tree_member tree2 u); *)
       ])
 in
+(* let _ = printf_assertion spec_tab ["Ins"] in *)
 let axiom1 = assertion ctx (vc ins) spec_tab preds bpreds 340 5 true testname "axiom1" in
 
 let _ = to_verifier testname [axiom1] in

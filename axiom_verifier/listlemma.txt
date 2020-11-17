@@ -1,0 +1,7 @@
+    requires forall u_0:a, u_1:a :: list_order(dt, u_0, u_1) && (!list_order(dt, u_1, u_0)) ==> (!list_last(dt, u_0))
+    requires forall u_0:a, u_1:a :: (list_member(dt, u_0) && list_member(dt, u_1) && u_0 != u_1) ==>
+    (list_order(dt, u_0, u_1) && list_order(dt, u_1, u_0))
+    requires forall u_0:a, u_1:a :: (list_once(dt, u_1) && list_last(dt, u_1)) ==> !list_order(dt, u_0, u_1)
+    requires forall u_0:a, u_1:a :: (list_once(dt, u_0) && list_once(dt, u_1)) ==> !(list_order(dt, u_0, u_1) || list_order(dt, u_1, u_0))
+    requires forall u_0:a, u_1:a :: (list_last(dt, u_0) && list_last(dt, u_1)) ==> u_0 == u_1
+    requires forall u_0:a, u_1:a :: (list_last(dt, u_0) && u_0 != u_1) ==> list_order(dt, u_1, u_0)

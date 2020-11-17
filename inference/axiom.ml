@@ -281,7 +281,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     in
     List.map get funcs
 
-  let neg_update_raw ctx pos neg model feature_set dt fv unbounded_dts =
+  let neg_update_raw ctx pos neg model feature_set dt fv unbounded_dts iternum =
     (* let _ = printf "%s\n" (Z3.Model.to_string model) in
      * let _ = get_preds_interp ctx model in
      * let _ = raise @@ InterExn "zz" in *)
@@ -335,12 +335,11 @@ module AxiomSyn (D: Dtree.Dtree) = struct
            (* let _ = printf "%s\n" (boollist_to_string v) in
             * let _ = printf "q=%s\n" (Expr.to_string q) in
             * let _ = raise @@ InterExn "zz" in *)
-           Hashtbl.add neg v ()
-        )
+           Hashtbl.add neg v iternum)
       | _, _ -> ()
     in
     let _ = List.power_set_b_fold aux () (List.length feature_set) in
-    !if_neg
+    !if_neg, 0
 
   let neg_update_raw2 ctx pos neg model feature_set _ fv unbounded_dts iternum =
     (* let _ = printf "neg_update_raw2\n" in *)
@@ -406,6 +405,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
     if_neg, totalvec
 
   let neg_update_opt ctx pos neg model feature_set dtnames chooses dt fv iter =
+    (* let _ = printf "%s\n" (Z3.Model.to_string model) in *)
     let chooses = List.map (fun i -> SE.Literal (T.Int, SE.L.Int i)) chooses in
     (* let _ = printf "chooses:%s\n" (List.to_string SE.layout chooses) in
      * let _ = List.iter (fun dtname ->
@@ -429,7 +429,9 @@ module AxiomSyn (D: Dtree.Dtree) = struct
             (List.combine fv intnames)) @@
       List.cross
         dtnames (List.choose_n_eq (fun x y -> x == y) chooses (List.length fv)) in
-    (* let _ = printf "len(vecs) = %i\n" (List.length vecs) in *)
+    (* let _ = printf "len(vecs) = %i\n" (List.length counter_vecs) in *)
+    (* let _ = List.iter (fun fvec -> printf "fvec:%s\n" (boollist_to_string fvec))
+     *     counter_vecs in *)
     let neg_counter = ref 0 in
     let if_updated = ref false in
     let _ = List.iter (fun s ->
@@ -591,16 +593,21 @@ module AxiomSyn (D: Dtree.Dtree) = struct
               (* let _ = printf "upper_bound = %i\n" upper_bound in *)
               let range = (0, upper_bound) in
               let chooses = List.init ((List.length fv) + 1) (fun i -> i) in
-              let _, m = S.check ctx (neg_vc_with_constraint range axiom) in
+              let q = (neg_vc_with_constraint range axiom) in
+              (* let _ = printf "q:\n%s\n" (Expr.to_string q) in *)
+              let _, m = S.check ctx q in
               match m with
               | None -> limited_smt_check (upper_bound + 1)
-              | Some m -> chooses, m
+              | Some m -> chooses, upper_bound, m
             in
-            let chooses, m = limited_smt_check (List.length fv) in
+            let chooses, upper_bound, m = limited_smt_check (List.length fv) in
+            let negchooses = List.init (
+                (List.length fv) + upper_bound - 1) (fun i -> i) in
             (* let _ = printf "model:%s\n" (Model.to_string m) in *)
             let _, totalvec = neg_update_opt ctx positives negatives
-                m feature_set unbounded_dts chooses dt fv stat.numIter in
-            (* let _, totalvec = neg_update_raw2 ctx positives negatives
+                m feature_set unbounded_dts negchooses dt fv stat.numIter in
+            (* let _ = printf "if_get:%b\n" if_get in *)
+            (* let _, totalvec = neg_update_raw ctx positives negatives
              *     m feature_set dt fv unbounded_dts stat.numIter in *)
             let negSample = stat.negSample @ [{posvec = 0; negvec = 0; totalvec = totalvec}] in
             (* let _ =

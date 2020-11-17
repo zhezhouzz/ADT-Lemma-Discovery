@@ -15,27 +15,27 @@ open Bench_utils
 ;;
 (* let rec merge tree1 tree2 =
  *   match tree1, tree2 with
- *   | tree1, E -> tree1
- *   | E, tree2 -> tree2
- *   | T (rank1, x, a1, b1), T (rank2, y, a2, b2) ->
- *     if Elem.leq x y then makeT x a1 (merge b1 tree2)
- *     else makeT y a2 (merge tree1 b2) *)
+ *   | tree1, Leftisthp.E -> tree1
+ *   | Leftisthp.E, tree2 -> tree2
+ *   | Leftisthp.T (rank1, x, a1, b1), T (rank2, y, a2, b2) ->
+ *     if Elem.leq x y then Leftisthp.makeT x a1 (merge b1 tree2)
+ *     else Leftisthp.makeT y a2 (merge tree1 b2) *)
 let testname = "leftisthp" in
 let ctx = init () in
-let t rank x a b tr = SpecApply ("T", [rank;x;a;b;tr]) in
-let e tr = SpecApply ("E", [tr]) in
-let makeT x a b tr = SpecApply ("makeT", [x;a;b;tr]) in
+let t rank x a b tr = SpecApply ("LeftisthpT", [rank;x;a;b;tr]) in
+let e tr = SpecApply ("LeftisthpIsEmpty", [tr]) in
+let makeT x a b tr = SpecApply ("LeftisthpMakeT", [x;a;b;tr]) in
 let le a b = SpecApply ("Le", [a;b]) in
 let spec_tab = StrMap.empty in
 let spec_tab = add_spec spec_tab "Le" ["a";"b"] [] (int_le a b) in
 let spec_tab, libt = register spec_tab
-    {name = "T"; intps = [T.Int; T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
+    {name = "LeftisthpT"; intps = [T.Int; T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
      prog = function
        | [V.I r; V.I x; V.TI a; V.TI b] -> [V.TI (LabeledTree.Node(r,x,a,b))]
        | _ -> raise @@ InterExn "bad prog"
     } in
 let spec_tab, libmaket = register spec_tab
-    {name = "makeT"; intps = [T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
+    {name = "LeftisthpMakeT"; intps = [T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
      prog = function
        | [V.I x; V.TI a; V.TI b] ->
          let result =
@@ -50,7 +50,7 @@ let spec_tab, libmaket = register spec_tab
        | _ -> raise @@ InterExn "bad prog"
     } in
 let spec_tab, libe = register spec_tab
-    {name = "E"; intps = [T.IntTreeI]; outtps = [T.Bool];
+    {name = "LeftisthpIsEmpty"; intps = [T.IntTreeI]; outtps = [T.Bool];
      prog = function
        | [V.TI LabeledTree.Leaf] -> [V.B true]
        | [V.TI _] -> [V.B false]
@@ -71,11 +71,13 @@ let vc merge = And [
       merge tree1 tree2 tree3)
   ]
 in
-let bpreds = ["=="] in
 let merge tree1 tree2 tree3 = SpecApply ("Merge", [tree1;tree2;tree3]) in
+let bpreds = ["=="] in
+let _ = print_vc_spec (vc merge) spec_tab in
 let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"]
     (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]))
 in
+let _ = printf_assertion spec_tab ["Merge"] in
 let axiom1 = assertion ctx (vc merge) spec_tab
     ["treei_head"; "treei_member"; "treei_left"; "treei_right"; "treei_parallel";
       "treei_node";]
@@ -89,6 +91,7 @@ let spec_tab = add_spec spec_tab "Merge"  ["tree1";"tree2";"tree3"] ["u"; "v"]
         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
       ])
 in
+let _ = printf_assertion spec_tab ["Merge"] in
 let axiom2 = assertion ctx (vc merge) spec_tab
     ["treei_head"; "treei_member"; "treei_left"; "treei_right"; "treei_parallel";]
     bpreds 340 5 true testname "axiom2" in

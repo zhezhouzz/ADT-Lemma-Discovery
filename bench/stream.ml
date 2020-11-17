@@ -68,12 +68,14 @@ in
 let reverse a b c = SpecApply ("Reverse", [a;b;c]) in
 let preds = ["list_once"; "list_member"; "list_order"; "list_head"; "list_last"; "list_next"] in
 let bpreds = ["=="] in
+let _ = print_vc_spec (vc reverse) spec_tab in
 
 let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
     (E.And [
         E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
+let _ = printf_assertion spec_tab ["Reverse"] in
 let axiom1 = assertion ctx (vc reverse) spec_tab
     preds bpreds 220 7
     true testname "axiom1" in
@@ -87,6 +89,7 @@ let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u";"v"]
         E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
+let _ = printf_assertion spec_tab ["Reverse"] in
 let axiom2 = assertion ctx (vc reverse) spec_tab
     ["list_member"; "list_head"; "list_order"; "list_next"]
     bpreds 110 7
@@ -98,24 +101,25 @@ let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u";"v";"w"]
                    list_order l3 u w);
       ])
 in
+let _ = printf_assertion spec_tab ["Reverse"] in
 let axiom3 = assertion ctx (vc reverse) spec_tab
     ["list_order"; "list_once"]
     bpreds 15 5
     true testname "axiom3" in
 
-let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
-    (E.And [
-        E.Iff (list_member l3 u, list_member l1 u);
-      ])
-in
-(* let axiom3 = assertion ctx (vc reverse) spec_tab false testname "axiom3" in *)
-
-let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
-    (E.And [
-        E.Iff (list_member l3 u, list_member l2 u);
-      ])
-in
-(* let axiom4 = assertion ctx (vc reverse) spec_tab false testname "axiom4" in *)
+(* let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
+ *     (E.And [
+ *         E.Iff (list_member l3 u, list_member l1 u);
+ *       ])
+ * in
+ * (\* let axiom3 = assertion ctx (vc reverse) spec_tab false testname "axiom3" in *\)
+ * 
+ * let spec_tab = add_spec spec_tab "Reverse" ["l1";"l2";"l3"] ["u"]
+ *     (E.And [
+ *         E.Iff (list_member l3 u, list_member l2 u);
+ *       ])
+ * in
+ * (\* let axiom4 = assertion ctx (vc reverse) spec_tab false testname "axiom4" in *\) *)
 
 let _ = to_verifier testname [axiom1;axiom2;axiom3] in
 ();;

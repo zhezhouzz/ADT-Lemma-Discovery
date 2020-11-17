@@ -22,28 +22,28 @@ let testname = "batchedq" in
 let ctx = init () in
 let spec_tab = StrMap.empty in
 let spec_tab, _ = register spec_tab
-    {name = "Cons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
+    {name = "ListCons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
      prog = function
        | [V.I h; V.L t] -> [V.L (h :: t)]
        | _ -> raise @@ InterExn "bad prog"
     } in
 let spec_tab, _ = register spec_tab
-    {name = "IsEmpty"; intps = [T.IntList]; outtps = [T.Bool];
+    {name = "ListIsEmpty"; intps = [T.IntList]; outtps = [T.Bool];
      prog = function
        | [V.L []] -> [V.B false]
        | [V.L _] -> [V.B true]
        | _ -> raise @@ InterExn "bad prog"
     } in
 let spec_tab, _ = register spec_tab
-    {name = "Rev"; intps = [T.IntList]; outtps = [T.IntList];
+    {name = "ListRev"; intps = [T.IntList]; outtps = [T.IntList];
      prog = function
        | [V.L l] -> [V.L (List.rev l)]
        | _ -> raise @@ InterExn "bad prog"
     } in
-let cons h t l = SpecApply ("Cons", [h;t;l]) in
+let cons h t l = SpecApply ("ListCons", [h;t;l]) in
 let tail l1 l2 l3 l4 = SpecApply ("Tail", [l1;l2;l3;l4]) in
-let is_empty l = SpecApply ("IsEmpty", [l]) in
-let rev l1 l2 = SpecApply ("Rev", [l1;l2]) in
+let is_empty l = SpecApply ("ListIsEmpty", [l]) in
+let rev l1 l2 = SpecApply ("ListRev", [l1;l2]) in
 let f, r = map_double list_var ("f", "r") in
 let vc =
   Implies (cons x f l1,
@@ -55,37 +55,38 @@ let vc =
 in
 let preds = ["list_once"; "list_member"; "list_order"; "list_head"; "list_last"; "list_next"] in
 let bpreds = ["=="] in
+let _ = print_vc_spec vc spec_tab in
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
     (E.And [
         E.Iff (Or[list_member l3 u; list_head l1 u; list_member l4 u;],
                E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
+let _ = printf_assertion spec_tab ["Tail"] in
 let axiom1 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"; "list_last"; "list_next"]
     bpreds 150 8 true testname "axiom1" in
 
-let axiom3 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head"]
-    bpreds 150 8 true testname "2" in
-let _ = raise @@ InterExn "zz" in
-let axiom3 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head"]
-    bpreds 150 8 true testname "3" in
-let axiom4 = assertion ~startX:4 ~maxX:4 ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head"]
-    bpreds 200 7 true testname "4" in
-let axiom5 = assertion ~startX:5 ~maxX:5 ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head"]
-    bpreds 200 7 true testname "5" in
-let axiom6 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head";"list_last";]
-    bpreds 150 8 true testname "6" in
-let axiom7 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head";"list_last";"list_next"]
-    bpreds 150 8 true testname "7" in
-let _ = to_verifier testname [axiom3;axiom4;axiom5;axiom6;axiom7;] in
-let _ = raise @@ InterExn "zz" in
+(* let axiom2 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
+ *     ["list_member"; "list_order"; "list_head"]
+ *     bpreds 150 8 true testname "2" in
+ * let axiom3 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+ *     ["list_member"; "list_order"; "list_head"]
+ *     bpreds 150 8 true testname "3" in
+ * let axiom4 = assertion ~startX:4 ~maxX:4 ctx vc spec_tab
+ *     ["list_member"; "list_order"; "list_head"]
+ *     bpreds 200 7 true testname "4" in
+ * (\* let axiom5 = assertion ~startX:5 ~maxX:5 ctx vc spec_tab
+ *  *     ["list_member"; "list_order"; "list_head"]
+ *  *     bpreds 200 7 true testname "5" in
+ *  * let axiom6 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+ *  *     ["list_member"; "list_order"; "list_head";"list_last";]
+ *  *     bpreds 150 8 true testname "6" in
+ *  * let axiom7 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+ *  *     ["list_member"; "list_order"; "list_head";"list_last";"list_next"]
+ *  *     bpreds 150 8 true testname "7" in *\)
+ * let _ = to_verifier testname [axiom2;axiom3;axiom4;] in
+ * let _ = raise @@ InterExn "zz" in *)
 
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
@@ -96,6 +97,7 @@ let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
                    Or[list_order l1 u v; list_order l2 v u])
       ])
 in
+let _ = printf_assertion spec_tab ["Tail"] in
 let axiom2 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"; "list_next"]
     bpreds 200 8 true testname "axiom2" in

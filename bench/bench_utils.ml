@@ -47,8 +47,11 @@ let to_verifier name axioms =
       let headfile = path ^ headfile in
       let methods =
         List.fold_left (fun str axiom ->
-            sprintf "%sghost method %s<a>(dt: %s<a>, u_0:a, u_1:a)
-  ensures %s;{}\n" str (Renaming.unique "axiom") dtname (E.layout (snd axiom))
+            let numX = List.length (fst axiom) - 1 in
+            let args = List.fold_left (fun r s -> r^s) "" @@
+              List.init numX (fun i -> sprintf ", u_%i:a" i) in
+            sprintf "%sghost method %s<a>(dt: %s<a>%s)
+  ensures %s;{}\n" str (Renaming.unique "axiom") dtname args (E.layout (snd axiom))
           ) "" axioms
       in
       let outfile = sprintf "%s%s.dfy" path name in
@@ -65,10 +68,21 @@ let record_stat stat time_delta name subname =
   fprintf oc "%s-%s & %s & %.2f\\\\ \\hline \n" name subname (Axiom.layout_entry entry) time_delta;
   close_out oc
 
+let print_vc_spec vc spec_tab =
+  let _ = printf "#### vc\n\n```\n%s\n```\n\n#### specs\n" (vc_layout vc) in
+  let _ = StrMap.iter (fun name spec ->
+      printf "##### %s\n\n```\n%s\n```\n\n" name (layout_spec_entry name spec)) spec_tab in
+  ()
+
+let counter = ref 1
+
+let printf_assertion spec_tab names =
+  List.iter (fun name ->
+      let spec = StrMap.find "printf_assertion" spec_tab name in
+      printf "#### assertion-%i\n\n```\n%s\n```\n\n" (!counter) (layout_spec_entry name spec)
+    ) names
+
 let assertion ?(startX=1) ?(maxX=3) ctx vc spec_tab preds bpreds sampledata bound expected filename name  =
-  (* let _ = printf "vc:\n%s\n" (vc_layout vc) in
-   * let _ = StrMap.iter (fun name spec ->
-   *     printf "%s\n\n" (layout_spec_entry name spec)) spec_tab in *)
   let axiom, time_delta = time
     (fun _ ->
        Axiom.infer ~ctx:ctx ~vc:vc ~spectable:spec_tab ~preds:preds ~bpreds:bpreds
@@ -77,8 +91,11 @@ let assertion ?(startX=1) ?(maxX=3) ctx vc spec_tab preds bpreds sampledata boun
   | (_, None), false -> printf "connot infer axiom\n"; None
   | (stat, Some (dttp, axiom)), true ->
     let _ = record_stat stat time_delta filename name in
-    let _ = printf "axiom:\n\t%s\n" (E.pretty_layout_forallformula axiom) in
+    let _ = printf "#### lemma-%i\n\n```\n%s\n```\n\n"
+        (!counter) (E.pretty_layout_forallformula axiom) in
+    let _ = counter:= (!counter) + 1 in
     Some (dttp, axiom)
+
   | _ -> raise @@ InterExn "bench: wrong result"
 
 let init () =

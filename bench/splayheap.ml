@@ -44,7 +44,7 @@ let le x y = SpecApply ("Le", [x;y]) in
 let a, b, a1, a2, b1, b2 = map6 tree_var ("a", "b", "a1", "a2", "b1", "b2") in
 let small, big, tr = map_triple tree_var ("small", "big", "tr") in
 let tmp1, tmp2, tmp3, tmp4 = map4 tree_var ("tmp1", "tmp2", "tmp3", "tmp4") in
-let tree1, tree2, tree3 = map_triple tree_var ("tree1","tree2","tree3") in
+let tree0, tree1, tree2, tree3 = map4 tree_var ("tree0", "tree1","tree2","tree3") in
 let pivot = int_var "pivot" in
 let tmpe = tree_var "tmpe" in
 let spec_tab = predefined_spec_tab in
@@ -55,6 +55,27 @@ let spec_tab, libt = register spec_tab
        | [V.T l; V.I a; V.T r] -> [V.T (Tree.Node (a, l, r))]
        | _ -> raise @@ InterExn "bad prog"
     } in
+let spec_tab = add_spec spec_tab "T" ["tree0";"x";"tree1";"tree2"] ["u"; "v"]
+  (And [
+     Iff (tree_head tree2 u, int_eq x u);
+     Iff (tree_member tree2 u, Or [treel tree2 x u; treer tree2 x u; tree_head tree2 u]);
+     Iff (treel tree2 u v, Or [
+         treel tree0  u v;
+         treel tree1 u v;
+         And [tree_head tree2 u; tree_member tree0 v];
+       ]);
+     Iff (treer tree2 u v, Or [
+         treer tree0 u v;
+         treer tree1 u v;
+         And [tree_head tree2 u; tree_member tree1 v];
+       ]);
+     Iff (treep tree2 u v, Or [
+         treep tree0 u v;
+         treep tree1 u v;
+         And [treel tree2 x u; treer tree2 x v];
+       ]);
+  ])
+in
 let spec_tab, libe = register spec_tab
     {name = "E"; intps = [T.IntTree;]; outtps = [T.Bool];
      prog = function
@@ -63,12 +84,13 @@ let spec_tab, libe = register spec_tab
        | _ -> raise @@ InterExn "bad prog"
     } in
 let vc partition =
+  Implies (e tree0,
   And [
     Implies(e tr, partition pivot tr tr tr);
     Implies(t a x b tr,
             Ite(le x pivot,
                 And[
-                  Implies(e b, partition pivot tr tr b);
+                  Implies(e b, partition pivot tr tr tree0);
                   Implies(t b1 y b2 b,
                           Ite(le y pivot,
                               Implies(And[partition pivot b2 small big;
@@ -81,7 +103,7 @@ let vc partition =
                          )
                 ],
                 And[
-                  Implies(e a, partition pivot tr a tr);
+                  Implies(e a, partition pivot tr tree0 tr);
                   Implies(t a1 y a2 a,
                           Ite(le y pivot,
                               Implies(And[partition pivot a2 small big;
@@ -96,32 +118,50 @@ let vc partition =
                )
            )
   ]
+          )
 in
+(* let vc partition =
+ *   (\* Implies(And[t a x b tr;e b], partition pivot tr tr b) *\)
+ *   (\* Implies(e tr, partition pivot tr tr tr); *\)
+ *   partition pivot tree1 tree2 tree3
+ * in *)
 let preds = ["treeb_head"; "treeb_member"; "treeb_left"; "treeb_right"; "treeb_parallel";
              (* "treeb_node" *)
             ] in
 let bpreds = ["=="] in
+
 let partition a b c d = SpecApply ("Partition", [a;b;c;d]) in
+let _ = print_vc_spec (vc partition) spec_tab in
 let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
     (E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u]))
 in
+let _ = printf_assertion spec_tab ["Partition"] in
 let axiom1 = assertion ctx (vc partition) spec_tab
     ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
-     "tree_left"
+     (* "tree_left" *)
     ]
     bpreds 100 6 true testname "axiom1" in
 
-let partition a b c d = SpecApply ("Partition", [a;b;c;d]) in
-let spec_tab = add_spec spec_tab "Partition" ["x";"tree1";"tree2";"tree3"] ["u"]
+let partition a b c d =
+  Implies (SpecApply ("PartitionPre", [a;b;c;d]), SpecApply ("PartitionPost", [a;b;c;d])) in
+let spec_tab = add_spec spec_tab "PartitionPre" ["x";"tree1";"tree2";"tree3"] ["u"; "v"]
     (E.And [
-        E.Implies (E.And [tree_head tree2 u], int_le u x);
-        E.Implies (E.And [tree_head tree3 u], int_ge u x);
+        (* E.True *)
+        E.Implies (E.And [treel tree1 u v], int_ge u v);
+        E.Implies (E.And [treer tree1 u v], int_le u v);
+      ]) in
+let spec_tab = add_spec spec_tab "PartitionPost" ["x";"tree1";"tree2";"tree3"] ["u"; "v"]
+    (
+      E.And [
+        E.Implies (E.And [tree_member tree2 u], int_le u x);
+        E.Implies (E.And [tree_member tree3 u], int_ge u x);
         E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u])
-      ])
+      ]
+    )
 in
+let _ = printf_assertion spec_tab ["PartitionPre";"PartitionPost"] in
 let axiom2 = assertion ctx (vc partition) spec_tab
     ["tree_head"; "tree_member"; "tree_left"; "tree_right"; "tree_parallel";
-     "tree_left"
     ]
     bpreds 100 6 true  testname "axiom2" in
 let _ = to_verifier testname [axiom1;axiom2] in
