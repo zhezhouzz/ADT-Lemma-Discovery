@@ -63,30 +63,31 @@ let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
       ])
 in
 let _ = printf_assertion spec_tab ["Tail"] in
-let axiom1 = assertion ctx vc spec_tab
-    ["list_member"; "list_order"; "list_head"; "list_last"; "list_next"]
-    bpreds 150 8 true testname "axiom1" in
-
-(* let axiom2 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
- *     ["list_member"; "list_order"; "list_head"]
- *     bpreds 150 8 true testname "2" in
- * let axiom3 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
- *     ["list_member"; "list_order"; "list_head"]
- *     bpreds 150 8 true testname "3" in
- * let axiom4 = assertion ~startX:4 ~maxX:4 ctx vc spec_tab
- *     ["list_member"; "list_order"; "list_head"]
- *     bpreds 200 7 true testname "4" in
- * (\* let axiom5 = assertion ~startX:5 ~maxX:5 ctx vc spec_tab
- *  *     ["list_member"; "list_order"; "list_head"]
- *  *     bpreds 200 7 true testname "5" in
- *  * let axiom6 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
- *  *     ["list_member"; "list_order"; "list_head";"list_last";]
- *  *     bpreds 150 8 true testname "6" in
- *  * let axiom7 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
- *  *     ["list_member"; "list_order"; "list_head";"list_last";"list_next"]
- *  *     bpreds 150 8 true testname "7" in *\)
- * let _ = to_verifier testname [axiom2;axiom3;axiom4;] in
- * let _ = raise @@ InterExn "zz" in *)
+let axiom1 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 150 8 true testname "2" in
+let axiom12 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
+    ["list_last";"list_member"; "list_order"; "list_head"]
+    bpreds 150 8 true testname "5" in
+let axiom13 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 150 8 true testname "3" in
+(* let _ = axiom_eq ctx axiom1 axiom3 in *)
+(* let _ = raise @@ InterExn "zz" in *)
+let axiom14 = assertion ~startX:4 ~maxX:4 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 200 7 true testname "4" in
+let axiom15 = assertion ~startX:5 ~maxX:5 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head"]
+    bpreds 200 7 true testname "5" in
+let axiom16 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head";"list_last";]
+    bpreds 150 8 true testname "6" in
+let axiom17 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+    ["list_member"; "list_order"; "list_head";"list_last";"list_next"]
+    bpreds 150 8 true testname "7" in
+let _ = to_verifier testname [axiom1;axiom12;axiom13;axiom14;axiom15;axiom16;axiom17]in
+let _ = raise @@ InterExn "zz" in
 
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]

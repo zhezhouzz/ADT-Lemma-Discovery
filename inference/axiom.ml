@@ -160,10 +160,10 @@ module AxiomSyn (D: Dtree.Dtree) = struct
          etr_num_possample = 0;etr_num_pfev_in_possample = 0} stat
 
   let layout_entry stat_entry =
-    sprintf "($%i$, $%i$) & $%i$ & $%i$ & $%i$ & $%i$ & $%i$ "
+    sprintf "($%i$, $%i$) & $%i$ & $%i$ & $%i$ & $%i$ "
       (stat_entry.etr_numX + 1) stat_entry.etr_numFeatureset
       stat_entry.etr_numCex
-      stat_entry.etr_num_pfev_in_negsample
+      (* stat_entry.etr_num_pfev_in_negsample *)
       stat_entry.etr_num_nfev_in_negsample
       (* stat_entry.etr_num_sampling_iter *)
       stat_entry.etr_num_possample
@@ -534,7 +534,9 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       let oldpos = Hashtbl.length pos in
       let samplesize = ref 0 in
       let rec aux counter =
-        let axiom_epr = Epr.simplify_ite @@ D.to_epr @@ pn_to_axiom_epr feature_set pos neg in
+        let decisiontree = pn_to_axiom_epr feature_set pos neg in
+        let axiom_epr = Epr.simplify_ite @@ D.to_epr decisiontree in
+        let _ = printf "len(decisiontree)=%i\n" (D.len decisiontree) in
         (* let _ = printf "axiom_epr:%s\n" (Epr.layout axiom_epr) in *)
         let ps, lenps = sampling fv_num axiom_epr feature_set dt fv chooses num in
         let _ = samplesize := (!samplesize) + lenps in

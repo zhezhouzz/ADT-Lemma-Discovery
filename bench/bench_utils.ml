@@ -2,6 +2,7 @@ module Ast = Language.SpecAst
 module Value = Pred.Value
 module Axiom = Inference.AxiomSyn;;
 module Spec = Inference.SpecSyn;;
+module S = Solver;;
 
 open Ast
 open Utils
@@ -33,6 +34,20 @@ let read_whole_file filename =
   let s = really_input_string ch (in_channel_length ch) in
   close_in ch;
   s
+
+let axiom_eq ctx ax1 ax2 =
+  match ax1, ax2 with
+  | Some (_, ax1),  Some (_, ax2) ->
+    let q =
+      Z3.Boolean.mk_not ctx
+        (Z3.Boolean.mk_iff ctx
+           (E.forallformula_to_z3 ctx ax1) (E.forallformula_to_z3 ctx ax2)) in
+    (match S.check ctx q with
+     | true, _ -> (printf "axioms are eq"; true)
+     | _, _ -> (printf "axioms are not eq"; false)
+    )
+  | _, _ -> raise @@ InterExn "axioms cannot be compare"
+
 
 let to_verifier name axioms =
   let dttps, axioms = List.split @@ List.filter_map (fun x -> x) axioms in

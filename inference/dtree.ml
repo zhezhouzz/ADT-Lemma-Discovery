@@ -15,6 +15,7 @@ module type Dtree = sig
   val to_spec: t -> Language.SpecAst.spec
   val of_fastdt: Ml.FastDT.FastDT.dt -> feature_set -> t
   val classify: Sample.FeatureVector.data -> t
+  val len: t -> int
 end
 
 module Dtree : Dtree = struct
@@ -105,9 +106,19 @@ module Dtree : Dtree = struct
         | Some p -> Node (p, aux if_t, aux if_f)
     in
     aux dt
+
+  let len dt =
+    let rec aux = function
+      | T -> 0
+      | F -> 0
+      | Leaf _ -> 1
+      | Node (_, l, r) -> aux l + aux r + 1
+    in
+    aux dt
   let classify {FV.dfeature_set;FV.labeled_vecs} =
     let samples = List.map (fun (a, b) -> a, Array.of_list b) labeled_vecs in
     let dt = FastDT.make_dt ~samples:(Array.of_list samples) ~max_d:50 in
     (* let _ = FastDT.print_tree' dt in *)
-    of_fastdt dt dfeature_set
+    let res = of_fastdt dt dfeature_set in
+    res
 end
