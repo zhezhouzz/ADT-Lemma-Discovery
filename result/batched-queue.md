@@ -9,7 +9,6 @@ let tail =
   | _ :: f, r ->
     if f = [] then List.rev r, f else f, r
 ```
-
 #### vc
 
 ```
@@ -112,64 +111,31 @@ forall u,((list_member(l3,u) || list_head(l1,u) || list_member(l4,u)) <==>
 ```
 forall dt u_1 u_0,(
  (
-  list_order(dt,u_1,u_0) ==> 
+  list_member(dt,u_1) ==> 
   (
-   list_member(dt,u_0) &&
+   list_order(dt,u_0,u_1) ||
    (
-    list_head(dt,u_0) ||
+    list_head(dt,u_1) ||
     (
-     list_member(dt,u_1) &&
-     (
-      list_order(dt,u_0,u_1) ||
-      (
-       (list_head(dt,u_1) && list_next(dt,u_1,u_0)) ==> 
-       (
-        !list_last(dt,u_1) &&
-        !list_next(dt,u_0,u_1)
-       )
-      )
-     )
+     (u_1==u_0) ||
+true
     )
    )
   )
  ) &&
  (
-  !list_order(dt,u_1,u_0) ==> 
+  !list_member(dt,u_1) ==> 
   (
-   !list_next(dt,u_1,u_0) &&
+   !list_order(dt,u_0,u_1) &&
    (
+    !list_head(dt,u_1) &&
     (
-     list_last(dt,u_0) ==> 
+     list_member(dt,u_0) ||
      (
-      list_member(dt,u_0) &&
-      (list_last(dt,u_1) ==> (u_1==u_0))
-     )
-    ) &&
-    (
-     !list_last(dt,u_0) ==> 
-     (
-      list_last(dt,u_1) ||
+      (u_1==u_0) ||
       (
-       list_next(dt,u_0,u_1) ||
-       (
-        (
-         list_order(dt,u_0,u_1) ==> 
-         (list_member(dt,u_1) && list_member(dt,u_0))
-        ) &&
-        (
-         !list_order(dt,u_0,u_1) ==> 
-         (
-          list_member(dt,u_1) ||
-          (
-           list_member(dt,u_0) ||
-           (
-            !list_head(dt,u_1) &&
-            !list_head(dt,u_0)
-           )
-          )
-         )
-        )
-       )
+       !list_order(dt,u_1,u_0) &&
+       !list_head(dt,u_0)
       )
      )
     )

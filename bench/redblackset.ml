@@ -112,8 +112,8 @@ let spec_tab = add_spec spec_tab "Balance"  ["r1";"tree1";"x";"tree2";"tree3"] [
               );
       ])
 in
-let _ = printf_assertion spec_tab ["Balance"] in
-let axiom1 = assertion ctx (vc balance) spec_tab preds bpreds 350 6 true testname "axiom1" in
+(* let _ = printf_assertion spec_tab ["Balance"] in *)
+(* let axiom1 = assertion ctx (vc balance) spec_tab preds bpreds 350 6 true testname "axiom1" in *)
 
 let balance a b c d e =
   Implies (SpecApply ("BalancePre", [a;b;c;d;e]), SpecApply ("BalancePost", [a;b;c;d;e])) in
@@ -145,5 +145,5 @@ let spec_tab = add_spec spec_tab "BalancePost" ["r1";"tree1";"x";"tree2";"tree3"
 in
 let _ = printf_assertion spec_tab ["BalancePre"; "BalancePost"] in
 let axiom2 = assertion ctx (vc balance) spec_tab  preds bpreds 400 6 true testname "axiom2" in
-let _ = to_verifier testname [axiom1;axiom2] in
+(* let _ = to_verifier testname [axiom1;axiom2] in *)
 ();;

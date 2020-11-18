@@ -4,5 +4,6 @@
 *.o
 log.txt
 *.out
+tmp*
 comparision/*
 dune-project

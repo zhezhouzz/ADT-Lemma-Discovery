@@ -536,7 +536,7 @@ module AxiomSyn (D: Dtree.Dtree) = struct
       let rec aux counter =
         let decisiontree = pn_to_axiom_epr feature_set pos neg in
         let axiom_epr = Epr.simplify_ite @@ D.to_epr decisiontree in
-        let _ = printf "len(decisiontree)=%i\n" (D.len decisiontree) in
+        (* let _ = printf "len(decisiontree)=%i\n" (D.len decisiontree) in *)
         (* let _ = printf "axiom_epr:%s\n" (Epr.layout axiom_epr) in *)
         let ps, lenps = sampling fv_num axiom_epr feature_set dt fv chooses num in
         let _ = samplesize := (!samplesize) + lenps in
@@ -586,7 +586,8 @@ module AxiomSyn (D: Dtree.Dtree) = struct
             D.to_forallformula @@
             if (p_size == 0) && (n_size == 0) then D.T
             else pn_to_axiom_epr feature_set positives negatives in
-          (* let _ = printf "axiom:\n\t%s\n" (Epr.pretty_layout_forallformula axiom) in *)
+          (* let _ = printf "[%i]axiom:\n\t%s\n" fv_num
+           *     (Epr.pretty_layout_forallformula (Epr.forallformula_simplify_ite axiom)) in *)
           let valid, _ = S.check ctx (neg_vc_with_ax axiom) in
           if valid
           then (total_stat @ [stat]), Some (dttp, Epr.forallformula_simplify_ite axiom)

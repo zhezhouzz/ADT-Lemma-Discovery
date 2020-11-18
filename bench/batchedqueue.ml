@@ -65,10 +65,10 @@ in
 let _ = printf_assertion spec_tab ["Tail"] in
 let axiom1 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"]
-    bpreds 150 8 true testname "2" in
-let axiom12 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
-    ["list_last";"list_member"; "list_order"; "list_head"]
-    bpreds 150 8 true testname "5" in
+    bpreds 150 8 true testname "1" in
+(* let axiom12 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
+ *     ["list_last";"list_member"; "list_order"; "list_head"]
+ *     bpreds 150 8 true testname "2" in *)
 (* let axiom13 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
  *     ["list_member"; "list_order"; "list_head"]
  *     bpreds 150 8 true testname "3" in *)
@@ -80,16 +80,16 @@ let axiom12 = assertion ~startX:2 ~maxX:2 ctx vc spec_tab
  * let axiom15 = assertion ~startX:5 ~maxX:5 ctx vc spec_tab
  *     ["list_member"; "list_order"; "list_head"]
  *     bpreds 200 7 true testname "5" in *)
-let axiom16 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
-    ["list_last"; "list_member"; "list_order"; "list_head";]
-    bpreds 150 8 true testname "6" in
-let axiom17 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
-    ["list_last";"list_next";"list_member"; "list_order"; "list_head";]
-    bpreds 150 8 true testname "7" in
-let _ = to_verifier testname [axiom1;axiom12;
-                              (* axiom13;axiom14;axiom15; *)
-                              axiom16;axiom17]in
-let _ = raise @@ InterExn "zz" in
+(* let axiom16 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+ *     ["list_last"; "list_member"; "list_order"; "list_head";]
+ *     bpreds 150 8 true testname "6" in
+ * let axiom17 = assertion ~startX:3 ~maxX:3 ctx vc spec_tab
+ *     ["list_last";"list_next";"list_member"; "list_order"; "list_head";]
+ *     bpreds 150 8 true testname "7" in *)
+(* let _ = to_verifier testname [axiom1;axiom12;
+ *                               (\* axiom13;axiom14;axiom15; *\)
+ *                               axiom16;axiom17]in
+ * let _ = raise @@ InterExn "zz" in *)
 
 
 let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
@@ -103,7 +103,7 @@ in
 let _ = printf_assertion spec_tab ["Tail"] in
 let axiom2 = assertion ctx vc spec_tab
     ["list_member"; "list_order"; "list_head"; "list_next"]
-    bpreds 200 8 true testname "axiom2" in
+    bpreds 200 8 true testname "2" in
 
 (* let spec_tab = add_spec spec_tab "Tail" ["l1";"l2";"l3";"l4"] ["u"]
  *     (E.Iff (Or[list_member l3 u; list_member l4 u],
