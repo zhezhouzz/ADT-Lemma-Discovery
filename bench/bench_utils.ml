@@ -57,7 +57,7 @@ let to_verifier name axioms =
     if List.exists (fun x -> not (T.eq x dttp)) t
     then raise @@ TestFailedException "wrong dt"
     else
-      let path = (Sys.getenv "DUNE_ROOT") ^ "/axiom_verifier/" in
+      let path = (Sys.getenv "DUNE_ROOT") ^ "/lemma_verifier/" in
       let headfile, dtname = get_head dttp in
       let headfile = path ^ headfile in
       let methods =
