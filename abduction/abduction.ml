@@ -6,6 +6,10 @@ open Z3
 open Z3.Arithmetic
 open Z3aux
 
+let rec print_list = function
+[] -> ""
+| e::l -> e ^ ", " ^ (print_list l)
+
 (**
  * Because of the way the AST is structured, all formula variables should ultimately be
  * introduced by SpecApply. This means we can determine the collection of free variables
@@ -41,7 +45,8 @@ let single_abduction ctx specs replacements pre post =
   let abd_name = (Flatten.get_singleton replacements).name in
   let imp = Boolean.mk_implies ctx pre post in
   let free_vars = get_free_variables specs in
-  let vbar = StrSet.filter (fun v -> not (StrSet.mem v (Flatten.all_fresh_params replacements))) free_vars in
+  let fresh_param_names = Flatten.all_fresh_param_names replacements in
+  let vbar = StrSet.filter (fun v -> not (StrSet.mem v fresh_param_names)) free_vars in
   (* TODO: MUS filter *)
   let qe_result = perform_qe ctx (StrSet.elements vbar) imp in
   let qe_result = Flatten.replace_backward ctx replacements qe_result in

@@ -18,6 +18,7 @@ module StrSet = Set.Make(String)
 open Utils
 open Z3
 open Z3.Arithmetic
+open Z3aux
 
 (**
  * A record of the variable and abducible replacements made during a
@@ -50,29 +51,13 @@ let find_or_add (ctx: Z3.context) (abd: Abducible.t) (replacements: abd_replacem
     | Some fresh_abd -> (fresh_abd, replacements)
     | None ->
        let fresh_name = freshen ctx abd.name in
-       let fresh_params = List.map (fun p -> freshen ctx p) abd.params in
+       let fresh_params = List.map (fun (name, indexed, sort) -> (freshen ctx name, indexed, sort)) abd.params in
        let fresh_abd = { Abducible.name = fresh_name; Abducible.params = fresh_params } in
        let replacements' = {
            orig_to_fresh = AbdMap.add abd fresh_abd replacements.orig_to_fresh;
            fresh_to_orig = AbdMap.add fresh_abd abd replacements.fresh_to_orig;
          } in
        (fresh_abd, replacements')
-
-(**
- * When flattening, we replace all function occurences A(x1, x2, ...) with the
- * constraint that the function args equal the fresh args in the top-level replacement
- * abducible, e.g. x1 = x1' /\ x2 = x2' /\ ... for fresh x1', x2', ...
- *
- * This function constructs such an equivalence clause for the given parameter lists.
- *)
-let fresh_params_equiv_clause (ctx: Z3.context) (orig_params: string list) (fresh_params: string list) =
-  let make_fresh_equiv (orig_param, fresh_param) =
-    let z3_orig_param  = Integer.mk_const_s ctx orig_param  in
-    let z3_fresh_param = Integer.mk_const_s ctx fresh_param in
-    Boolean.mk_eq ctx z3_orig_param z3_fresh_param
-  in
-  let fresh_equivs = List.map make_fresh_equiv (List.combine orig_params fresh_params) in
-  Boolean.mk_and ctx fresh_equivs
 
 (** Returns the number of abducibles in the replacement mapping. *)
 let abducible_count (replacements: abd_replacements) =
@@ -89,9 +74,9 @@ let get_singleton (replacements: abd_replacements) =
     | _ -> raise (Failure "replacements mapping is not a singleton")
 
 (** Returns a set of all fresh parameter names in the entire replacement mapping. *)
-let all_fresh_params (replacements: abd_replacements) =
+let all_fresh_param_names (replacements: abd_replacements) =
   let collect_params (abd: Abducible.t) _ param_set =
-    List.fold_left (fun set p -> StrSet.add p set) param_set abd.params
+    List.fold_left (fun set (name, _, _) -> StrSet.add name set) param_set abd.params
   in
   AbdMap.fold collect_params replacements.fresh_to_orig StrSet.empty
 
@@ -106,9 +91,9 @@ let replace_backward (ctx: Z3.context) (replacements: abd_replacements) (expr: E
     List.fold_left (fun (fp, op) (fv, ov) -> (fv :: fp, ov :: op)) (fparams, oparams) pairs
   in
   let (fparams, oparams) = AbdMap.fold rev_map replacements.fresh_to_orig ([], []) in
-  let to_consts params = List.map (fun p -> Integer.mk_const_s ctx p) params in
+  (* TODO: This shouldn't always be an integer constant. *)
+  let to_consts params = List.map (fun (p, _, _) -> Integer.mk_const_s ctx p) params in
   Expr.substitute expr (to_consts fparams) (to_consts oparams)
-
 
 
 (**
@@ -123,14 +108,31 @@ let replace_backward (ctx: Z3.context) (replacements: abd_replacements) (expr: E
   * This assumes all SEs are expressible in our Z3 theory, which they
   * should be.
   *)
-let extract_params_HACK (ses: Ast.E.SE.t list) =
+let extract_params_HACK ctx (ses: Ast.E.SE.t list) =
   let extract se = match se with
-    | Ast.E.SE.Var (Ast.E.SE.Int, x) -> x
-    | _ -> raise (Failure ("You have run afoul of the extract_params_HACK in abduction/flatten.ml. Abduction currently only works when abducibles operate over simple int vars. This error was triggered by the parameter: " ^ (Ast.E.SE.layout se)))
+    | Ast.E.SE.Var (Ast.E.SE.Int, x)     -> (x, false, Integer.mk_sort ctx)
+    | Ast.E.SE.Var (Ast.E.SE.IntList, x) -> (x, true, make_uninterpreted_sort ctx "list")
+    | _ -> raise @@ Failure ("Abduction is currently unable to handle the type of this parameter: "
+                           ^ (Ast.E.SE.layout se))
   in
   List.map extract ses
 
 
+(**
+ * When flattening, we replace all function occurences A(x1, x2, ...) with the
+ * constraint that the function args equal the fresh args in the top-level replacement
+ * abducible, e.g. x1 = x1' /\ x2 = x2' /\ ... for fresh x1', x2', ...
+ *
+ * This function constructs such an equivalence clause for the given parameter lists.
+ *)
+let fresh_params_equiv_clause (ctx: Z3.context) (orig_params: Abducible.param_t list) (fresh_params: Abducible.param_t list) =
+  let make_fresh_equiv (orig_param, fresh_param) =
+    let z3_orig_param  = Abducible.param_to_z3 ctx orig_param  in
+    let z3_fresh_param = Abducible.param_to_z3 ctx fresh_param in
+    Boolean.mk_eq ctx z3_orig_param z3_fresh_param
+  in
+  let fresh_equivs = List.map make_fresh_equiv (List.combine orig_params fresh_params) in
+  Boolean.mk_and ctx fresh_equivs
 
 (**
  * Performs the flattening operation.
@@ -181,7 +183,7 @@ let flatten (ctx: Z3.context) (ast: Ast.t) (specs: (Ast.spec StrMap.t)) (replace
     | Ast.SpecApply (name, params) ->
        match StrMap.find_opt name specs with
        | None ->
-          let eparams = extract_params_HACK params in
+          let eparams = extract_params_HACK ctx params in
           let abd = { Abducible.name = name; Abducible.params = eparams } in
           let (fresh_abd, replacements) = find_or_add ctx abd replacements in
           (fresh_params_equiv_clause ctx eparams fresh_abd.params, replacements)

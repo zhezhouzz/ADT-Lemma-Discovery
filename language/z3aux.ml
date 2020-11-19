@@ -55,3 +55,10 @@ let quanti_head ctx forallvars existsvars body =
          p
          (Some 1)
          [] [] None None)
+
+let encode_ds_var ctx sort_name var_name =
+  let sort = Sort.mk_uninterpreted ctx (Symbol.mk_string ctx sort_name) in
+  let value_func_name = Symbol.mk_string ctx (sort_name ^ "_value") in
+  let value_func = FuncDecl.mk_func_decl ctx value_func_name [Z3.Arithmetic.Integer.mk_sort ctx] sort in
+  let index = Integer.mk_const_s ctx var_name in
+  Z3.FuncDecl.apply value_func [index]
