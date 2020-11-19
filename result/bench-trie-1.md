@@ -154,7 +154,6 @@ forall u_0 u_1,(
   ))
 )
 ```
-
 #### assertion-1
 
 ```

@@ -97,7 +97,6 @@ forall u_0 u_1,(
   list_order(l3,u_1,u_0))
 )
 ```
-
 #### assertion-1
 
 ```
@@ -144,48 +143,3 @@ true
  )
 )
 ```
-
-#### assertion-2
-
-```
-Tail(l1,l2,l3,l4):=
-forall u v,(
- ((list_member(l3,u) || list_member(l4,u) || list_head(l1,u)) <==> 
-  (list_member(l1,u) || list_member(l2,u))) &&
- (
-  (list_order(l3,u,v) || list_order(l4,v,u)) ==> 
-  (list_order(l1,u,v) || list_order(l2,v,u))
- )
-)
-```
-
-#### lemma-2
-
-```
-forall dt u_1 u_0,(
- (
-  list_member(dt,u_1) ==> 
-  (
-   list_order(dt,u_0,u_1) ||
-   (
-    !list_next(dt,u_0,u_1) &&
-    (
-     list_member(dt,u_0) ||
-     !list_order(dt,u_1,u_0)
-    )
-   )
-  )
- ) &&
- (
-  !list_member(dt,u_1) ==> 
-  (
-   !list_next(dt,u_1,u_0) &&
-   (
-    !list_order(dt,u_0,u_1) &&
-    !list_order(dt,u_1,u_0)
-   )
-  )
- )
-)
-```
-

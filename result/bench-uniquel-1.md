@@ -50,7 +50,6 @@ true &&
  !list_member(l2,u_0)
 )
 ```
-
 #### assertion-1
 
 ```
@@ -97,93 +96,3 @@ true
  )
 )
 ```
-
-#### assertion-2
-
-```
-SetAdd(x,l1,l2):=
-forall u,(
- (list_once(l1,u) ==> list_once(l2,u)) &&
- (list_member(l2,u) <==> 
-  ((u==x) || list_member(l1,u)))
-)
-```
-
-#### lemma-2
-
-```
-forall dt u_1 u_0,(
- (
-  list_order(dt,u_1,u_0) ==> 
-  (
-   (
-    list_once(dt,u_1) ==> 
-    (
-     list_member(dt,u_1) &&
-     (
-      list_member(dt,u_0) &&
-      !(u_1==u_0)
-     )
-    )
-   ) &&
-   (
-    !list_once(dt,u_1) ==> 
-    list_member(dt,u_1)
-   )
-  )
- ) &&
- (
-  !list_order(dt,u_1,u_0) ==> 
-  (
-   (
-    list_member(dt,u_1) ==> 
-    (
-     (
-      list_head(dt,u_1) ==> 
-      (
-       (list_member(dt,u_0) ==> list_once(dt,u_1)) &&
-       (
-        !list_member(dt,u_0) ==> 
-        !list_once(dt,u_0)
-       )
-      )
-     ) &&
-     (
-      !list_head(dt,u_1) ==> 
-      (
-       list_once(dt,u_1) ||
-       (
-        list_once(dt,u_0) ||
-        !(u_1==u_0)
-       )
-      )
-     )
-    )
-   ) &&
-   (
-    !list_member(dt,u_1) ==> 
-    (
-     !list_once(dt,u_1) &&
-     (
-      !list_order(dt,u_0,u_1) &&
-      (
-       list_member(dt,u_0) ||
-       (
-        !list_head(dt,u_1) &&
-        (
-         (u_1==u_0) ||
-         (
-          !list_head(dt,u_0) &&
-          !list_once(dt,u_0)
-         )
-        )
-       )
-      )
-     )
-    )
-   )
-  )
- )
-)
-```
-
