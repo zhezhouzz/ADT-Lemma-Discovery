@@ -38,4 +38,4 @@ To setup the environment.
 
 + run `dune exec bench/$benchname.exe` to run infer the lemmas. E.g. `dune exec bench/customstack.exe` which includes all benchmarks in Custom Stack.
 
-+ (optional) If you want to verify the inferred lemma, run `dafny lemma_verifier/$benchname.dfy`. E.g. `dafny lemma_verifier/$custstk.dfy`.
++ (optional) If you want to verify the inferred lemma, run `dafny lemma_verifier/$benchname.dfy`. E.g. `dafny lemma_verifier/custstk.dfy`.
