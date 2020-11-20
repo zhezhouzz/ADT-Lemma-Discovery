@@ -31,7 +31,7 @@ Algebraic data type lemma discovery
 + run 
 
 ```
-DUNE_ROOT=`pwd`
+export DUNE_ROOT=`pwd`
 ```
 
 To setup the environment.
