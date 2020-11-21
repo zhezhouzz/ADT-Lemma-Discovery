@@ -138,20 +138,30 @@ forall u_0 u_1,(
 ```
 Balance(r1,tree1,x,tree2,tree3):=
 forall u v,(
- (tree_member(tree1,u) ==> tree_once(tree1,u)) &&
- (tree_member(tree2,u) ==> tree_once(tree2,u)) &&
  (
-  (treeb_member(tree1,u) && treeb_member(tree1,v)) ==> 
+  (treeb_left(tree1,u,v) || treeb_right(tree1,u,v) || treeb_parallel(tree1,u,v)) ==>
   !(u==v)
  ) &&
  (
-  (treeb_member(tree1,u) || treeb_member(tree2,u)) ==> 
+  (treeb_left(tree2,u,v) || treeb_right(tree2,u,v) || treeb_parallel(tree2,u,v)) ==>
+  !(u==v)
+ ) &&
+ (
+  (treeb_member(tree1,u) && treeb_member(tree1,v)) ==>
+  !(u==v)
+ ) &&
+ (
+  (treeb_member(tree1,u) || treeb_member(tree2,u)) ==>
   !(u==x)
  )
-) ==>
+)
+==>
 forall u v,(
- (tree_member(tree3,u) ==> tree_once(tree3,u)) &&
- (treeb_member(tree3,u) <==> 
+ (
+  (treeb_left(tree3,u,v) || treeb_right(tree3,u,v) || treeb_parallel(tree3,u,v)) ==>
+  !(u==v)
+ ) &&
+ (treeb_member(tree3,u) <==>
   (treeb_member(tree1,u) || treeb_member(tree2,u) || (u==x)))
 )
 ```
@@ -161,30 +171,72 @@ forall u v,(
 ```
 forall dt u_1 u_0,(
  (
-  treeb_member(dt,u_1) ==> 
+  treeb_member(dt,u_1) ==>
   (
    (
-    (u_1==u_0) ==> 
+    treeb_member(dt,u_0) ==>
     (
      (
-      treeb_once(dt,u_1) ==> 
+      (u_1==u_0) ==>
       (
-       !treeb_left(dt,u_1,u_0) &&
+       treeb_parallel(dt,u_1,u_0) ||
        (
-        !treeb_right(dt,u_1,u_0) &&
-        !treeb_parallel(dt,u_1,u_0)
+        treeb_left(dt,u_1,u_0) ||
+        (treeb_right(dt,u_1,u_0) || treeb_once(dt,u_1))
        )
       )
      ) &&
      (
-      !treeb_once(dt,u_1) ==> 
+      !(u_1==u_0) ==>
       (
-       treeb_left(dt,u_1,u_0) ||
        (
-        treeb_right(dt,u_1,u_0) ||
+        treeb_right(dt,u_1,u_0) ==>
         (
-         !treeb_head(dt,u_1) &&
-         treeb_parallel(dt,u_1,u_0)
+         treeb_left(dt,u_0,u_1) ||
+         (
+          (
+           treeb_head(dt,u_1) ==>
+           (
+            treeb_parallel(dt,u_0,u_1) ||
+            (
+             treeb_once(dt,u_0) ||
+             (
+              (
+               treeb_left(dt,u_1,u_0) ==>
+               (treeb_parallel(dt,u_1,u_0) || treeb_once(dt,u_1))
+              ) &&
+              (
+               (
+                !treeb_left(dt,u_1,u_0) &&
+                treeb_once(dt,u_1)
+               ) ==>
+               !treeb_right(dt,u_0,u_1)
+              )
+             )
+            )
+           )
+          ) &&
+          (
+           (
+            !treeb_head(dt,u_1) &&
+            treeb_once(dt,u_0)
+           ) ==>
+           !treeb_head(dt,u_0)
+          )
+         )
+        )
+       ) &&
+       (
+        (
+         !treeb_right(dt,u_1,u_0) &&
+         treeb_head(dt,u_0)
+        ) ==>
+        (
+         treeb_parallel(dt,u_1,u_0) ||
+         (
+          (treeb_left(dt,u_0,u_1) && treeb_right(dt,u_0,u_1)) ==>
+          (treeb_parallel(dt,u_0,u_1) || treeb_once(dt,u_0))
+         )
         )
        )
       )
@@ -192,41 +244,56 @@ forall dt u_1 u_0,(
     )
    ) &&
    (
-    !(u_1==u_0) ==> 
     (
-     treeb_member(dt,u_0) ||
-     (
-      !treeb_left(dt,u_1,u_0) &&
-      (
-       !treeb_parallel(dt,u_0,u_1) &&
-       !treeb_left(dt,u_0,u_1)
-      )
-     )
+     !treeb_member(dt,u_0) &&
+     treeb_once(dt,u_1)
+    ) ==>
+    (
+     !treeb_once(dt,u_0) &&
+     !treeb_parallel(dt,u_0,u_1)
     )
    )
   )
  ) &&
  (
-  !treeb_member(dt,u_1) ==> 
+  !treeb_member(dt,u_1) ==>
   (
-   !treeb_left(dt,u_0,u_1) &&
    (
+    (treeb_member(dt,u_0) && treeb_once(dt,u_0)) ==>
     (
-     treeb_member(dt,u_0) ==> 
-     (
-      !treeb_parallel(dt,u_1,u_0) &&
-      !treeb_left(dt,u_1,u_0)
-     )
-    ) &&
+     !treeb_once(dt,u_1) &&
+     !treeb_parallel(dt,u_1,u_0)
+    )
+   ) &&
+   (
+    !treeb_member(dt,u_0) ==>
     (
-     !treeb_member(dt,u_0) ==> 
      (
-      !treeb_right(dt,u_0,u_1) &&
+      (u_1==u_0) ==>
       (
-       !treeb_once(dt,u_1) &&
+       !treeb_right(dt,u_1,u_0) &&
+       !treeb_once(dt,u_1)
+      )
+     ) &&
+     (
+      !(u_1==u_0) ==>
+      (
+       !treeb_right(dt,u_1,u_0) &&
        (
-        !treeb_parallel(dt,u_0,u_1) &&
-        !treeb_once(dt,u_0)
+        !treeb_right(dt,u_0,u_1) &&
+        (
+         !treeb_once(dt,u_1) &&
+         (
+          !treeb_left(dt,u_1,u_0) &&
+          (
+           !treeb_left(dt,u_0,u_1) &&
+           (
+            !treeb_parallel(dt,u_1,u_0) &&
+            !treeb_parallel(dt,u_0,u_1)
+           )
+          )
+         )
+        )
        )
       )
      )
@@ -236,4 +303,3 @@ forall dt u_1 u_0,(
  )
 )
 ```
-

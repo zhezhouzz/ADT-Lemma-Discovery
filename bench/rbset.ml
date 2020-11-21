@@ -112,32 +112,32 @@ let spec_tab = add_spec spec_tab "Balance"  ["r1";"tree1";"x";"tree2";"tree3"] [
               );
       ])
 in
-(* let _ = printf_assertion spec_tab ["Balance"] in *)
-(* let axiom1 = assertion ctx (vc balance) spec_tab preds bpreds 350 6 true testname "axiom1" in *)
+let _ = printf_assertion spec_tab ["Balance"] in
+let axiom1 = assertion ctx (vc balance) spec_tab preds bpreds 350 6 true testname "axiom1" in
 
 let balance a b c d e =
   Implies (SpecApply ("BalancePre", [a;b;c;d;e]), SpecApply ("BalancePost", [a;b;c;d;e])) in
 let spec_tab = add_spec spec_tab "BalancePre" ["r1";"tree1";"x";"tree2";"tree3"] ["u"; "v"]
-    (* (E.And [
-     *     E.Implies (treeb_any_order tree1 u v, Not (int_eq u v));
-     *     E.Implies (treeb_any_order tree2 u v, Not (int_eq u v));
-     *     E.Implies (E.And [treeb_member tree1 u; treeb_member tree1 v],
-     *                Not (int_eq u v));
-     *     E.Implies (E.Or[treeb_member tree1 u; treeb_member tree2 u], Not (int_eq u x));
-     *   ]) *)
     (E.And [
-        E.Implies(tree_member tree1 u, tree_once tree1 u);
-        E.Implies(tree_member tree2 u, tree_once tree2 u);
+        E.Implies (treeb_any_order tree1 u v, Not (int_eq u v));
+        E.Implies (treeb_any_order tree2 u v, Not (int_eq u v));
         E.Implies (E.And [treeb_member tree1 u; treeb_member tree1 v],
                    Not (int_eq u v));
         E.Implies (E.Or[treeb_member tree1 u; treeb_member tree2 u], Not (int_eq u x));
       ])
+    (* (E.And [
+     *     E.Implies(tree_member tree1 u, tree_once tree1 u);
+     *     E.Implies(tree_member tree2 u, tree_once tree2 u);
+     *     E.Implies (E.And [treeb_member tree1 u; treeb_member tree1 v],
+     *                Not (int_eq u v));
+     *     E.Implies (E.Or[treeb_member tree1 u; treeb_member tree2 u], Not (int_eq u x));
+     *   ]) *)
 in
 let spec_tab = add_spec spec_tab "BalancePost" ["r1";"tree1";"x";"tree2";"tree3"] ["u"; "v"]
     (E.And [
         (* tree_once tree3 u; *)
-        E.Implies(tree_member tree3 u, tree_once tree3 u);
-        (* E.Implies (treeb_any_order tree3 u v, Not (int_eq u v)); *)
+        (* E.Implies(tree_member tree3 u, tree_once tree3 u); *)
+        E.Implies (treeb_any_order tree3 u v, Not (int_eq u v));
         E.Iff (treeb_member tree3 u,
                E.Or [treeb_member tree1 u; treeb_member tree2 u; int_eq u x]
               );
@@ -145,5 +145,5 @@ let spec_tab = add_spec spec_tab "BalancePost" ["r1";"tree1";"x";"tree2";"tree3"
 in
 let _ = printf_assertion spec_tab ["BalancePre"; "BalancePost"] in
 let axiom2 = assertion ctx (vc balance) spec_tab  preds bpreds 400 6 true testname "axiom2" in
-(* let _ = to_verifier testname [axiom1;axiom2] in *)
+let _ = to_verifier testname [axiom1;axiom2] in
 ();;

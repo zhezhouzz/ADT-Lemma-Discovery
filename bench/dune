@@ -4,16 +4,16 @@
 )
 (tests
  (names
- customstack
- splayheap
- leftistheap
- unbalancedset
+ customstk
+ splayhp
+ leftisthp
+ unbset
  stream
- redblackset
- bankersqueue
- batchedqueue
+ rbset
+ bankersq
+ batchedq
  trie
- uniquelist
+ uniquel
  )
  (libraries ounit2 solver inference frontend)
 )
