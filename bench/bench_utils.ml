@@ -126,7 +126,44 @@ let register spec_tab {name;intps;outtps;prog} =
   let spec_tab = spec_tab_add spec_tab {name;intps;outtps;prog} in
   spec_tab, fun args -> SpecApply (name, args)
 
+let register_spec spec_tab (name, spec) =
+  let spec_tab = StrMap.add name spec spec_tab in
+  spec_tab, fun args -> SpecApply (name, args)
+
 let make_lets l body =
   List.fold_right (fun (names, es) body ->
       Let(names, es, body)
     ) l body
+
+module SpecAbd = Inference.SpecAbduction;;
+let test ctx vc spectable holes preds bpreds startnum endnum traces =
+  let result = SpecAbd.multi_infer ctx vc spectable holes preds bpreds startnum endnum
+      traces
+  in
+  let _ = match result with
+    | None -> Printf.printf "no result\n"
+    | Some (spectable, result) ->
+      let _ = StrMap.iter (fun name spec ->
+          printf "%s\n" (Ast.layout_spec_entry name spec)
+        ) spectable in
+      ()
+    (* | Some result ->
+     *   let _ = List.map (fun (name, args, spec) ->
+     *       Printf.printf "%s(%s):\n\t%s\n" name
+     *         (List.to_string snd args)
+     *         (E.pretty_layout_forallformula spec)
+     *     ) result in () *)
+  in
+  ()
+
+let bench_post = fun args -> SpecApply("Post", args)
+let set_post spectable args qv body =
+  let spectable, _ = add_spec_ret_fun spectable "Post" args qv body in
+  spectable
+
+let make_hole name argstp =
+  let names = T.auto_name argstp in
+  let hole = {SpecAbd.name = name;
+              SpecAbd.funtype = List.combine argstp names;
+              SpecAbd.inout = []} in
+  (fun args -> SpecApply(name, args)), hole

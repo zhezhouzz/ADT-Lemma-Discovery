@@ -6,6 +6,7 @@ module type Ast = sig
   val spec_exec: spec -> string list -> value Utils.StrMap.t -> bool
   val exec: t -> spec Utils.StrMap.t -> value Utils.StrMap.t -> bool
   val spec_to_z3: Z3.context -> string -> spec -> Z3.FuncDecl.func_decl * Z3.Expr.expr
+  val to_z3_with_q: Z3.context -> t -> spec Utils.StrMap.t -> string list -> (Tp.Tp.t * string) list -> Z3.Expr.expr
   val to_z3: Z3.context -> t -> spec Utils.StrMap.t -> Z3.Expr.expr
   val neg_to_z3: Z3.context -> t -> spec Utils.StrMap.t -> string list * Z3.Expr.expr
   val application: t -> spec Utils.StrMap.t -> t
@@ -17,6 +18,7 @@ module type Ast = sig
   val skolemize: t -> string list * t
   val elem_not_conj: t -> t
   val extract_variables: t -> (int list * (E.SE.tp * string) list)
+  val eliminate_cond: t -> t list
 end
 
 module Ast (A: AstTree.AstTree): Ast = struct
@@ -99,16 +101,92 @@ module Ast (A: AstTree.AstTree): Ast = struct
     let rec aux = function
       | ForAll ff -> E.forallformula_to_z3 ctx ff
       | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
-      | Ite (p1, p2, p3) -> Boolean.mk_ite ctx (aux p1) (aux p2) (aux p3)
+      | Ite (p1, p2, p3) ->
+        (match p1 with
+         | SpecApply (_, argsvalue) ->
+           let b = List.last argsvalue in
+           Boolean.mk_implies ctx (aux p1)
+             (Boolean.mk_ite ctx (E.SE.to_z3 ctx b) (aux p2) (aux p3))
+         | _ -> raise @@ InterExn "bad ast to z3 in cond")
       | Not p -> Boolean.mk_not ctx (aux p)
       | And ps -> Boolean.mk_and ctx (List.map aux ps)
       | Or ps -> Boolean.mk_or ctx (List.map aux ps)
       | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2)
       | SpecApply (spec_name, argsvalue) ->
-        let args, body = StrMap.find "ast::to_z3" spec_tab spec_name in
+        let args, body = StrMap.find
+            (Printf.sprintf "ast::to_z3: spec(%s) no found" spec_name) spec_tab spec_name in
         E.forallformula_to_z3 ctx @@ E.subst_forallformula body args argsvalue
     in
     aux a
+
+  let to_z3_with_q ctx a spec_tab qv qargs =
+    (* let ptab, bodys = make_spec_def ctx spec_tab in *)
+    let rec aux = function
+      | ForAll _ -> raise @@ InterExn "bad ast to z3 q"
+      | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
+      | Ite (p1, p2, p3) ->
+        (match p1 with
+         | SpecApply (_, argsvalue) ->
+           let b = List.last argsvalue in
+           Boolean.mk_implies ctx (aux p1)
+             (Boolean.mk_ite ctx (E.SE.to_z3 ctx b) (aux p2) (aux p3))
+         | _ -> raise @@ InterExn "bad ast to z3 q in cond")
+      | Not p -> Boolean.mk_not ctx (aux p)
+      | And ps -> Boolean.mk_and ctx (List.map aux ps)
+      | Or ps -> Boolean.mk_or ctx (List.map aux ps)
+      | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2)
+      | SpecApply (spec_name, argsvalue) ->
+        let args, body = StrMap.find
+            (Printf.sprintf "ast::to_z3: spec(%s) no found" spec_name) spec_tab spec_name in
+        let (qv', body') = E.subst_forallformula body args argsvalue in
+        if (List.length qv) != (List.length qv')
+        then raise @@ InterExn "unimplemented z3 q"
+        else
+          let qv_se = List.map (fun qv -> SE.Var (T.Int, qv)) qv in
+          let body = E.subst body' qv' qv_se in
+          E.to_z3 ctx body
+    in
+    let body = aux a in
+    let qargs = List.map (arg_to_z3 ctx) qargs in
+    make_forall ctx qargs body
+
+  let eliminate_cond ast =
+    let rec aux = function
+      | ForAll _ -> raise @@ InterExn "eliminate_cond:never happen"
+      | Implies (p1, p2) ->
+        let p1s = aux p1 in
+        let p2s = aux p2 in
+        List.map (fun (p1, p2) -> Implies (p1, p2)) (List.cross p1s p2s)
+      | Ite (p1, p2, p3) ->
+        (match p1 with
+         | SpecApply (specname, argsvalue) ->
+           (match argsvalue with
+           | [] -> raise @@ InterExn "bad ast to z3 in cond"
+           | _ :: args ->
+             let p2s = aux p2 in
+             let p3s = aux p3 in
+             (List.map (fun p2 ->
+                 Implies(SpecApply (specname, SE.Literal (T.Bool, SE.L.Bool true)::args),
+                         p2)
+                ) p2s) @
+             (List.map (fun p3 ->
+                  Implies(SpecApply (specname, SE.Literal (T.Bool, SE.L.Bool false)::args),
+                          p3)
+                ) p3s)
+           )
+         | _ -> raise @@ InterExn "bad ast to z3 in cond")
+      | Not _ -> raise @@ InterExn "eliminate_cond:never happen"
+      | And ps ->
+        let ps = List.map aux ps in
+        List.map (fun ps -> And ps) (List.choose_list_list ps)
+      | Or ps ->
+        let ps = List.map aux ps in
+        List.map (fun ps -> Or ps) (List.choose_list_list ps)
+      | Iff (_, _) -> raise @@ InterExn "eliminate_cond:never happen"
+      | SpecApply (spec_name, argsvalue) -> [SpecApply (spec_name, argsvalue)]
+    in
+    aux ast
+
   let neg_to_z3 ctx a spec_tab =
     match a with
     | Implies (p, SpecApply (name, argsvalue)) ->

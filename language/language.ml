@@ -18,6 +18,8 @@ module Helper = struct
   let bool_var name = SE.Var (T.Bool, name)
   let add_spec spectab name args fv body =
     StrMap.add name (args, (fv,body)) spectab
+  let add_spec_ret_fun spectab name args fv body =
+    StrMap.add name (args, (fv,body)) spectab, fun args -> SpecApply(name, args)
   let l0    = list_var "l0"
   let l1    = list_var "l1"
   let l2    = list_var "l2"
@@ -39,6 +41,7 @@ module Helper = struct
   let h1    = int_var "h1"
   let h2    = int_var "h2"
   let bool0 = bool_var "bool0"
+  let booltrue = SE.Literal (T.Bool, SE.L.Bool true)
   let const0 = SE.Literal (T.Int, SE.L.Int 0)
   let const1 = SE.Literal (T.Int, SE.L.Int 1)
   let int_plus a b = SE.Op (T.Int, "+", [a; b])
@@ -73,10 +76,22 @@ module Helper = struct
   let int_lt a b = E.Atom (SE.Op (T.Bool, "<", [a;b]))
   let int_gt a b = E.Atom (SE.Op (T.Bool, ">", [a;b]))
   let int_eq a b = E.Atom (SE.Op (T.Bool, "==", [a;b]))
+  let le = fun args -> SpecApply("le", args)
+  let lt = fun args -> SpecApply("lt", args)
+  let intadd = fun args -> SpecApply("intadd", args)
+  let inteq = fun args -> SpecApply("inteq", args)
   let predefined_spec_tab =
     let spec_tab = StrMap.empty in
     let spec_tab = add_spec spec_tab "Plus" ["x";"y";"z"] [] (int_eq (int_plus x y) z) in
     let spec_tab = add_spec spec_tab "Le" ["x";"y"] [] (int_le x y) in
+    let spec_tab = add_spec spec_tab "le" ["bool0";"x";"y";] []
+        (int_eq (SE.Op (T.Bool, "<=", [x;y])) bool0) in
+    let spec_tab = add_spec spec_tab "lt" ["bool0";"x";"y";] []
+        (int_eq (SE.Op (T.Bool, "<", [x;y])) bool0) in
+    let spec_tab = add_spec spec_tab "intadd" ["x";"y";"z"] []
+        (int_eq (SE.Op (T.Bool, "+", [x;y])) z) in
+    let spec_tab = add_spec spec_tab "inteq" ["bool0";"x";"y"] []
+        (int_eq (SE.Op (T.Bool, "==", [x;y])) bool0) in
     let spec_tab = add_spec spec_tab "equal" ["x";"y"] [] (int_eq x y) in
     spec_tab
 end

@@ -2,6 +2,7 @@ open Z3
 open Z3.Expr
 open Z3.Boolean
 open Z3.Arithmetic
+module T = Tp.Tp
 
 let int_to_z3 ctx i = mk_numeral_int ctx i (Integer.mk_sort ctx)
 let bool_to_z3 ctx b = if b then mk_true ctx else mk_false ctx
@@ -19,6 +20,14 @@ let array_head_ ctx (arrname, idx) =
 let array_head ctx (arrname, idxname) =
   let idx = Integer.mk_const_s ctx idxname in
   array_head_ ctx (arrname, idx)
+
+let arg_to_z3 ctx (tp, name) =
+  T.(match tp with
+      | Int -> Integer.mk_const_s ctx name
+      | Bool -> Boolean.mk_const_s ctx name
+      | IntList | IntTree | IntTreeI | IntTreeB ->
+        Integer.mk_const_s ctx name
+    )
 
 let make_forall ctx forallvars body =
   if List.length forallvars == 0 then body else

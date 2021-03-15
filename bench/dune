@@ -4,16 +4,25 @@
 )
 (tests
  (names
- customstk
- splayhp
- leftisthp
- unbset
- stream
- rbset
- bankersq
- batchedq
- trie
- uniquel
+ spec_customstk
+ spec_splayhp
+ spec_leftisthp
+ spec_unbset
+ spec_rbset
+ spec_stream
+ spec_bankersq
+ spec_uniquel
+ spec_batchedq
+ ;; customstk
+ ;; splayhp
+ ;; leftisthp
+ ;; unbset
+ ;; stream
+ ;; rbset
+ ;; bankersq
+ ;; batchedq
+ ;; trie
+ ;; uniquel
  )
  (libraries ounit2 solver inference frontend)
 )

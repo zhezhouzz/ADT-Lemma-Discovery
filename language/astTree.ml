@@ -15,6 +15,9 @@ module type AstTree = sig
   val layout_spec: spec -> string
   val layout_spec_entry: string -> spec -> string
   val eq: t -> t -> bool
+  val get_app_args: t -> string -> E.SE.t list list
+  val neg_spec: string -> t -> t
+  val implies_to_and: t -> t
 end
 
 module AstTree (E: Epr.Epr) : AstTree
@@ -46,6 +49,37 @@ module AstTree (E: Epr.Epr) : AstTree
       sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
     | SpecApply (specname, args) ->
       sprintf "%s(%s)" specname (List.to_string E.SE.layout args)
+
+  let neg_spec name ast =
+    let rec aux = function
+    | ForAll _ -> raise @@ InterExn "never happen aux"
+    | Implies (p1, p2) -> Implies (aux p1, aux p2)
+    | And ps -> And (List.map aux ps)
+    | Or ps -> Or (List.map aux ps)
+    | Not _ -> raise @@ InterExn "never happen aux"
+    | Iff (_, _) -> raise @@ InterExn "never happen aux"
+    | Ite (_, _, _) -> raise @@ InterExn "never happen aux"
+    | SpecApply (specname, args) ->
+      if String.equal specname name
+      then And [Not (SpecApply (specname, args)); SpecApply ("co_" ^ specname, args)]
+      else SpecApply (specname, args)
+    in
+    aux ast
+
+  let implies_to_and ast =
+    let rec aux = function
+      | ForAll _ -> raise @@ InterExn "never happen aux"
+      | Implies (p1, p2) -> And [aux p1; aux p2]
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Not (SpecApply (specname, args)) -> Not (SpecApply (specname, args))
+      | Not _ -> raise @@ InterExn "never happen aux"
+      | Iff (_, _) -> raise @@ InterExn "never happen aux"
+      | Ite (_, _, _) -> raise @@ InterExn "never happen aux"
+      | SpecApply (specname, args) -> SpecApply (specname, args)
+    in
+    aux ast
+
   let vc_layout a =
     let mk_indent indent = String.init indent (fun _ -> ' ') in
     let rec aux indent = function
@@ -109,4 +143,21 @@ module AstTree (E: Epr.Epr) : AstTree
     in
     aux a b
 
+  let get_app_args t specname =
+    let rec aux t res =
+      match t with
+      | ForAll _ -> raise @@ InterExn "bad in get_app_args"
+      | Implies (p1, p2) -> aux p2 (aux p1 res)
+      | And ps -> List.fold_left (fun r p -> aux p r) res ps
+      | Or ps -> List.fold_left (fun r p -> aux p r) res ps
+      | Not p -> aux p res
+      | Iff (p1, p2) -> aux p2 (aux p1 res)
+      | Ite (p1, p2, p3) -> aux p3 (aux p2 (aux p1 res))
+      | SpecApply (specname', args) ->
+        if String.equal specname specname' then
+          args :: res
+        else
+          res
+    in
+    aux t []
 end

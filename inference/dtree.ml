@@ -16,6 +16,7 @@ module type Dtree = sig
   val of_fastdt: Ml.FastDT.FastDT.dt -> feature_set -> t
   val classify: Sample.FeatureVector.data -> t
   val len: t -> int
+  val dt_summary: t -> feature_set -> (int * int)
 end
 
 module Dtree : Dtree = struct
@@ -59,7 +60,7 @@ module Dtree : Dtree = struct
     aux dt
 
   let rec layout = function
-    | T -> "⊥"
+    | T -> "⊤"
     | F -> "⊥"
     | Leaf feature -> F.layout feature
     | Node (feature, l, r) ->
@@ -97,9 +98,14 @@ module Dtree : Dtree = struct
   let of_fastdt dt feature_set =
     let rec aux = function
       | FastDT.Leaf {c_t; c_f} ->
+        let res =
         if (Float.abs c_t) < 1e-3 then F
         else if (Float.abs c_f) < 1e-3 then T
         else raise @@ InterExn (sprintf "Bad Dt Result(%f, %f)" c_t c_f)
+        in
+        (* let _ = Printf.printf "leaf(%f,%f) ->(%f,%f,%f) = %s\n" c_t c_f
+         *     (Float.abs c_t) (Float.abs c_f) (1e-3) (layout res) in *)
+        res
       | FastDT.Node ({split;if_t;if_f}) ->
         match List.nth_opt feature_set split with
         | None -> raise @@ InterExn "Bad Dt Result"
@@ -115,10 +121,41 @@ module Dtree : Dtree = struct
       | Node (_, l, r) -> aux l + aux r + 1
     in
     aux dt
+
+  let dt_summary dt fset =
+    let len = (List.length fset) in
+    let fv_arr = Array.init len (fun _ -> false) in
+    let rec next idx =
+      if idx >= len then None
+      else if not (fv_arr.(idx)) then (Array.set fv_arr idx true; Some idx)
+      else
+        match next (idx + 1) with
+        | None -> None
+        | Some _ -> (Array.set fv_arr idx false; Some 0)
+    in
+    let posnum = ref 0 in
+    let negnum = ref 0 in
+    let rec aux idx =
+      let fvec = Array.to_list fv_arr in
+      let _ = Printf.printf "iter:%s\n" (boollist_to_string fvec) in
+      let _ = if exec_vector dt fset fvec
+        then posnum := !posnum + 1
+        else negnum := !negnum + 1
+      in
+      match next idx with
+      | None -> ()
+      | Some idx -> aux idx
+    in
+    (aux 0; (!posnum, !negnum))
+
   let classify {FV.dfeature_set;FV.labeled_vecs} =
     let samples = List.map (fun (a, b) -> a, Array.of_list b) labeled_vecs in
     let dt = FastDT.make_dt ~samples:(Array.of_list samples) ~max_d:50 in
-    (* let _ = FastDT.print_tree' dt in *)
+    let _ = FastDT.print_tree' dt in
+    (* let _ = if List.length labeled_vecs >= 3 then raise @@ InterExn "class" else () in *)
     let res = of_fastdt dt dfeature_set in
+    (* let posnum, negnum = dt_summary res dfeature_set in *)
+    (* let _ = Printf.printf "summary: %i|%i\n" posnum negnum in *)
     res
+
 end

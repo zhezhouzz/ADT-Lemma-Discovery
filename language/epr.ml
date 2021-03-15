@@ -162,7 +162,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
       match p2, p3 with
       | True, True -> True
       | True, Not True -> p1
-      | True, p3 -> Or [p1; p3]
+      | True, p3 -> Implies (Not p1, p3)
       | Not True, True -> Not p1
       | Not True, Not True -> Not True
       | Not True, p3 -> And [Not p1; p3]
@@ -170,7 +170,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | p2, Not True -> And [p1; p2]
       | x1, Not x2 ->
         if eq x1 x2
-        then Iff (x1, x2)
+        then Iff (p1, x1)
         else desugar_ite (p1, p2, p3)
       | _ -> desugar_ite (p1, p2, p3)
     in
@@ -194,6 +194,22 @@ module Epr (E: EprTree.EprTree): Epr = struct
         if eq p1 p2 then True else Iff (p1, p2)
       | True -> True
     in
+    (* let rec multi_implies t tmp =
+     *   let make_conj tmp t =
+     *     match tmp with
+     *     | [] -> t
+     *     | _ -> Implies (And tmp, t)
+     *   in
+     *   match t with
+     *   | Implies(p1,p2) -> multi_implies p2 (tmp @ [p1])
+     *   | Ite (p1, p2, p3) ->
+     *     make_conj tmp (Ite (multi_implies p1 [], multi_implies p2 [], multi_implies p3 []))
+     *   | And ps -> make_conj tmp (And (List.map (fun p -> multi_implies p tmp) ps))
+     *   | Or ps -> make_conj tmp (Or (List.map (fun p -> multi_implies p tmp) ps))
+     *   | Iff (p1, p2) ->
+     *     make_conj tmp (Iff ( multi_implies p1 [],  multi_implies p2 []))
+     *   | Atom _ | Not _ | True -> make_conj tmp t
+     * in *)
     let rec simplify_same = function
       | Implies(p1, Implies(p2, p3)) -> simplify_same (Implies(And[p1;p2], p3))
       | Implies(p1, p2) -> Implies(simplify_same p1, simplify_same p2)
@@ -211,6 +227,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
         if eq p1 p2 then True else Iff (p1, p2)
       | True -> True
     in
-    simplify_same (aux a)
+    (simplify_same (aux a))
+    (* multi_implies (simplify_same (aux a)) [] *)
   let forallformula_simplify_ite (fv, e) = fv, simplify_ite e
 end

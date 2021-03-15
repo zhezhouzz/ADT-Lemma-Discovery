@@ -11,6 +11,7 @@ module type Value = sig
   val eq : t -> t -> bool
   val flatten_forall: t -> int list
   val flatten_forall_l: t list -> int list
+  val get_tp: t -> Tp.Tp.t
 end
 
 module Value: Value = struct
@@ -60,4 +61,14 @@ module Value: Value = struct
         | TB itb -> (LabeledTree.flatten_forall (fun x y -> x == y) itb) @ r
         | NotADt -> raise @@ InterExn "flatten_forall_l: not a value"
       ) [] l
+  module T = Tp.Tp
+  let get_tp v =
+    match v with
+    | I _ -> T.Int
+    | B _ -> T.Bool
+    | L _ -> T.IntList
+    | T _ -> T.IntTree
+    | TI _ -> T.IntTreeI
+    | TB _ -> T.IntTreeB
+    | NotADt -> raise @@ InterExn "get_tp: not a value"
 end

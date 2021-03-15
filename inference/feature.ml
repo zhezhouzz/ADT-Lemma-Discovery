@@ -14,6 +14,7 @@ module type Feature = sig
   val get_vars: t -> string list * string list
   val make_set: (Tp.Tp.t * string) list -> set
   val make_set_from_preds: string list -> string list -> (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
+  val make_set_from_preds_multidt: string list -> string list -> (Tp.Tp.t * string) list -> set
   val make_target: (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
   val subst:string Utils.StrMap.t -> t -> t
 end
@@ -129,6 +130,20 @@ module Feature : Feature = struct
       | None -> []
     in
     pr_features @ eq_features @ comp_features
+
+  let make_set_from_preds_multidt preds basicpreds variables =
+    let bvariables, variables = List.partition
+        (fun (tp, _) -> match tp with
+           | T.Bool -> true
+           | _ -> false) variables in
+    let bfeatures = List.map (fun (_, name) -> Bo name) bvariables in
+    let dts, basics = List.partition
+        (fun (tp, _) -> T.is_dt tp) variables in
+    bfeatures @ (
+      List.fold_left (fun featureset dt ->
+          featureset @ (make_set_from_preds preds basicpreds dt basics)
+        ) [] dts
+    )
 
   let make_set vars =
     let variable_split (dts, elems, bs) (tp, name) =

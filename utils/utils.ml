@@ -12,6 +12,8 @@ module StrMap = struct
     | None -> raise @@ InterExn info
     | Some v -> v
   let find_opt m k = find_opt k m
+  let to_value_list m = fold (fun _ v l -> v :: l) m []
+  let to_key_list m = fold (fun k _ l -> k :: l) m []
 end
 
 module Renaming = struct
@@ -252,6 +254,25 @@ module List = struct
         | Some _ -> aux (a :: r)
       in
       aux []
+
+  let choose_list_list_order_fold f default ll =
+    if List.exists (fun l -> (List.length l) == 0) ll then default else
+      let others = Array.of_list (List.map Array.of_list ll) in
+      let n = Array.length others in
+      let idx_max = Array.init n (fun i -> Array.length others.(i)) in
+      let idx = Array.init n (fun _ -> 0) in
+      let rec increase i =
+        if i >= n then None else
+        if (idx.(i) + 1) >= idx_max.(i)
+        then (Array.set idx i 0; increase (i + 1))
+        else (Array.set idx i (idx.(i) + 1); Some ()) in
+      let rec aux r =
+        let a = List.init n (fun i -> others.(i).(idx.(i))) in
+        match increase 0 with
+        | None -> f r a
+        | Some _ -> aux (f r a)
+      in
+      aux default
 
   let choose_n l n =
     let rec aux r n =
@@ -634,3 +655,4 @@ let map_triple f (a, b, c) = (f a, f b, f c)
 let map4 f (a, b, c, d) = (f a, f b, f c, f d)
 let map5 f (a, b, c, d, e) = (f a, f b, f c, f d, f e)
 let map6 f (a, b, c, d, e, g) = (f a, f b, f c, f d, f e, f g)
+let map7 f (a, b, c, d, e, g, h) = (f a, f b, f c, f d, f e, f g, f h)
