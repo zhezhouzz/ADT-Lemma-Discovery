@@ -139,6 +139,8 @@ module Feature : Feature = struct
     let bfeatures = List.map (fun (_, name) -> Bo name) bvariables in
     let dts, basics = List.partition
         (fun (tp, _) -> T.is_dt tp) variables in
+    (* let _ = Printf.printf "dts: %s\n" (List.to_string T.layouttvar dts) in *)
+    (* let _ = Printf.printf "basics: %s\n" (List.to_string T.layouttvar basics) in *)
     bfeatures @ (
       List.fold_left (fun featureset dt ->
           featureset @ (make_set_from_preds preds basicpreds dt basics)
@@ -207,7 +209,7 @@ module Feature : Feature = struct
       | _ -> raise @@ UndefExn "make_target"
 
   let subst m x =
-    let find m a = StrMap.find "feature:subst" m a in
+    let find m a = StrMap.find (sprintf "feature:subst(%s)" a) m a in
     match x with
     | Base (op, a, b) -> Base (op, find m a, find m b)
     | Pr (pred, [dt], args) -> Pr (pred, [find m dt], List.map (find m) args)

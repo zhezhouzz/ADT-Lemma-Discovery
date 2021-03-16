@@ -9,7 +9,7 @@ module type EprTree = sig
     | And of t list
     | Or of t list
     | Iff of t * t
-  type free_variable = string
+  type free_variable = Tp.Tp.tpedvar
   type forallformula = free_variable list * t
   val layout: t -> string
   val layout_forallformula: forallformula -> string
@@ -26,6 +26,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
   with type SE.tp = SE.tp
   with type SE.t = SE.t = struct
   module SE = SE
+  module T = Tp.Tp
   open Utils
   open Printf
 
@@ -38,7 +39,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     | And of t list
     | Or of t list
     | Iff of t * t
-  type free_variable = string
+  type free_variable = Tp.Tp.tpedvar
   type forallformula = free_variable list * t
 
   (* let sym_and = "/\\"
@@ -109,12 +110,14 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     aux indent e
 
   let pretty_layout_forallformula (forallvars, body) =
+    let qvstr = List.map T.layouttvar forallvars in
     if (List.length forallvars) == 0 then layout body else
-      sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (pretty_layout 0 body)
+      sprintf "forall %s,%s" (List.inner_layout qvstr " " "") (pretty_layout 0 body)
 
   let layout_forallformula (forallvars, body) =
+    let qvstr = List.map T.layouttvar forallvars in
     if (List.length forallvars) == 0 then layout body else
-      sprintf "forall %s,%s" (List.inner_layout forallvars " " "") (layout body)
+      sprintf "forall %s,%s" (List.inner_layout qvstr " " "") (layout body)
 
   let subst body args argsvalue =
     let rec aux = function
@@ -154,5 +157,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     aux a b
 
   let eq_forallformula (fv1, body1) (fv2, body2) =
-    (List.for_all2 String.equal fv1 fv2) && (eq body1 body2)
+    let _, fv1str = List.split fv1 in
+    let _, fv2str = List.split fv2 in
+    (List.for_all2 String.equal fv1str fv2str) && (eq body1 body2)
 end

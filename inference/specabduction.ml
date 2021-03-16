@@ -1,7 +1,4 @@
 module type SpecAbduction = sig
-  type hole_spec = {name: string;
-                    funtype: (Tp.Tp.t * string) list;
-                    inout: Pred.Value.t list list}
   type max_env = {
     spectable: Language.SpecAst.spec Utils.StrMap.t;
     phi: (Tp.Tp.t * string) list * Language.SpecAst.spec Utils.StrMap.t;
@@ -21,22 +18,21 @@ module type SpecAbduction = sig
 
   val multi_infer:
     ctx:Z3.context ->
-    vc:Language.SpecAst.t ->
+    pre:Language.SpecAst.t ->
+    post:Language.SpecAst.t ->
     spectable:Language.SpecAst.spec Utils.StrMap.t ->
-    holes: string list ->
+    holes: Language.Helper.hole list ->
+    holes_imp: (Pred.Value.t list -> Pred.Value.t list) Utils.StrMap.t ->
     preds: string list ->
     startX:int->
     maxX:int->
-    samples: (Pred.Value.t Utils.StrMap.t) list ->
     Language.SpecAst.spec option
 
   val maximal_abduction: ctx:Z3.context -> menv:max_env -> unit
 end
 
 module SpecAbduction (D: Dtree.Dtree) = struct
-  type hole_spec = {name: string;
-                    funtype: (Tp.Tp.t * string) list;
-                    inout: Pred.Value.t list list}
+  module LH = Language.Helper
   module P = Pred.Pred
   module V = Pred.Value
   module Ast = Language.SpecAst
@@ -53,7 +49,7 @@ module SpecAbduction (D: Dtree.Dtree) = struct
     pos: (bool list, unit) Hashtbl.t;
     neg: (bool list, unit) Hashtbl.t;
     candidate_neg: (bool list, unit) Hashtbl.t;
-    dt: D.t;
+    dt: F.t D.t;
     abduciable: Epr.forallformula;
     coabduciable: Epr.forallformula;
   }
@@ -386,7 +382,7 @@ module SpecAbduction (D: Dtree.Dtree) = struct
     (* let _ = if (!loop_counter) > 1 && String.equal head.name "t" then
      *     raise @@ InterExn "end" else () in *)
     let abduciable = Epr.simplify_ite abduciable in
-    let abduciable = (snd (List.split hole.qv)), abduciable in
+    let abduciable = hole.qv, abduciable in
     let _ =
       if String.equal head.name "StackTail"
       then
@@ -422,15 +418,14 @@ module SpecAbduction (D: Dtree.Dtree) = struct
           ) holes trace
       ) holes traces
 
-  let max_spec ctx vcs spectable (head, hole) =
+  let max_spec ctx vcs (spectable: Ast.spec StrMap.t) (head, hole) =
     let _ = printf "--max_spec--\n\n" in
     let _ = printf "[%s]:%s\n" head.name (Epr.layout_forallformula hole.abduciable) in
-    let verify spectable (head, hole) =
+    let verify (spectable: Ast.spec StrMap.t) (head, hole) =
       let vc = Ast.neg_spec head.name (Or vcs) in
       let vc = Ast.implies_to_and vc in
-      let _, argnames = List.split head.funtype in
       let spectable = StrMap.add ("co_" ^ head.name)
-          (argnames, hole.coabduciable) spectable in
+          (head.funtype, hole.coabduciable) spectable in
       let _ = printf "raw smt_query\n%s\n" (Ast.layout vc) in
       let _ = StrMap.iter (fun name spec ->
           printf "%s\n" (Ast.layout_spec_entry name spec)) spectable in
@@ -483,7 +478,7 @@ module SpecAbduction (D: Dtree.Dtree) = struct
         (Epr.And fs) :: res
         ) candidate []
     in
-    head, {hole with coabduciable = snd (List.split hole.qv), (Epr.Not (Epr.And ps))}
+    head, {hole with coabduciable = hole.qv, (Epr.Not (Epr.And ps))}
 
   let refinement_loop ctx vcs spectable holes preds bpreds =
     let _ = printf "refinement_loop\n" in
@@ -514,9 +509,8 @@ module SpecAbduction (D: Dtree.Dtree) = struct
       let holes = List.map (fun (head, cache) -> head, cache_update_abd head cache) holes in
       let spectable =
         List.fold_left (fun spectable (head, cache) ->
-            let _, argnames = List.split head.funtype in
             StrMap.add head.name
-              (argnames, cache.abduciable) spectable
+              (head.funtype, cache.abduciable) spectable
           ) spectable holes in
       let is_verified, holes =
         List.fold_lefti (fun (is_verified, holes) idx vc ->
@@ -543,37 +537,4 @@ module SpecAbduction (D: Dtree.Dtree) = struct
         | Some spec -> Some spec
     in
     search_hyp startX
-
-  type max_env = {
-    spectable: Ast.spec StrMap.t;
-    phi: (T.t * string) list * Ast.t;
-    hole: (T.t * string) list * Ast.t;
-    qv: string list;
-  }
-
-  let arg_eq (tp1, name1) (tp2, name2) =
-    (T.eq tp1 tp2) && (String.equal name1 name2)
-
-  let args_sub a b =
-    List.filter_map (fun arg ->
-        if List.exists (arg_eq arg) b
-        then None
-        else Some arg
-      ) a
-
-  let args_union a b =
-    (args_sub a b) @ b
-
-  let build_pos_query ctx menv =
-    let phi_args = fst menv.phi in
-    let hole_args = fst menv.hole in
-    let total_args = args_union phi_args hole_args in
-    let not_hole_args = args_sub total_args hole_args in
-    let pre = Ast.to_z3_with_q ctx (snd menv.phi) menv.spectable menv.qv not_hole_args in
-    pre
-
-  let maximal_abduction ctx menv =
-    let query = build_pos_query ctx menv in
-    let _ = Printf.printf "query:\n%s\n" (Expr.to_string query) in
-    ()
 end

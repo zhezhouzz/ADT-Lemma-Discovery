@@ -4,15 +4,17 @@
 )
 (tests
  (names
- spec_customstk
- spec_splayhp
- spec_leftisthp
- spec_unbset
- spec_rbset
- spec_stream
- spec_bankersq
- spec_uniquel
- spec_batchedq
+ ;; spec_customstk2
+ spec_customstk3
+ ;;spec_customstk
+ ;;spec_splayhp
+ ;;spec_leftisthp
+ ;;spec_unbset
+ ;;spec_rbset
+ ;;spec_stream
+ ;;spec_bankersq
+ ;;spec_uniquel
+ ;;spec_batchedq
  ;; customstk
  ;; splayhp
  ;; leftisthp

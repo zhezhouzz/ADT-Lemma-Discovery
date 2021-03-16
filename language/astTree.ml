@@ -9,7 +9,7 @@ module type AstTree = sig
     | Or of t list
     | Iff of t * t
     | SpecApply of string * E.SE.t list
-  type spec = (string list) * E.forallformula
+  type spec = (Tp.Tp.tpedvar list) * E.forallformula
   val layout: t -> string
   val vc_layout: t -> string
   val layout_spec: spec -> string
@@ -37,7 +37,7 @@ module AstTree (E: Epr.Epr) : AstTree
     | Or of t list
     | Iff of t * t
     | SpecApply of string * E.SE.t list
-  type spec = (string list) * E.forallformula
+  type spec = (Tp.Tp.tpedvar list) * E.forallformula
   let rec layout = function
     | ForAll ff -> E.layout_forallformula ff
     | Implies (p1, p2) -> sprintf "(%s => %s)" (layout p1) (layout p2)
@@ -118,13 +118,15 @@ module AstTree (E: Epr.Epr) : AstTree
         sprintf "%s%s(%s)" (mk_indent indent) specname (List.to_string E.SE.layout args)
     in
     aux 0 a
+
+  module T = Tp.Tp
   let layout_spec (args, formula) =
-    sprintf "fun %s -> %s" (List.to_string (fun x -> x) args)
+    sprintf "fun %s -> %s" (List.to_string T.layouttvar args)
       (E.pretty_layout_forallformula formula)
 
   let layout_spec_entry name (args, formula) =
     sprintf "%s(%s):=\n%s" name
-      (List.to_string (fun x -> x) args) (E.pretty_layout_forallformula formula)
+      (List.to_string T.layouttvar args) (E.pretty_layout_forallformula formula)
 
   let eq a b =
     let rec aux a b =

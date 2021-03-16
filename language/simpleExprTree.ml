@@ -13,6 +13,8 @@ module type SimpleExprTree = sig
   val eq: t -> t -> bool
   val var_to_tp_name: t -> (int list * (tp * string) list)
   val get_tp: t -> tp
+  val to_tpedvar: t -> Tp.Tp.tpedvar
+  val from_tpedvar: Tp.Tp.tpedvar -> t
 end
 
 module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
@@ -82,4 +84,10 @@ let rec var_to_tp_name = function
   | Op (_, _, args) ->
     let a, b = List.split (List.map var_to_tp_name args) in
     List.flatten a, List.flatten b
+
+let to_tpedvar = function
+  | Var (tp, name) -> (tp, name)
+  | _ -> raise @@ InterExn "SE::to_tpedvar"
+
+let from_tpedvar (tp, name) = Var (tp, name)
 end

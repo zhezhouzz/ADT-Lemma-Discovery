@@ -8,7 +8,7 @@ module type Ast = sig
   val spec_to_z3: Z3.context -> string -> spec -> Z3.FuncDecl.func_decl * Z3.Expr.expr
   val to_z3_with_q: Z3.context -> t -> spec Utils.StrMap.t -> string list -> (Tp.Tp.t * string) list -> Z3.Expr.expr
   val to_z3: Z3.context -> t -> spec Utils.StrMap.t -> Z3.Expr.expr
-  val neg_to_z3: Z3.context -> t -> spec Utils.StrMap.t -> string list * Z3.Expr.expr
+  val neg_to_z3: Z3.context -> t -> spec Utils.StrMap.t -> Tp.Tp.tpedvar list * Z3.Expr.expr
   val application: t -> spec Utils.StrMap.t -> t
   val to_nnf: t -> t
   val remove_unsat_clause: t -> t
@@ -49,7 +49,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
   let type_check bexpr = (bexpr, true)
   let spec_exec (args, forallf) args' env =
     let argsmap = List.combine args args' in
-    let new_env = List.fold_left (fun m (name, name') ->
+    let new_env = List.fold_left (fun m ((_, name), name') ->
         StrMap.add name (StrMap.find "spec_exex" env name') m
       ) StrMap.empty argsmap in
     E.forallformula_exec forallf new_env
@@ -65,7 +65,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | SpecApply (spec_name, args) ->
         let argsvalue = List.map (fun b -> E.SE.exec b env) args in
         let args', body = StrMap.find "ast:exec" stable spec_name in
-        let env = List.fold_left (fun env (k, v) -> StrMap.add k v env) env
+        let env = List.fold_left (fun env ((_, k), v) -> StrMap.add k v env) env
             (List.combine args' argsvalue) in
         E.forallformula_exec body env
     in
@@ -77,12 +77,12 @@ module Ast (A: AstTree.AstTree): Ast = struct
     let fdecl = FuncDecl.mk_func_decl_s ctx name
         (List.init (List.length args) (fun _ -> Integer.mk_sort ctx))
         (Boolean.mk_sort ctx) in
-    let args = List.map (fun name -> Integer.mk_const_s ctx name) args in
+    let args = List.map (fun name -> tpedvar_to_z3 ctx name) args in
     let body = make_forall ctx args (
         Boolean.mk_iff ctx (FuncDecl.apply fdecl args) (E.forallformula_to_z3 ctx forallf)) in
     fdecl, body
 
-  let application a spec_tab =
+  let application a (spec_tab: spec StrMap.t) =
     let rec aux = function
       | ForAll ff -> ForAll ff
       | Implies (p1, p2) -> Implies(aux p1, aux p2)
@@ -93,10 +93,10 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | Iff (p1, p2) -> Iff (aux p1, aux p2)
       | SpecApply (spec_name, argsvalue) ->
         let args, body = StrMap.find "ast::application" spec_tab spec_name in
-         ForAll (E.subst_forallformula body args argsvalue)
+         ForAll (E.subst_forallformula body (snd @@ List.split args) argsvalue)
     in
     aux a
-  let to_z3 ctx a spec_tab =
+  let to_z3 ctx a (spec_tab: spec StrMap.t) =
     (* let ptab, bodys = make_spec_def ctx spec_tab in *)
     let rec aux = function
       | ForAll ff -> E.forallformula_to_z3 ctx ff
@@ -115,11 +115,12 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | SpecApply (spec_name, argsvalue) ->
         let args, body = StrMap.find
             (Printf.sprintf "ast::to_z3: spec(%s) no found" spec_name) spec_tab spec_name in
-        E.forallformula_to_z3 ctx @@ E.subst_forallformula body args argsvalue
+        E.forallformula_to_z3 ctx @@
+        E.subst_forallformula body (snd @@ List.split args) argsvalue
     in
     aux a
 
-  let to_z3_with_q ctx a spec_tab qv qargs =
+  let to_z3_with_q ctx a (spec_tab: spec StrMap.t) qv qargs =
     (* let ptab, bodys = make_spec_def ctx spec_tab in *)
     let rec aux = function
       | ForAll _ -> raise @@ InterExn "bad ast to z3 q"
@@ -138,16 +139,17 @@ module Ast (A: AstTree.AstTree): Ast = struct
       | SpecApply (spec_name, argsvalue) ->
         let args, body = StrMap.find
             (Printf.sprintf "ast::to_z3: spec(%s) no found" spec_name) spec_tab spec_name in
-        let (qv', body') = E.subst_forallformula body args argsvalue in
+        let (qv', body') = E.subst_forallformula body (snd @@ List.split args) argsvalue in
         if (List.length qv) != (List.length qv')
         then raise @@ InterExn "unimplemented z3 q"
         else
           let qv_se = List.map (fun qv -> SE.Var (T.Int, qv)) qv in
+          let _, qv' = List.split qv' in
           let body = E.subst body' qv' qv_se in
           E.to_z3 ctx body
     in
     let body = aux a in
-    let qargs = List.map (arg_to_z3 ctx) qargs in
+    let qargs = List.map (tpedvar_to_z3 ctx) qargs in
     make_forall ctx qargs body
 
   let eliminate_cond ast =
@@ -187,11 +189,11 @@ module Ast (A: AstTree.AstTree): Ast = struct
     in
     aux ast
 
-  let neg_to_z3 ctx a spec_tab =
+  let neg_to_z3 ctx a (spec_tab: spec StrMap.t) =
     match a with
     | Implies (p, SpecApply (name, argsvalue)) ->
       let args, body = StrMap.find "neg_to_z3" spec_tab name in
-      let body = E.subst_forallformula body args argsvalue in
+      let body = E.subst_forallformula body (snd @@ List.split args) argsvalue in
       let fv, body = E.neg_forallf body in
       fv, to_z3 ctx (And [p;ForAll body]) spec_tab
     | _ -> raise @@ InterExn "neg_to_z3"
@@ -258,6 +260,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
   let skolemize_clasue = function
     | ForAll ff -> None, ForAll ff
     | Not (ForAll (fv, body)) ->
+      let _, fv = List.split fv in
       let dts = E.related_dt body fv in
       let fv' = List.init (List.length fv) (fun _ -> Renaming.name ()) in
       let fvse' = List.map (fun n -> E.SE.Var (T.Int, n)) fv' in
@@ -270,7 +273,7 @@ module Ast (A: AstTree.AstTree): Ast = struct
     | Not (ForAll (fv, body)) ->
       let fv' = List.init (List.length fv) (fun _ -> Renaming.name ()) in
       let fvse' = List.map (fun n -> E.SE.Var (T.Int, n)) fv' in
-      fv', ForAll ([], E.subst (E.Not body) fv fvse')
+      fv', ForAll ([], E.subst (E.Not body) (snd (List.split fv)) fvse')
     | Or ps ->
       let newvars, ps = List.split (List.map skolemize ps) in
       List.flatten newvars, Or ps

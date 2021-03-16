@@ -7,6 +7,8 @@ module Tp = struct
     | IntTreeI
     | IntTreeB
 
+  type tpedvar = t * string
+
   let layout = function
     | Bool -> "bool"
     | Int -> "int"
@@ -14,6 +16,8 @@ module Tp = struct
     | IntTree -> "int tree"
     | IntTreeI -> "int treei"
     | IntTreeB -> "int treeb"
+
+  let layouttvar (t, name) = (layout t) ^ ":" ^ name
 
   let is_dt = function
     | Int -> false

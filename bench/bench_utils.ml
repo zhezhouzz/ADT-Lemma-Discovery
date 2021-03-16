@@ -163,7 +163,5 @@ let set_post spectable args qv body =
 
 let make_hole name argstp =
   let names = T.auto_name argstp in
-  let hole = {SpecAbd.name = name;
-              SpecAbd.funtype = List.combine argstp names;
-              SpecAbd.inout = []} in
+  let hole = {name = name; args = List.combine argstp names} in
   (fun args -> SpecApply(name, args)), hole

@@ -7,7 +7,7 @@ module type Epr = sig
   val forallformula_exec: forallformula -> value Utils.StrMap.t -> bool
   val to_z3: Z3.context -> t -> Z3.Expr.expr
   val forallformula_to_z3: Z3.context -> forallformula -> Z3.Expr.expr
-  val neg_forallf: forallformula -> string list * forallformula
+  val neg_forallf: forallformula -> Tp.Tp.tpedvar list * forallformula
   val related_dt: t -> string list -> string list
   val desugar: t -> t
   val to_nnf: t -> t
@@ -66,6 +66,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
     | Some m -> (m + 1) :: us
 
   let forallformula_exec (fv, e) env =
+    let _, fv = List.split fv in
     let us = forallu e env in
     (* let _ = Printf.printf "%s\n" (intlist_to_string us) in *)
     let len = List.length us in
@@ -99,7 +100,6 @@ module Epr (E: EprTree.EprTree): Epr = struct
     aux ids
 
   open Z3
-  open Arithmetic
   open Z3aux
 
   let to_z3 ctx epr =
@@ -114,7 +114,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2) in
     aux epr
   let forallformula_to_z3 ctx (fv, epr) =
-    let fv = List.map (fun name -> Integer.mk_const_s ctx name) fv in
+    let fv = List.map (fun var -> tpedvar_to_z3 ctx var) fv in
     make_forall ctx fv (to_z3 ctx epr)
   let neg_forallf (fv, epr) = fv, ([], Not epr)
   let related_dt e fv =

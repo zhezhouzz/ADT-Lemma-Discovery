@@ -2,21 +2,26 @@ module type Dtree = sig
   type value = Pred.Value.t
   type feature = Feature.Feature.t
   type feature_set = Feature.Feature.set
-  type t =
+  type label = Pos | Neg | MayNeg
+  type 'a t =
     | T
     | F
-    | Leaf of feature
-    | Node of feature * t * t
-  val exec: t -> value Utils.StrMap.t -> bool
-  val exec_vector: t -> feature_set -> bool list -> bool
-  val layout: t -> string
-  val to_epr: t -> Language.SpecAst.E.t
-  val to_forallformula: t -> Language.SpecAst.E.forallformula
-  val to_spec: t -> Language.SpecAst.spec
-  val of_fastdt: Ml.FastDT.FastDT.dt -> feature_set -> t
-  val classify: Sample.FeatureVector.data -> t
-  val len: t -> int
-  val dt_summary: t -> feature_set -> (int * int)
+    | Leaf of 'a
+    | Node of 'a * 'a t * 'a t
+  val exec: feature t -> value Utils.StrMap.t -> bool
+  val exec_vector: feature t -> feature_set -> bool list -> bool
+  val exec_vector_idx: int t -> bool list -> bool
+  val layout: feature t -> string
+  val to_epr: feature t -> Language.SpecAst.E.t
+  val to_epr_idx: int t -> Language.SpecAst.E.t list -> Language.SpecAst.E.t
+  val to_forallformula: feature t -> Language.SpecAst.E.forallformula
+  val to_spec: feature t -> Language.SpecAst.spec
+  val of_fastdt: Ml.FastDT.FastDT.dt -> feature_set -> feature t
+  val classify: Sample.FeatureVector.data -> feature t
+  val classify_hash: feature_set -> (bool list, label) Hashtbl.t -> feature t * int t
+  val len: feature t -> int
+  val dt_summary: feature t -> feature_set -> (int * int)
+  val layout_label: label -> string
 end
 
 module Dtree : Dtree = struct
@@ -31,13 +36,19 @@ module Dtree : Dtree = struct
   type value = Pred.Value.t
   type feature = Feature.Feature.t
   type feature_set = feature list
-  type t =
+  type label = Pos | Neg | MayNeg
+  type 'a t =
     | T
     | F
-    | Leaf of feature
-    | Node of feature * t * t
+    | Leaf of 'a
+    | Node of 'a * 'a t * 'a t
 
-  let exec (dt: t) m : bool =
+  let layout_label = function
+    | Pos -> "pos"
+    | Neg -> "neg"
+    | MayNeg -> "mayneg"
+
+  let exec (dt: feature t) m : bool =
     let rec aux = function
       | T -> true
       | F -> false
@@ -47,7 +58,7 @@ module Dtree : Dtree = struct
     in
     aux dt
 
-  let exec_vector (dt: t) (fl: feature list) (vec: bool list) : bool =
+  let exec_vector (dt: feature t) (fl: feature list) (vec: bool list) : bool =
     let m = List.combine fl vec in
     let get_b f = snd @@ List.find "exec_raw" (fun (f', _) -> F.eq f f') m in
     let rec aux = function
@@ -59,6 +70,20 @@ module Dtree : Dtree = struct
     in
     aux dt
 
+  let exec_vector_idx (dt: int t) (vec: bool list) : bool =
+    let nth i = match List.nth_opt vec i with
+      | None -> raise @@ InterExn "exec_vector_idx"
+      | Some b -> b
+    in
+    let rec aux = function
+      | T -> true
+      | F -> false
+      | Leaf feature -> nth feature
+      | Node (feature, l, r) ->
+        if nth feature then aux l else aux r
+    in
+    aux dt
+
   let rec layout = function
     | T -> "⊤"
     | F -> "⊥"
@@ -66,7 +91,7 @@ module Dtree : Dtree = struct
     | Node (feature, l, r) ->
       sprintf "[%s](%s,%s)" (F.layout feature) (layout l) (layout r)
 
-  let get_vars (dtree: t) =
+  let get_vars (dtree: feature t) =
     let rec aux = function
       | T | F -> [], []
       | Leaf feature -> F.get_vars feature
@@ -86,12 +111,29 @@ module Dtree : Dtree = struct
     in
     aux dtree
 
-  let to_forallformula (dtree: t) =
-    let dts, elems = get_vars dtree in
-    dts @ elems, to_epr dtree
+  let to_epr_idx dtree vars =
+    let nth i = match List.nth_opt vars i with
+      | None -> raise @@ InterExn "to_epr_idx"
+      | Some b -> b
+    in
+    let rec aux = function
+      | T -> Epr.True
+      | F -> Epr.Not Epr.True
+      | Leaf feature -> nth feature
+      | Node (feature, l, r) -> Epr.Ite (nth feature, aux l, aux r)
+    in
+    aux dtree
 
-  let to_spec (dtree: t) =
+  (* TODO: handle types in predicates *)
+  let to_forallformula (dtree: feature t) =
     let dts, elems = get_vars dtree in
+    let vars = List.map (fun v -> T.Int, v) (dts @ elems) in
+    vars, to_epr dtree
+
+  let to_spec (dtree: feature t) =
+    let dts, elems = get_vars dtree in
+    let dts = List.map (fun v -> T.Int, v) dts in
+    let elems = List.map (fun v -> T.Int, v) elems in
     dts, (elems, to_epr dtree)
 
 
@@ -110,6 +152,22 @@ module Dtree : Dtree = struct
         match List.nth_opt feature_set split with
         | None -> raise @@ InterExn "Bad Dt Result"
         | Some p -> Node (p, aux if_t, aux if_f)
+    in
+    aux dt
+
+  let of_fastdt_idx dt =
+    let rec aux = function
+      | FastDT.Leaf {c_t; c_f} ->
+        let res =
+          if (Float.abs c_t) < 1e-3 then F
+          else if (Float.abs c_f) < 1e-3 then T
+          else raise @@ InterExn (sprintf "Bad Dt Result(%f, %f)" c_t c_f)
+        in
+        (* let _ = Printf.printf "leaf(%f,%f) ->(%f,%f,%f) = %s\n" c_t c_f
+         *     (Float.abs c_t) (Float.abs c_f) (1e-3) (layout res) in *)
+        res
+      | FastDT.Node ({split;if_t;if_f}) ->
+        Node (split, aux if_t, aux if_f)
     in
     aux dt
 
@@ -148,14 +206,36 @@ module Dtree : Dtree = struct
     in
     (aux 0; (!posnum, !negnum))
 
-  let classify {FV.dfeature_set;FV.labeled_vecs} =
-    let samples = List.map (fun (a, b) -> a, Array.of_list b) labeled_vecs in
-    let dt = FastDT.make_dt ~samples:(Array.of_list samples) ~max_d:50 in
-    let _ = FastDT.print_tree' dt in
+  let classify_ fset samples =
+    let dt = FastDT.make_dt ~samples:samples ~max_d:50 in
+    (* let _ = FastDT.print_tree' dt in *)
     (* let _ = if List.length labeled_vecs >= 3 then raise @@ InterExn "class" else () in *)
-    let res = of_fastdt dt dfeature_set in
+    let res = of_fastdt dt fset in
     (* let posnum, negnum = dt_summary res dfeature_set in *)
     (* let _ = Printf.printf "summary: %i|%i\n" posnum negnum in *)
     res
+
+  let classify {FV.dfeature_set;FV.labeled_vecs} =
+    let samples = List.map (fun (a, b) -> a, Array.of_list b) labeled_vecs in
+    classify_ dfeature_set (Array.of_list samples)
+
+  let classify_hash fset htab =
+    let samples = Array.init (Hashtbl.length htab)
+        (fun _ -> false, Array.init (List.length fset) (fun _ -> false)) in
+    let iter = ref 0 in
+    let _ =
+      Hashtbl.iter (fun f v ->
+        let _ =
+        match v with
+        | Pos -> Array.set samples !iter (true, Array.of_list f)
+        | Neg | MayNeg -> Array.set samples !iter (false, Array.of_list f)
+        in
+        iter := !iter + 1
+        ) htab
+    in
+    let dt = FastDT.make_dt ~samples:samples ~max_d:50 in
+    let res = of_fastdt dt fset in
+    let res_idx = of_fastdt_idx dt in
+    res, res_idx
 
 end

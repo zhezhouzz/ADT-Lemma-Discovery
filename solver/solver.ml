@@ -41,6 +41,11 @@ let get_pred m predexpr =
       | Z3enums.L_UNDEF -> raise @@ InterExn "get pred"
     )
 
+let get_unknown_fv ctx m unknown_fv =
+  List.map (fun (_, b) ->
+      get_pred m (Boolean.mk_const_s ctx b))
+    unknown_fv
+
 let check ctx vc =
   (* let _ = printf "check\n" in *)
   let solver = (mk_solver ctx None) in

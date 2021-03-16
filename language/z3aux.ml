@@ -21,7 +21,7 @@ let array_head ctx (arrname, idxname) =
   let idx = Integer.mk_const_s ctx idxname in
   array_head_ ctx (arrname, idx)
 
-let arg_to_z3 ctx (tp, name) =
+let tpedvar_to_z3 ctx (tp, name) =
   T.(match tp with
       | Int -> Integer.mk_const_s ctx name
       | Bool -> Boolean.mk_const_s ctx name
