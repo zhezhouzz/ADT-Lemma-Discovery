@@ -9,17 +9,18 @@ module FV = Sample.FeatureVector
 module D = Dtree.Dtree
 open Utils
 
-type hole = {name: string; args: T.tpedvar list}
-
 type env = {
+  pre: Ast.t;
+  post: Ast.t;
+  spectable: Ast.spec StrMap.t;
+}
+
+type spec_env = {
   cur_dt: int D.t;
   current: Ast.spec;
   qv: T.tpedvar list;
   fset: F.t list;
-  pre: Ast.t;
-  post: Ast.t;
-  spectable: Ast.spec StrMap.t;
-  hole: hole;
+  hole: Language.Helper.hole;
   applied_args: T.tpedvar list list;
   unknown_fv: T.tpedvar list;
   fvtab: (bool list, D.label) Hashtbl.t

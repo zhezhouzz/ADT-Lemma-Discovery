@@ -8,9 +8,9 @@ let solver_result solver =
   match check solver [] with
   | UNSATISFIABLE -> true, None
   | UNKNOWN ->
-    (* raise (InterExn "time out!") *)
+    raise (InterExn "time out!")
     (* Printf.printf "\ttimeout\n"; *)
-    false, None
+    (* false, None *)
   | SATISFIABLE ->
     match Solver.get_model solver with
     | None -> raise (InterExn "never happen")
@@ -53,3 +53,28 @@ let check ctx vc =
   let _ = Goal.add g [vc] in
   let _ = Solver.add solver (get_formulas g) in
   solver_result solver
+
+let get_preds_interp model =
+  let funcs = Model.get_func_decls model in
+  let get func =
+    match Model.get_func_interp model func with
+    | None -> raise @@ InterExn "never happen"
+    | Some interp ->
+      let bounds =
+        List.fold_left (fun l e ->
+            Model.FuncInterp.FuncEntry.(
+              List.map (fun bound ->
+                  if Arithmetic.is_int_numeral bound
+                  then int_of_string @@ Arithmetic.Integer.numeral_to_string bound
+                  else raise @@ InterExn "bad bound"
+                ) (get_args e)
+            ) @ l
+          ) [] (Model.FuncInterp.get_entries interp) in
+      let bounds = List.remove_duplicates_eq bounds in
+      (* let _ = printf "%s\n" (IntList.to_string bounds) in *)
+      bounds
+  in
+  let bounds = List.remove_duplicates_eq @@ List.flatten @@ List.map get funcs in
+  match IntList.max_opt bounds with
+  | None -> [0]
+  | Some ma -> (ma + 1) :: bounds

@@ -84,19 +84,26 @@ module Helper = struct
   let poly_eq = fun args -> SpecApply("equal", args)
   let predefined_spec_tab =
     let spec_tab = StrMap.empty in
-    let spec_tab = add_spec spec_tab "Plus" ["x";"y";"z"] [] (int_eq (int_plus x y) z) in
-    let spec_tab = add_spec spec_tab "Le" ["x";"y"] [] (int_le x y) in
-    let spec_tab = add_spec spec_tab "le" ["bool0";"x";"y";] []
+    let spec_tab = add_spec spec_tab "Plus"
+        [T.Int, "x";T.Int, "y";T.Int, "z"] [] (int_eq (int_plus x y) z) in
+    let spec_tab = add_spec spec_tab "Le"
+        [T.Int, "x";T.Int, "y"] [] (int_le x y) in
+    let spec_tab = add_spec spec_tab "le"
+        [T.Bool, "bool0";T.Int, "x";T.Int, "y";] []
         (int_eq (SE.Op (T.Bool, "<=", [x;y])) bool0) in
-    let spec_tab = add_spec spec_tab "lt" ["bool0";"x";"y";] []
+    let spec_tab = add_spec spec_tab "lt"
+        [T.Bool, "bool0";T.Int, "x";T.Int, "y";] []
         (int_eq (SE.Op (T.Bool, "<", [x;y])) bool0) in
-    let spec_tab = add_spec spec_tab "intadd" ["x";"y";"z"] []
+    let spec_tab = add_spec spec_tab "intadd"
+        [T.Int, "x";T.Int, "y";T.Int, "z"] []
         (int_eq (SE.Op (T.Bool, "+", [x;y])) z) in
-    let spec_tab = add_spec spec_tab "inteq" ["bool0";"x";"y"] []
+    let spec_tab = add_spec spec_tab "inteq"
+        [T.Bool, "bool0";T.Int, "x";T.Int, "y";] []
         (int_eq (SE.Op (T.Bool, "==", [x;y])) bool0) in
-    let spec_tab = add_spec spec_tab "equal" ["x";"y"] [] (int_eq x y) in
-    let spec_tab = add_spec spec_tab "is_true" ["x"] [] (int_eq x booltrue) in
-    let spec_tab = add_spec spec_tab "is_false" ["x"] [] (int_eq x boolfalse) in
+    let spec_tab = add_spec spec_tab "equal"
+        [T.Int, "x";T.Int, "y"] [] (int_eq x y) in
+    let spec_tab = add_spec spec_tab "is_true" [T.Bool ,"x"] [] (int_eq x booltrue) in
+    let spec_tab = add_spec spec_tab "is_false" [T.Bool, "x"] [] (int_eq x boolfalse) in
     spec_tab
 
   let is_true b =
@@ -107,73 +114,4 @@ module Helper = struct
 
   type hole = {name: string; args: T.tpedvar list}
 
-  let instantiate_bool pre holes =
-    let update t specname (specname_true, specname_false) =
-      let rec aux t =
-        match t with
-        | ForAll _ -> raise @@ InterExn "never happen in instantiate_bool"
-        | Implies (p1, p2) -> Implies (aux p1, aux p2)
-        | And ps -> And (List.map aux ps)
-        | Or ps -> Or (List.map aux ps)
-        | Not p -> Not (aux p)
-        | Iff (p1, p2) -> Iff (aux p1, aux p2)
-        | Ite (SpecApply (specname', args), p2, p3) ->
-          if String.equal specname' specname
-          then
-            match args with
-            | [] -> raise @@ InterExn "never happen in instantiate_bool"
-            | _ :: args ->
-              Or [And [SpecApply(specname_true, args); aux p2];
-                  And [SpecApply(specname_false, args); aux p3];]
-          else Ite (SpecApply (specname', args), aux p2, aux p3)
-        | Ite (_, _, _) ->
-          raise @@ InterExn "never happen in instantiate_bool"
-        | SpecApply (specname', args) ->
-          if String.equal specname specname' then
-            match args with
-            | [] -> raise @@ InterExn "never happen in instantiate_bool"
-            | b :: args ->
-              Or [And [SpecApply(specname_true, args); is_true b];
-                  And [SpecApply(specname_false, args); is_false b];]
-          else
-            t
-      in
-      aux t
-    in
-    let if_cond t specname =
-      let rec aux t =
-        match t with
-        | ForAll _ -> raise @@ InterExn "never happen in instantiate_bool"
-        | Implies (p1, p2) -> (aux p1) || (aux p2)
-        | And ps -> List.exists aux ps
-        | Or ps -> List.exists aux ps
-        | Not p -> aux p
-        | Iff (p1, p2) -> (aux p1) || (aux p2)
-        | Ite (SpecApply (specname', _), p2, p3) ->
-          (String.equal specname' specname) || (aux p2) || (aux p3)
-        | Ite (_, _, _) ->
-          raise @@ InterExn "never happen in instantiate_bool"
-        | SpecApply (_, _) -> false
-      in
-      aux t
-    in
-    let rec update_holes (t, holes') = function
-      | [] -> (t, holes')
-      | h :: r ->
-        if if_cond t h.name
-        then
-          match h.args with
-          | [] -> raise @@ InterExn "never happen in instantiate_bool"
-          | _ :: args ->
-            let specname_true = h.name ^ "_true" in
-            let specname_false = h.name ^ "_false" in
-            let holes' = {name = specname_true; args = args} ::
-                        {name = specname_false; args = args} :: holes' in
-            let t = update t h.name (specname_true, specname_false) in
-            update_holes (t, holes') r
-        else
-          update_holes (t, h :: holes') r
-    in
-    let t, holes = update_holes (pre, []) holes in
-    t, holes
 end

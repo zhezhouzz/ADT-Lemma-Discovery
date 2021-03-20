@@ -116,7 +116,7 @@ let assertion ?(startX=1) ?(maxX=3) ctx vc spec_tab preds bpreds sampledata boun
 let init () =
   let _ = Random.init 0 in
   let ctx =
-    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "19999")] in
+    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "59999")] in
   ctx
 
 let spec_tab_add spec_tab {name;intps;outtps;prog} =
@@ -135,33 +135,33 @@ let make_lets l body =
       Let(names, es, body)
     ) l body
 
-module SpecAbd = Inference.SpecAbduction;;
-let test ctx vc spectable holes preds bpreds startnum endnum traces =
-  let result = SpecAbd.multi_infer ctx vc spectable holes preds bpreds startnum endnum
-      traces
-  in
-  let _ = match result with
-    | None -> Printf.printf "no result\n"
-    | Some (spectable, result) ->
-      let _ = StrMap.iter (fun name spec ->
-          printf "%s\n" (Ast.layout_spec_entry name spec)
-        ) spectable in
-      ()
-    (* | Some result ->
-     *   let _ = List.map (fun (name, args, spec) ->
-     *       Printf.printf "%s(%s):\n\t%s\n" name
-     *         (List.to_string snd args)
-     *         (E.pretty_layout_forallformula spec)
-     *     ) result in () *)
-  in
-  ()
+(* module SpecAbd = Inference.SpecAbduction;;
+ * let test ctx vc spectable holes preds bpreds startnum endnum traces =
+ *   let result = SpecAbd.multi_infer ctx vc spectable holes preds bpreds startnum endnum
+ *       traces
+ *   in
+ *   let _ = match result with
+ *     | None -> Printf.printf "no result\n"
+ *     | Some (spectable, result) ->
+ *       let _ = StrMap.iter (fun name spec ->
+ *           printf "%s\n" (Ast.layout_spec_entry name spec)
+ *         ) spectable in
+ *       ()
+ *     (\* | Some result ->
+ *      *   let _ = List.map (fun (name, args, spec) ->
+ *      *       Printf.printf "%s(%s):\n\t%s\n" name
+ *      *         (List.to_string snd args)
+ *      *         (E.pretty_layout_forallformula spec)
+ *      *     ) result in () *\)
+ *   in
+ *   () *)
 
 let bench_post = fun args -> SpecApply("Post", args)
 let set_post spectable args qv body =
-  let spectable, _ = add_spec_ret_fun spectable "Post" args qv body in
+  let spectable = StrMap.add "Post" (args, (qv, body)) spectable in
   spectable
 
-let make_hole name argstp =
+let make_hole name argstp imp =
   let names = T.auto_name argstp in
   let hole = {name = name; args = List.combine argstp names} in
-  (fun args -> SpecApply(name, args)), hole
+  (fun args -> SpecApply(name, args)), (hole, imp)

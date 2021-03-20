@@ -220,6 +220,9 @@ module Dtree : Dtree = struct
     classify_ dfeature_set (Array.of_list samples)
 
   let classify_hash fset htab =
+    (* let _ = Hashtbl.iter (fun vec label ->
+     *     printf "%s:%s\n" (boollist_to_string vec) (layout_label label)
+     *   ) htab in *)
     let samples = Array.init (Hashtbl.length htab)
         (fun _ -> false, Array.init (List.length fset) (fun _ -> false)) in
     let iter = ref 0 in
@@ -233,7 +236,7 @@ module Dtree : Dtree = struct
         iter := !iter + 1
         ) htab
     in
-    let dt = FastDT.make_dt ~samples:samples ~max_d:50 in
+    let dt = FastDT.make_dt ~samples:samples ~max_d:500 in
     let res = of_fastdt dt fset in
     let res_idx = of_fastdt_idx dt in
     res, res_idx
