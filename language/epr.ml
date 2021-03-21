@@ -126,6 +126,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
      * Boolean.mk_implies ctx (Boolean.mk_and ctx (ps1 @ ps2)) body *)
   let forallformula_to_z3 ctx (fv, epr) =
     let fv = List.map (fun var -> tpedvar_to_z3 ctx var) fv in
+    (* make_forall ctx fv (to_z3 ctx epr) *)
     make_forall ctx fv (avoid_timeout_constraint ctx fv @@ to_z3 ctx epr)
   let neg_forallf (fv, epr) = fv, ([], Not epr)
   let related_dt e fv =

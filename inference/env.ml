@@ -20,9 +20,15 @@ type vc = {
   spectable: Ast.spec StrMap.t;
 }
 
+type single_result = {
+  additional_dt: int D.t;
+  additional_spec: Ast.spec;
+  init_dt: int D.t;
+  init_spec: Ast.spec;
+}
+
 type spec_env = {
-  cur_dt: int D.t;
-  current: Ast.spec;
+  current: single_result;
   qv: T.tpedvar list;
   fset: F.t list;
   hole: Language.Helper.hole;

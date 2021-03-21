@@ -463,8 +463,16 @@ module SpecAbduction = struct
 
   let make_single_abd_env vc_env spec_env hole =
     let _ = Printf.printf "|Fset| = %i\n" (List.length spec_env.fset) in
-    let current = StrMap.find "miss current single abd"
+    let spec = StrMap.find "miss current single abd"
         vc_env.Env.spectable hole.name in
+    let current =
+      {Env.init_spec = spec;
+       Env.init_dt = spec_env.dt;
+       Env.additional_spec = spec;
+       Env.additional_dt = spec_env.dt;
+       (* Env.additional_spec = hole.args, (spec_env.qv, Epr.True);
+        * Env.additional_dt = D.T *)
+      } in
     let fvtab' = Hashtbl.create 10000 in
     let _ = Hashtbl.iter (fun vec label ->
         match label with
@@ -472,7 +480,6 @@ module SpecAbduction = struct
         | D.Neg | D.MayNeg -> Hashtbl.add fvtab' vec D.MayNeg
       ) spec_env.fvtab in
     let single_env = {
-      Env.cur_dt = spec_env.dt;
       Env.current = current;
       Env.qv = spec_env.qv;
       Env.fset = spec_env.fset;
