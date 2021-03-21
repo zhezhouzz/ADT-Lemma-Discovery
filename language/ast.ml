@@ -12,7 +12,6 @@ module type Ast = sig
   val application: t -> spec Utils.StrMap.t -> t
   val to_nnf: t -> t
   val remove_unsat_clause: t -> t
-  val to_dnf: t -> t
   (* val get_sat_conj: ctx -> t spec Utils.StrMap.t -> t *)
   val skolemize_conj: t -> string list * string list * t
   val skolemize: t -> string list * t
@@ -101,13 +100,13 @@ module Ast (A: AstTree.AstTree): Ast = struct
     let rec aux = function
       | ForAll ff -> E.forallformula_to_z3 ctx ff
       | Implies (p1, p2) -> Boolean.mk_implies ctx (aux p1) (aux p2)
-      | Ite (p1, p2, p3) ->
-        (match p1 with
-         | SpecApply (_, argsvalue) ->
-           let b = List.last argsvalue in
-           Boolean.mk_implies ctx (aux p1)
-             (Boolean.mk_ite ctx (E.SE.to_z3 ctx b) (aux p2) (aux p3))
-         | _ -> raise @@ InterExn "bad ast to z3 in cond")
+      | Ite (_, _, _) -> raise @@ InterExn "never happen in ast to z3"
+        (* (match p1 with
+         *  | SpecApply (_, argsvalue) ->
+         *    let b = List.last argsvalue in
+         *    Boolean.mk_implies ctx (aux p1)
+         *      (Boolean.mk_ite ctx (E.SE.to_z3 ctx b) (aux p2) (aux p3))
+         *  | _ -> raise @@ InterExn "bad ast to z3 in cond") *)
       | Not p -> Boolean.mk_not ctx (aux p)
       | And ps -> Boolean.mk_and ctx (List.map aux ps)
       | Or ps -> Boolean.mk_or ctx (List.map aux ps)
@@ -248,15 +247,6 @@ module Ast (A: AstTree.AstTree): Ast = struct
     in
     aux a
 
-  let to_dnf a =
-    let rec aux a =
-      match a with
-      | ForAll _ | SpecApply (_, _) | Not _ -> [[a]]
-      | Or ps -> List.concat @@ List.map aux ps
-      | And ps -> List.map (fun l -> List.flatten l) (List.choose_list_list (List.map aux ps))
-      | _ -> raise @@ InterExn "undesugar"
-    in
-    Or (List.map (fun l -> And l) (aux a))
   let skolemize_clasue = function
     | ForAll ff -> None, ForAll ff
     | Not (ForAll (fv, body)) ->

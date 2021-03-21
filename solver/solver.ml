@@ -3,18 +3,23 @@ open Z3.Solver
 open Z3.Goal
 open Utils
 
+type smt_result =
+  | SmtSat of Model.model
+  | SmtUnsat
+  | Timeout
+
 let solver_result solver =
   (* let _ = printf "solver_result\n" in *)
   match check solver [] with
-  | UNSATISFIABLE -> true, None
+  | UNSATISFIABLE -> SmtUnsat
   | UNKNOWN ->
-    raise (InterExn "time out!")
+    (* raise (InterExn "time out!") *)
     (* Printf.printf "\ttimeout\n"; *)
-    (* false, None *)
+    Timeout
   | SATISFIABLE ->
     match Solver.get_model solver with
     | None -> raise (InterExn "never happen")
-    | Some m -> false, Some m
+    | Some m -> SmtSat m
 
 let get_int m i =
   match Model.eval m i true with

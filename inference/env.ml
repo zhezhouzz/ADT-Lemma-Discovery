@@ -9,8 +9,13 @@ module FV = Sample.FeatureVector
 module D = Dtree.Dtree
 open Utils
 
-type env = {
-  pre: Ast.t;
+type flow = {
+  pre_flow: Ast.t;
+  applied_args_map: (T.tpedvar list list) StrMap.t
+}
+
+type vc = {
+  multi_pre: flow list;
   post: Ast.t;
   spectable: Ast.spec StrMap.t;
 }
@@ -21,7 +26,6 @@ type spec_env = {
   qv: T.tpedvar list;
   fset: F.t list;
   hole: Language.Helper.hole;
-  applied_args: T.tpedvar list list;
   unknown_fv: T.tpedvar list;
   fvtab: (bool list, D.label) Hashtbl.t
 }

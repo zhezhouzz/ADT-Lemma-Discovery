@@ -72,23 +72,24 @@ let fv_no_repeat env =
   let c = Epr.Not (Epr.Or c) in
   c
 
-let pos_query ctx total_env env =
+let pos_query ctx vc_env env =
+  let pre = Ast.Or (List.map (fun flow -> flow.pre_flow) vc_env.multi_pre) in
   let spec = make_spec_with_unknown env in
   let new_spectable = StrMap.update env.hole.name
       (fun v -> match v with
          | None -> raise @@ InterExn "never happen multi_apply_constraint"
          | Some _ -> Some spec)
-      total_env.spectable in
-  let pos_phi = Ast.to_z3 ctx (Ast.Implies (total_env.pre, total_env.post)) new_spectable in
+      vc_env.spectable in
+  let pos_phi = Ast.to_z3 ctx (Ast.Implies (pre, vc_env.post)) new_spectable in
   let force_enum_neg = Epr.to_z3 ctx
       (fv_not_in_curr_constraint env) in
   let force_no_repeat = Epr.to_z3 ctx @@ fv_no_repeat env in
   let pos_query = Boolean.mk_and ctx [pos_phi; force_enum_neg; force_no_repeat] in
-  let _ = Printf.printf "pos_query:\n%s\n" (Expr.to_string pos_query) in
-  let _, m = S.check ctx pos_query in
-  match m with
-  | None -> None
-  | Some m ->
+  (* let _ = Printf.printf "pos_query:\n%s\n" (Expr.to_string pos_query) in *)
+  match S.check ctx pos_query with
+  | S.SmtUnsat -> None
+  | S.Timeout -> raise (InterExn "pos query time out!")
+  | S.SmtSat m ->
     let fv = S.get_unknown_fv ctx m env.unknown_fv in
     let _ = Printf.printf "pos:fv = %s\n" (boollist_to_string fv) in
     Some fv
@@ -97,7 +98,7 @@ open Printf
 
 type smt_status = Pass | NeedRefine
 
-let gather_neg_fvec_to_tab_multi ctx env qvrange model =
+let gather_neg_fvec_to_tab_flow ctx env applied_args qvrange model =
     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
     let sub_assignment = List.map (fun _ -> se_range) env.qv in
     let _, names = List.split (env.hole.args @ env.qv) in
@@ -125,30 +126,53 @@ let gather_neg_fvec_to_tab_multi ctx env qvrange model =
           in
           let _ = List.choose_list_list_order_fold extract_fvec () sub_assignment in
           ()
-        ) env.applied_args in
+        ) applied_args in
     let _ = if !counter == 0
       then raise @@ InterExn "never happen gather neg single abd" else () in
     ()
 
-let pos_verify_update_env ctx total_env env fv =
+let gather_neg_fvec_to_tab ctx vc_env env qvrange model =
+  List.iter (fun flow ->
+      let applied_args = StrMap.find
+          "[single] gather_neg_fvec_to_tab" flow.applied_args_map env.hole.name
+      in
+      gather_neg_fvec_to_tab_flow ctx env applied_args qvrange model
+    )
+  vc_env.multi_pre
+
+let pos_verify_flow ctx vc_env env flow fv =
   let spec = make_spec_with_fv env fv in
   let new_spectable = StrMap.update env.hole.name
       (fun v -> match v with
          | None -> raise @@ InterExn "never happen multi_apply_constraint"
          | Some _ -> Some spec)
-      total_env.spectable in
+      vc_env.spectable in
   let neg_phi = Ast.to_z3 ctx
-      (Ast.Not (Ast.Implies (total_env.pre, total_env.post))) new_spectable in
-  let _ = Printf.printf "verify:%s\n" (Expr.to_string neg_phi) in
-  let if_pos, _ = S.check ctx neg_phi in
-  let _ =
-    if if_pos
-    then Printf.printf "real pos[%s]\n" (boollist_to_string fv)
-    else Printf.printf "false pos[%s]\n" (boollist_to_string fv)
+      (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
+  (* let _ = Printf.printf "verify:%s\n" (Expr.to_string neg_phi) in *)
+  let if_pos =
+    match S.check ctx neg_phi with
+    | S.SmtUnsat ->
+      (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
+      true
+    | S.Timeout -> raise (InterExn "verify candidate pos time out!")
+    | S.SmtSat _ ->
+      let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in
+      false
   in
+  if_pos
+
+let pos_verify_update_env ctx vc_env env fv =
+  let res = List.map (fun flow ->
+      pos_verify_flow ctx vc_env env flow fv
+    ) vc_env.multi_pre in
+  let if_pos = List.for_all (fun b -> b) res in
   let _ =
     match Hashtbl.find_opt env.fvtab fv, if_pos with
     | Some D.Pos, b ->
+      (* let _ = Hashtbl.iter (fun vec label ->
+       *     printf "%s -> <%s>\n" (boollist_to_string vec) (D.layout_label label)
+       *   ) env.fvtab in *)
       raise @@ InterExn (sprintf "never happen in single abduction(%s,%b)"
                            (D.layout_label D.Pos) b)
     | Some D.Neg, b ->
@@ -179,35 +203,45 @@ let summary_fv_num env =
   let _ = printf "{pos:%i; neg:%i; maynge:%i}\n" !pos_num !neg_num !mayneg_num in
   ()
 
+let is_pass = function
+  | Pass -> true
+  | _ -> false
 
-let neg_query ctx total_env env new_spec =
+let neg_query ctx vc_env env new_spec =
   let counter = ref 0 in
   let rec loop (new_spec, _) =
     let new_spectable = StrMap.update env.hole.name
         (fun v -> match v with
            | None -> raise @@ InterExn "never happen multi_apply_constraint"
            | Some _ -> Some new_spec)
-        total_env.spectable in
-    let neg_phi = Ast.to_z3 ctx
-        (Ast.Not (Ast.Implies (total_env.pre, total_env.post))) new_spectable in
-    let _ = Printf.printf "neg_query ast:%s\n"
-        (Ast.vc_layout (Ast.Not (Ast.Implies (total_env.pre, total_env.post)))) in
-    let _ = StrMap.iter (fun name spec ->
-        printf "%s\n" (Ast.layout_spec_entry name spec)
-      ) new_spectable in
-    let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
-    let _, m = S.check ctx neg_phi in
-    match m with
-    | None ->
-      if !counter == 0 then Pass else NeedRefine
-    | Some m ->
-      (* let _ = Printf.printf "%s\n" (Model.to_string m) in *)
-      let bounds = S.get_preds_interp m in
-      let _ = gather_neg_fvec_to_tab_multi ctx env bounds m in
-      (* let _ = Hashtbl.iter (fun vec label ->
-       *     printf "%s:%s\n" (boollist_to_string vec) (D.layout_label label)
-       *   ) env.fvtab in *)
-      let _ = summary_fv_num env in
+        vc_env.spectable in
+    let once flow =
+      let neg_phi = Ast.to_z3 ctx
+        (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
+      (* let _ = Printf.printf "neg_query ast:%s\n"
+       *   (Ast.vc_layout (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post)))) in
+       * let _ = StrMap.iter (fun name spec ->
+       *   printf "%s\n" (Ast.layout_spec_entry name spec)
+       * ) new_spectable in
+       * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
+      match S.check ctx neg_phi with
+      | S.SmtUnsat -> Pass
+      | S.Timeout -> raise (InterExn "neg query time out!")
+      | S.SmtSat m ->
+        let bounds = S.get_preds_interp m in
+        let applied_args = StrMap.find "gather_neg_fvec_to_tab_flow"
+            flow.applied_args_map env.hole.name in
+        let _ = gather_neg_fvec_to_tab_flow ctx env applied_args bounds m in
+        (* let _ = Hashtbl.iter (fun vec label ->
+         *     printf "%s:%s\n" (boollist_to_string vec) (D.layout_label label)
+         *   ) env.fvtab in *)
+        let _ = summary_fv_num env in
+        NeedRefine
+    in
+    let res = List.map once vc_env.multi_pre in
+    if List.for_all is_pass res
+    then (if !counter == 0 then Pass else NeedRefine)
+    else
       let dt, dt_idx =
         if Hashtbl.length env.fvtab == 0
         then D.T, D.T
@@ -218,9 +252,9 @@ let neg_query ctx total_env env new_spec =
   in
   loop new_spec
 
-let learn_weaker ctx total_env env =
+let learn_weaker ctx vc_env env =
   let current = StrMap.find "never happen learn_weaker"
-      total_env.spectable env.hole.name in
+      vc_env.spectable env.hole.name in
   let _, (_, cur_body) = current in
   let fset_z3 = List.map (fun f -> Epr.to_z3 ctx @@ F.to_epr f) env.fset in
   let rec loop () =
@@ -230,39 +264,36 @@ let learn_weaker ctx total_env env =
       else D.classify_hash env.fset env.fvtab in
     let learned_body = Epr.simplify_ite @@ D.to_epr dt in
     let query = Epr.to_z3 ctx @@ Epr.Not (Epr.Implies (cur_body, learned_body)) in
-    let if_weaker, m = S.check ctx query in
-    if if_weaker
-    then body_to_spec env learned_body, dt_idx
-    else
-      match m with
-      | None -> raise @@ InterExn "never happen in learn_weaker(timeout)"
-      | Some m ->
-        let fv = List.map (fun feature -> S.get_pred m feature) fset_z3 in
-        let _ = Printf.printf "old pos[%s]\n" (boollist_to_string fv) in
-        let _ =
-          match Hashtbl.find_opt env.fvtab fv with
-          | Some D.MayNeg -> Hashtbl.replace env.fvtab fv D.Pos
-          | Some label -> raise @@ InterExn
-              (sprintf "learn_weaker(exists %s -> %s)"
-                 (boollist_to_string fv) (D.layout_label label))
-          | None -> Hashtbl.add env.fvtab fv D.Pos
-        in
-        loop ()
+    match S.check ctx query with
+    | S.SmtUnsat -> body_to_spec env learned_body, dt_idx
+    | S.Timeout -> raise (InterExn "old pos time out!")
+    | S.SmtSat m ->
+      let fv = List.map (fun feature -> S.get_pred m feature) fset_z3 in
+      let _ = Printf.printf "old pos[%s]\n" (boollist_to_string fv) in
+      let _ =
+        match Hashtbl.find_opt env.fvtab fv with
+        | Some D.MayNeg -> Hashtbl.replace env.fvtab fv D.Pos
+        | Some label -> raise @@ InterExn
+            (sprintf "learn_weaker(exists %s -> %s)"
+               (boollist_to_string fv) (D.layout_label label))
+        | None -> Hashtbl.add env.fvtab fv D.Pos
+      in
+      loop ()
   in
   loop ()
 
-let weaker_safe_loop ctx total_env env =
+let weaker_safe_loop ctx vc_env env =
   let rec loop () =
-    let new_spec, dt = learn_weaker ctx total_env env in
+    let new_spec, dt = learn_weaker ctx vc_env env in
     (* let _ = Printf.printf "learn_weaker:\n%s\n" (Ast.layout_spec new_spec) in *)
-    match neg_query ctx total_env env (new_spec, dt) with
+    match neg_query ctx vc_env env (new_spec, dt) with
     | Pass ->
       let new_spectable = StrMap.update env.hole.name
           (fun v -> match v with
              | None -> raise @@ InterExn "never happen multi_apply_constraint"
              | Some _ -> Some new_spec)
-          total_env.spectable in
-      {total_env with spectable = new_spectable;},
+          vc_env.spectable in
+      {vc_env with spectable = new_spectable;},
       {env with current = new_spec; cur_dt = dt}
     | NeedRefine ->
       loop ()
@@ -287,28 +318,28 @@ let refresh_single_abd_env env =
     ) env.fvtab in
   ()
 
-let infer ctx total_env env =
+let infer ctx vc_env env =
   let _ = Printf.printf "single infer: %s\n" (env.hole.name) in
   let _ = Printf.printf "env.fset: %s\n" (F.layout_set env.fset) in
   let max_loop_counter = ref 0 in
-  let rec max_loop total_env env =
+  let rec max_loop vc_env env =
     let rec find_pos env =
-      match pos_query ctx total_env env with
+      match pos_query ctx vc_env env with
       | None -> None
       | Some fv ->
-        let if_pos = pos_verify_update_env ctx total_env env fv in
+        let if_pos = pos_verify_update_env ctx vc_env env fv in
         if not if_pos then find_pos env else Some env
     in
     match find_pos env with
     | None ->
-      if !max_loop_counter == 0 then None else Some (total_env, env)
+      if !max_loop_counter == 0 then None else Some (vc_env, env)
     | Some env ->
       let _ = max_loop_counter := !max_loop_counter + 1 in
-      let total_env, env = weaker_safe_loop ctx total_env env in
+      let vc_env, env = weaker_safe_loop ctx vc_env env in
       (* let _ = Printf.printf "new current:\n%s\n" (Ast.layout_spec env.current) in *)
-      max_loop total_env env
+      max_loop vc_env env
   in
-  let env_opt = max_loop total_env env in
+  let env_opt = max_loop vc_env env in
   let _ = match env_opt with
     | None -> Printf.printf "maxed\n"
     | Some (_, env) ->

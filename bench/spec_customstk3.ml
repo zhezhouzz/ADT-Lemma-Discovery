@@ -89,9 +89,9 @@ let holel = [is_empty_hole;
  *     Printf.printf "?%s(%s)\n" hole.name (List.to_string T.layouttvar hole.args)
  *   ) holes *)
 (* in *)
-let total_env = SpecAbd.multi_infer ctx pre post spectable holel preds bpreds 3 3 in
-let _ = StrMap.iter (fun name spec ->
-    printf "%s\n" (Ast.layout_spec_entry name spec)
-  ) (total_env.spectable) in
-let _ = printf "finished\n" in
+let total_env = SpecAbd.multi_infer ctx pre post spectable holel preds bpreds 2 2 in
+(* let _ = StrMap.iter (fun name spec ->
+ *     printf "%s\n" (Ast.layout_spec_entry name spec)
+ *   ) (total_env.spectable) in
+ * let _ = printf "finished\n" in *)
 ();;

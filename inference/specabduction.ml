@@ -21,18 +21,16 @@ module SpecAbduction = struct
     dt: int D.t;
     qv: T.tpedvar list;
     fset: F.t list;
-    applied_args: T.tpedvar list list;
+    (* applied_args: T.tpedvar list list; *)
     fvtab: (bool list, D.label) Hashtbl.t;
     abduciable: Epr.forallformula;
   }
 
   type multi_spec_env = {
-    pre:Ast.t;
-    post:Ast.t;
+    vc: Env.vc;
     spec_envs: spec_env StrMap.t;
     holes: hole StrMap.t;
     imps: (V.t list -> (V.t list option)) StrMap.t;
-    spectab: Ast.spec StrMap.t;
   }
 
   let loop_counter = ref 0
@@ -103,7 +101,7 @@ module SpecAbduction = struct
       ) fvs in
     List.length fvs
 
-  let gather_neg_fvec_to_tab ctx hole env qvrange model =
+  let gather_neg_fvec_to_tab ctx hole env applied_args qvrange model =
     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
     let sub_assignment = List.map (fun _ -> se_range) env.qv in
     let _, names = List.split (hole.args @ env.qv) in
@@ -130,198 +128,130 @@ module SpecAbduction = struct
           in
           let _ = List.choose_list_list_order_fold extract_fvec () sub_assignment in
           ()
-        ) env.applied_args in
+        ) applied_args in
     !counter
 
 
-  let print_feature model ctx pred dt intvalue =
-    printf "%s(%s, %i) = %b\n" pred dt intvalue
-      (S.get_pred model
-         (Epr.to_z3 ctx
-            (Epr.Atom
-               (SE.Op (T.Int, pred,
-                       [SE.Var (T.IntList, dt); SE.Literal (T.Int, SE.L.Int intvalue)])
-               )
-            )
-         )
-      )
+  (* let print_feature model ctx pred dt intvalue =
+   *   printf "%s(%s, %i) = %b\n" pred dt intvalue
+   *     (S.get_pred model
+   *        (Epr.to_z3 ctx
+   *           (Epr.Atom
+   *              (SE.Op (T.Int, pred,
+   *                      [SE.Var (T.IntList, dt); SE.Literal (T.Int, SE.L.Int intvalue)])
+   *              )
+   *           )
+   *        )
+   *     ) *)
 
-  let show_all_features ctx model qv qvrange preds bpreds =
-    let _ = printf "model\n%s\n" (Model.to_string model) in
-    let _ = printf "show_all:bound:%s\n" (IntList.to_string qvrange) in
-    (* let _ = printf "show_all:\nnu_top=%i\n" (S.get_int_name ctx model "nu_top") in *)
-    let dts = [T.IntTree, "tr";T.IntTree, "a"; T.IntTree, "b";] in
-    let aux dt =
-      let tab = Hashtbl.create 1000 in
-      let all_features = F.make_set_from_preds_multidt preds bpreds
-          (dt :: qv) in
-      let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
-      let sub_assignment = List.map (fun _ -> se_range) qv in
-      let _, names = List.split qv in
-      let _ = printf "dt:%s %s\n" (snd dt) (F.layout_set all_features) in
-      let extract_fvec _ values =
-        let vec = List.map
-            (fun feature -> Epr.subst (F.to_epr feature) names values) all_features in
-        (* let _ = printf "%s\n" (List.to_string Epr.layout vec) in *)
-        let vec = List.map (fun e -> S.get_pred model (Epr.to_z3 ctx e)) vec in
-        let _ = printf "u = %s: %s\n"
-            (List.to_string SE.layout values) (boollist_to_string vec) in
-        match Hashtbl.find_opt tab vec with
-        | Some _ -> ()
-        | None -> Hashtbl.add tab vec ()
-      in
-      let _ = List.choose_list_list_order_fold extract_fvec () sub_assignment in
-      (* let _ = Hashtbl.iter (fun vec _ ->
-       *     printf "vec: %s\n" (boollist_to_string vec)
-       *   ) tab in *)
-      ()
-    in
-    List.map aux dts
+  (* let show_all_features ctx model qv qvrange preds bpreds =
+   *   let _ = printf "model\n%s\n" (Model.to_string model) in
+   *   let _ = printf "show_all:bound:%s\n" (IntList.to_string qvrange) in
+   *   (\* let _ = printf "show_all:\nnu_top=%i\n" (S.get_int_name ctx model "nu_top") in *\)
+   *   let dts = [T.IntTree, "tr";T.IntTree, "a"; T.IntTree, "b";] in
+   *   let aux dt =
+   *     let tab = Hashtbl.create 1000 in
+   *     let all_features = F.make_set_from_preds_multidt preds bpreds
+   *         (dt :: qv) in
+   *     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
+   *     let sub_assignment = List.map (fun _ -> se_range) qv in
+   *     let _, names = List.split qv in
+   *     let _ = printf "dt:%s %s\n" (snd dt) (F.layout_set all_features) in
+   *     let extract_fvec _ values =
+   *       let vec = List.map
+   *           (fun feature -> Epr.subst (F.to_epr feature) names values) all_features in
+   *       (\* let _ = printf "%s\n" (List.to_string Epr.layout vec) in *\)
+   *       let vec = List.map (fun e -> S.get_pred model (Epr.to_z3 ctx e)) vec in
+   *       let _ = printf "u = %s: %s\n"
+   *           (List.to_string SE.layout values) (boollist_to_string vec) in
+   *       match Hashtbl.find_opt tab vec with
+   *       | Some _ -> ()
+   *       | None -> Hashtbl.add tab vec ()
+   *     in
+   *     let _ = List.choose_list_list_order_fold extract_fvec () sub_assignment in
+   *     (\* let _ = Hashtbl.iter (fun vec _ ->
+   *      *     printf "vec: %s\n" (boollist_to_string vec)
+   *      *   ) tab in *\)
+   *     ()
+   *   in
+   *   List.map aux dts *)
 
-  let join_pos_neg_table pos neg candidate =
-    let _ = Hashtbl.iter (fun vec _ ->
-        match Hashtbl.find_opt pos vec with
-        | Some _ -> Hashtbl.remove candidate vec
-        | None -> ()) candidate in
-    let negnum = Hashtbl.length candidate in
-    let _ = Hashtbl.iter (fun vec _ ->
-        match Hashtbl.find_opt neg vec with
-        | Some _ ->
-          let _ =
-            printf "conflict:\n\t%s\n" (boollist_to_string vec);
-            printf "candidate:\n";
-            Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) candidate;
-            printf "neg:\n";
-            Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) neg
-          in
-          (* () *)
-          raise @@ InterExn "bad error in join_pos_neg_table"
-        | None -> Hashtbl.add neg vec ()) candidate in
-    negnum
-
-  (* (\* feature vectors consistent with the cex *\)
-   * let gather_neg_fvec_to_tab_multi args vc ctx model head cache qvrange tab =
-   *   (\* let _ = printf "%s\n" (Z3.Model.to_string model) in *\)
-   *   let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
-   *   let sub_assignment = List.map (fun _ -> se_range) cache.qv in
-   *   let _, names = List.split (head.args @ cache.qv) in
-   *   let _ = printf "gather_neg_fvec_to_tab_multi:\n%s\n%s\n"
-   *       (Ast.layout vc)
-   *       (List.to_string (fun l ->
-   *            sprintf "%s\n" (List.to_string SE.layout l)
-   *          ) args) in
-   *   let _ =
-   *     List.map (fun args ->
-   *         let _ = printf "~%s\n"
-   *             (List.to_string SE.layout args) in
-   *         let extract_fvec _ values =
-   *           let vec = List.map
-   *               (fun feature ->
-   *                  Epr.subst (F.to_epr feature) names (args @ values)) cache.fset in
-   *           let _ = printf "[vec]:%s\n" (List.to_string Epr.layout vec) in
-   *           let vec' = List.map (fun e -> S.get_pred model (Epr.to_z3 ctx e)) vec in
-   *           let _ = printf "[vec]:%s%s\n" (List.to_string Epr.layout vec)
-   *               (boollist_to_string vec') in
-   *           match Hashtbl.find_opt tab vec' with
-   *           | Some _ -> ()
-   *           | None -> Hashtbl.add tab vec' ()
-   *         in
-   *         let _ = List.choose_list_list_order_fold extract_fvec () sub_assignment in
-   *         let _ = Hashtbl.iter (fun vec _ ->
-   *             printf "neg vec: %s\n" (boollist_to_string vec)
-   *           ) tab
-   *         in
-   *         ()
-   *       ) args in
-   *   tab *)
-
-  (* let join_pos_neg_table_multi head hole candidate =
+  (* let join_pos_neg_table pos neg candidate =
    *   let _ = Hashtbl.iter (fun vec _ ->
-   *       match Hashtbl.find_opt hole.pos vec with
+   *       match Hashtbl.find_opt pos vec with
    *       | Some _ -> Hashtbl.remove candidate vec
    *       | None -> ()) candidate in
    *   let negnum = Hashtbl.length candidate in
-   *   let if_overlap = Hashtbl.fold (fun vec _ if_overlap ->
-   *       match Hashtbl.find_opt hole.neg vec with
+   *   let _ = Hashtbl.iter (fun vec _ ->
+   *       match Hashtbl.find_opt neg vec with
    *       | Some _ ->
    *         let _ =
-   *           printf "[%s]abd:\n%s\n" head.name (Epr.pretty_layout_forallformula hole.abduciable);
-   *           printf "fset:\n%s\n" (F.layout_set hole.fset);
    *           printf "conflict:\n\t%s\n" (boollist_to_string vec);
    *           printf "candidate:\n";
    *           Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) candidate;
    *           printf "neg:\n";
-   *           Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) hole.neg;
-   *           printf "pos:\n";
-   *           Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) hole.pos
+   *           Hashtbl.iter (fun vec _ -> printf "%s\n" (boollist_to_string vec)) neg
    *         in
-   *       raise @@ InterExn "bad error in join_pos_neg_table"
-   *       | None ->
-   *         if_overlap) candidate false in
-   *   if if_overlap then 0
-   *   else
-   *     (Hashtbl.iter (fun vec _ ->
-   *          match Hashtbl.find_opt hole.candidate_neg vec with
-   *          | Some _ -> ()
-   *          | None -> Hashtbl.add hole.candidate_neg vec ()) candidate; negnum) *)
-
-  (* let sample_filter hole_spec sample =
-   *   List.map (fun (_, name) ->
-   *       match StrMap.find_opt sample name with
-   *       | None -> raise @@ InterExn "bad sample"
-   *       | Some v -> v) hole_spec.args *)
-
-  (* let pn_to_axiom_epr feature_set pos neg =
-   *   let data = {FV.dfeature_set = feature_set;
-   *               FV.labeled_vecs =
-   *                 Hashtbl.fold (fun vec _ vecs -> (true, vec) :: vecs) pos @@
-   *                 Hashtbl.fold (fun vec _ vecs -> (false, vec) :: vecs) neg []} in
-   *   let res = D.classify data in
-   *   (\* let _ = printf "raw:%s\n" (D.layout res) in *\)
-   *   res *)
+   *         (\* () *\)
+   *         raise @@ InterExn "bad error in join_pos_neg_table"
+   *       | None -> Hashtbl.add neg vec ()) candidate in
+   *   negnum *)
 
   let name_qv qv_num = List.map (fun n -> (T.Int, n)) @@ List.init qv_num (fun i -> sprintf "u_%i" i)
 
-  let init_spec_env pre hole preds bpreds numX =
+  let init_spec_env hole preds bpreds numX =
     let qv = name_qv numX in
     let fset = F.make_set_from_preds_multidt preds bpreds
         (hole.args @ qv) in
     let _ = printf "init-set:%s\n" (F.layout_set fset) in
     let fvtab = Hashtbl.create 1000 in
     let abduciable = [], Epr.Not Epr.True in
-    let applied_args = List.map (fun args ->
-        List.map SE.to_tpedvar args
-      ) (Ast.get_app_args pre hole.name) in
     { dt = D.F;
      qv = qv;
      fset = fset;
      fvtab = fvtab;
-     abduciable = abduciable;
-     applied_args = applied_args}
+     abduciable = abduciable;}
 
-  let init_env (pre, post) spectab preds bpreds numX holel =
+  let init_env (pre, post) spectable preds bpreds numX holel =
     let holes, imps = List.fold_left (fun (m, imp_m) (hole, imp) ->
         (StrMap.add hole.name hole m,
          StrMap.add hole.name imp imp_m)
       ) (StrMap.empty, StrMap.empty) holel in
+    let multi_pre =
+      List.map (fun pre ->
+          let applied_args_map = StrMap.mapi (fun name _ ->
+              List.map (fun args ->
+                  List.map SE.to_tpedvar args
+                ) (Ast.get_app_args pre name)
+            ) holes in
+          let applied_args_map = StrMap.filter (fun _ r ->
+              match r with
+              | [] -> false
+              | _ -> true
+            ) applied_args_map in
+          {Env.pre_flow = pre; Env.applied_args_map = applied_args_map}
+        ) pre in
     let spec_envs = StrMap.map (fun hole ->
-        init_spec_env pre hole preds bpreds numX
+        init_spec_env hole preds bpreds numX
       ) holes in
-    let spectab = StrMap.fold (fun specname spec_env m ->
+    let spectable = StrMap.fold (fun specname spec_env m ->
         let hole = StrMap.find "init_env" holes specname in
         StrMap.update specname (fun spec ->
             match spec with
             | None -> Some (hole.args, spec_env.abduciable)
             | Some _ -> raise @@ InterExn "init_env"
           ) m
-      ) spec_envs spectab
+      ) spec_envs spectable
     in
-    { pre = pre;
-      post = post;
+    let vc = {
+      Env.multi_pre =  multi_pre;
+      Env.post = post;
+      Env.spectable = spectable;
+    } in
+    { vc = vc;
       holes = holes;
       imps = imps;
       spec_envs = spec_envs;
-      spectab = spectab;
     }
 
   let learn_in_spec_env env =
@@ -335,66 +265,75 @@ module SpecAbduction = struct
     let abduciable = env.qv, abduciable in
     {env with abduciable = abduciable; dt = dtidx}
 
-  let update_spec_env ctx model qvrange hole spec_env =
-    let _ = printf "update_spec_env(%s):\n%s\n" (hole.name) (F.layout_set spec_env.fset) in
-    let negnum = gather_neg_fvec_to_tab ctx hole spec_env qvrange model in
-    let spec_env = learn_in_spec_env spec_env in
-    negnum, spec_env
-
-  let update_env ctx model qvrange env =
+  let inplace_gather_fv ctx model qvrange env flow =
     let total_neg_num = ref 0 in
-    let spec_envs' = StrMap.mapi (fun specname spec_env ->
-        let hole = StrMap.find "update_env" env.holes specname in
-        let neg_num, spec_env =
-          update_spec_env ctx model qvrange hole spec_env
-        in
-        let _ = total_neg_num := !total_neg_num + neg_num in
-        spec_env
-      ) env.spec_envs in
-    !total_neg_num, {env with spec_envs = spec_envs'}
+    let _ = StrMap.iter
+        (fun specname applied_args ->
+           let hole = StrMap.find "update_spec_env" env.holes specname in
+           let spec_env = StrMap.find "update_spec_env" env.spec_envs specname in
+           let neg_num =
+             gather_neg_fvec_to_tab ctx hole spec_env applied_args qvrange model
+           in
+           (* let _ = printf "total_neg_num:%i neg_num:%i\n"
+            *     (!total_neg_num) neg_num in *)
+           let _ = total_neg_num := !total_neg_num + neg_num in
+           ()
+        ) flow.Env.applied_args_map in
+    (* let _ = printf "total_neg_num:%i\n" (!total_neg_num) in *)
+    if !total_neg_num == 0 then Some flow.pre_flow else None
 
-  let update_env_spectab env =
-    let spectab' = StrMap.fold (fun specname spec_env spectab ->
+  let update_env_spectable env =
+    let spectable' = StrMap.fold (fun specname spec_env spectable ->
         let hole = StrMap.find "update_env" env.holes specname in
         StrMap.update specname (fun spec ->
             match spec with
             | None -> raise @@ InterExn "update_env"
             | Some _ -> Some (hole.args, spec_env.abduciable)
-          )  spectab
-      ) env.spec_envs env.spectab in
-    {env with spectab = spectab'}
-  (* let reset_cache candidate (head, cache) =
-   *   let _ = Hashtbl.iter (fun vec _ ->
-   *       match Hashtbl.find_opt cache.pos vec with
-   *       | Some _ -> raise @@ InterExn "error in reset_cache"
-   *       | None -> Hashtbl.add cache.pos vec ()
-   *     ) candidate in
-   *   let _ = Hashtbl.clear cache.candidate_neg in
-   *   let _ = Hashtbl.clear cache.neg in
-   *   (\* let cache = {cache with neg = (Hashtbl.create 1000)} in *\)
-   *   let _ = printf "\tnum:%i|%i\n" (Hashtbl.length cache.pos) (Hashtbl.length cache.neg) in
-   *   head, cache *)
+          )  spectable
+      ) env.spec_envs env.vc.Env.spectable in
+    {env with vc = {env.vc with Env.spectable = spectable'}}
 
-  let verify ctx env =
-      (* let _ = printf "raw smt_query\n%s\n" (Ast.layout vc) in *)
-      (* let _ = List.map (fun (head, cache) ->
-       *     printf "hole spec[%s]: %s\n" head.name (Epr.layout_forallformula cache.abduciable)
-       *   ) holes in *)
-      let smt_query = Ast.to_z3 ctx (Ast.Not (Ast.Implies (env.pre, env.post)))
-          env.spectab in
+  type neg_result =
+    | Verified
+    | CannotGather
+    | Gathered
+
+  let is_verified = function
+    | Verified -> true
+    | _ -> false
+  let is_cannot_gather = function
+    | CannotGather -> true
+    | _ -> false
+
+  let inplace_verify_and_gather_fv ctx env flow =
+    let smt_query = Ast.to_z3 ctx
+        (Ast.Not (Ast.Implies (flow.Env.pre_flow, env.vc.Env.post)))
+        env.vc.Env.spectable in
       let _ = printf "smt_query\n%s\n" (Expr.to_string smt_query) in
-      let valid, model = S.check ctx smt_query in
-      if valid
-      then true, Some env
-      else
-        let model = match model with
-          | None -> raise @@ InterExn "bad spec abd"
-          | Some model -> model in
+      match S.check ctx smt_query with
+      | S.SmtUnsat -> Verified
+      | S.Timeout -> raise (InterExn "multi inference time out!")
+      | S.SmtSat model ->
         let qvrange = S.get_preds_interp model in
-        let totalnum, env = update_env ctx model qvrange env in
-        if totalnum == 0
-        then (printf "bad model\n"; false, None)
-        else false, Some env
+        (match inplace_gather_fv ctx model qvrange env flow with
+         | None -> Gathered
+         | Some pre ->
+           (printf "cannot gather fv in ast:%s\n" (Ast.vc_layout pre); CannotGather)
+        )
+
+  (* let inplace_update_env ctx model qvrange env flow =
+   *   let n = update_spec_env ctx model qvrange env flow.applied_args_map in
+   *   if n <= 0
+   *   then NotExistsInHyp pre.pre_flow
+   *   else
+   * 
+   *       Some flow else None
+   *     ) None env.multi_pre in
+   *   match false_opt with
+   *   | Some pre -> NotExistsInHyp pre.pre_flow
+   *   | None ->
+   *     let spec_envs' = StrMap.map learn_in_spec_env env.spec_envs in
+   *     SpecEnvUpdated {env with spec_envs = spec_envs'} *)
 
   let sample_num = 10
 
@@ -402,15 +341,18 @@ module SpecAbduction = struct
     let _ = printf "refinement_loop\n" in
     let rec neg_refine_loop env =
       let _ = loop_counter := !loop_counter + 1 in
-      let is_verified, env = verify ctx env in
-      if is_verified then
-        env
+      let res = List.map (fun flow ->
+          inplace_verify_and_gather_fv ctx env flow
+        ) env.vc.Env.multi_pre in
+      if List.for_all is_verified res
+      then Some env
+      else if List.exists is_cannot_gather res
+      then None
       else
-        match env with
-        | Some env ->
-          let env = update_env_spectab env in
-          neg_refine_loop env
-        | None -> None
+        let spec_envs' = StrMap.map learn_in_spec_env env.spec_envs in
+        let env = {env with spec_envs = spec_envs'} in
+        let env = update_env_spectable env in
+        neg_refine_loop env
     in
     let rec pos_refine_loop env =
       let total_pos_num = ref 0 in
@@ -426,7 +368,7 @@ module SpecAbduction = struct
       if !total_pos_num > 0
       then
         let env = {env with spec_envs = spec_envs'} in
-        let env = update_env_spectab env in
+        let env = update_env_spectable env in
         let env = neg_refine_loop env in
         match env with
         | Some env -> pos_refine_loop env
@@ -519,28 +461,27 @@ module SpecAbduction = struct
   let init_unknown_fv fset =
     List.init (List.length fset) (fun i -> T.Bool, Printf.sprintf "_fv!%i" i)
 
-  let make_single_abd_env env spec_env hole =
+  let make_single_abd_env vc_env spec_env hole =
     let _ = Printf.printf "|Fset| = %i\n" (List.length spec_env.fset) in
     let current = StrMap.find "miss current single abd"
-        env.spectab hole.name in
+        vc_env.Env.spectable hole.name in
+    let fvtab' = Hashtbl.create 10000 in
+    let _ = Hashtbl.iter (fun vec label ->
+        match label with
+        | D.Pos -> Hashtbl.add fvtab' vec D.Pos
+        | D.Neg | D.MayNeg -> Hashtbl.add fvtab' vec D.MayNeg
+      ) spec_env.fvtab in
     let single_env = {
       Env.cur_dt = spec_env.dt;
       Env.current = current;
       Env.qv = spec_env.qv;
       Env.fset = spec_env.fset;
       Env.hole = hole;
-      Env.applied_args = spec_env.applied_args;
       Env.unknown_fv = init_unknown_fv spec_env.fset;
-      Env.fvtab = Hashtbl.create 1000;
+      Env.fvtab = fvtab';
     }
     in
     single_env
-
-  let make_total_single_abd_env env =
-    { Env.pre = env.pre;
-      Env.post = env.post;
-      Env.spectable = env.spectab;
-    }
 
   let rec pow a = function
     | 0 -> 1
@@ -549,35 +490,41 @@ module SpecAbduction = struct
       let b = pow a (n / 2) in
       b * b * (if n mod 2 = 0 then 1 else a)
 
-  let multi_infer ctx pre post spectab holel preds bpreds startX maxX =
-    let pre, holel = instantiate_bool pre holel in
+  let consistent_solution ctx pres post spectable holel preds bpreds startX maxX =
     let rec search_hyp numX =
       if numX > maxX then
         None
       else
-        let env = init_env (pre, post) spectab preds bpreds numX holel in
+        let env = init_env (pres, post) spectable preds bpreds numX holel in
         match refinement_loop ctx env with
         | None -> search_hyp (numX + 1)
         | Some spec -> Some spec
     in
-    let env = search_hyp startX in
+    search_hyp startX
+
+  let multi_infer ctx pre post spectable holel preds bpreds startX maxX =
+    let pre, holel = instantiate_bool pre holel in
+    let pres = List.map Ast.merge_and @@ Ast.to_dnf pre in
+    let env = consistent_solution ctx pres post spectable holel preds bpreds startX maxX in
     match env with
     | None -> raise @@ InterExn "search_hyp: quantified variables over bound"
     | Some env ->
+      let _ = StrMap.iter (fun name spec ->
+          printf "%s\n" (Ast.layout_spec_entry name spec)
+        ) env.vc.Env.spectable in
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"
             name (List.length env.fset) (pow 2 (List.length env.fset))
         ) env.spec_envs in
       (* let _ = raise @@ InterExn "end" in *)
-      let total_env = make_total_single_abd_env env in
       let single_envs = StrMap.fold (fun specname spec_env r ->
           let target_hole = StrMap.find "multi_infer" env.holes specname in
-          let single_env = make_single_abd_env env spec_env target_hole in
+          let single_env = make_single_abd_env env.vc spec_env target_hole in
           single_env :: r
         ) env.spec_envs [] in
       let concat_env = List.find "multi_infer" (fun x ->
           String.equal "push" x.Env.hole.name) single_envs in
-      let _ = Single_abd.infer ctx total_env concat_env in
+      let _ = Single_abd.infer ctx env.vc concat_env in
       let _ = raise @@ InterExn "end" in
       let single_envs = Array.of_list single_envs in
       let rec check_all () =
@@ -593,7 +540,7 @@ module SpecAbduction = struct
             in
             aux total_env (idx + 1) changenum
         in
-        let total_env, changenum = aux total_env 0 0 in
+        let total_env, changenum = aux env.vc 0 0 in
         if changenum == 0 then total_env else check_all ()
       in
       let total_env = check_all () in

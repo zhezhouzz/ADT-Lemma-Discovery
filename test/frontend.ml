@@ -5,8 +5,7 @@ open Printf;;
 open FA;;
 open Utils;;
 open Language.Helper;;
-module Axiom = Inference.AxiomSyn;;
-module Spec = Inference.SpecSyn;;
+(* module Spec = Inference.SpecSyn;; *)
 (* let snoc (lenf, f, lenr, r) x =
  *   let lenr = lenr + 1 in
  *   let r = lazy (Cons (x, r)) in
@@ -68,18 +67,18 @@ let libconcat = {name = "concat"; intps = [T.IntList;T.IntList]; outtps = [T.Int
                     | _ -> raise @@ InterExn "bad prog"
                 } in
 let f, f', r, r' = map4 list_var ("f", "f'", "r", "r'") in
-let spec_tab = predefined_spec_tab in
-let spec_tab = add_spec spec_tab "snoc"
-    ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
-     (Iff(Or[list_member f u; list_member r u; int_eq u x],
-             Or[list_member f' u; list_member r' u]
-            ))
-in
-let spec_tab_add spec_tab {name;intps;outtps;prog} =
-  StrMap.add name (Spec.infer ~progtp:(intps,outtps) ~prog:prog) spec_tab in
-let spec_tab = List.fold_left spec_tab_add spec_tab
-    [libcons;libnil;liblazy;libreverse;libconcat] in
-let _ = printf "%s\n" (A.layout vc) in
+(* let spec_tab = predefined_spec_tab in
+ * let spec_tab = add_spec spec_tab "snoc"
+ *     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
+ *      (Iff(Or[list_member f u; list_member r u; int_eq u x],
+ *              Or[list_member f' u; list_member r' u]
+ *             ))
+ * in *)
+(* let spec_tab_add spec_tab {name;intps;outtps;prog} =
+ *   StrMap.add name (Spec.infer ~progtp:(intps,outtps) ~prog:prog) spec_tab in
+ * let spec_tab = List.fold_left spec_tab_add spec_tab
+ *     [libcons;libnil;liblazy;libreverse;libconcat] in
+ * let _ = printf "%s\n" (A.layout vc) in *)
 (* let ctx =
  *    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
  *  let _ = StrMap.iter (fun name spec ->

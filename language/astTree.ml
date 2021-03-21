@@ -18,6 +18,9 @@ module type AstTree = sig
   val get_app_args: t -> string -> E.SE.t list list
   val neg_spec: string -> t -> t
   val implies_to_and: t -> t
+  val merge_and: t -> t
+  val make_match: matched:Tp.Tp.tpedvar list -> branchs:((t * Tp.Tp.tpedvar) list * t) list -> t
+  val to_dnf: t -> t list
 end
 
 module AstTree (E: Epr.Epr) : AstTree
@@ -79,6 +82,21 @@ module AstTree (E: Epr.Epr) : AstTree
       | SpecApply (specname, args) -> SpecApply (specname, args)
     in
     aux ast
+
+  let merge_and a =
+    let rec get_and = function
+      | ForAll _ | Implies (_, _) | Or _ | Not _ | Iff (_, _) | Ite (_, _, _) ->
+        raise @@ InterExn "never happen in merge and"
+      | And ps -> List.flatten (List.map get_and ps)
+      | SpecApply (_, _) as a -> [a]
+    in
+    let rec aux = function
+      | ForAll _ | Implies (_, _) | Not _ | Iff (_, _) | Ite (_, _, _) | SpecApply (_, _)->
+        raise @@ InterExn "never happen in merge and"
+      | Or ps -> Or (List.map aux ps)
+      | And _ as a-> And (get_and a)
+    in
+    aux a
 
   let vc_layout a =
     let mk_indent indent = String.init indent (fun _ -> ' ') in
@@ -145,6 +163,21 @@ module AstTree (E: Epr.Epr) : AstTree
     in
     aux a b
 
+  let make_match
+      ~(matched:Tp.Tp.tpedvar list)
+      ~(branchs:((t * Tp.Tp.tpedvar) list * t) list) =
+    let matched : E.SE.t list = List.map E.SE.from_tpedvar matched in
+    let handle_banch (matched', body) =
+      let ps = List.flatten @@
+        List.map (fun (x, (t, x')) ->
+          let x' = E.SE.from_tpedvar x' in
+          [t;SpecApply("equal", [x;x'])]
+        ) (List.combine matched matched')
+      in
+      And (ps @ [body])
+    in
+    Or (List.map handle_banch branchs)
+
   let get_app_args t specname =
     let rec aux t res =
       match t with
@@ -162,4 +195,14 @@ module AstTree (E: Epr.Epr) : AstTree
           res
     in
     aux t []
+
+  let to_dnf a =
+    let rec aux a =
+      match a with
+      | SpecApply (_, _) -> [[a]]
+      | Or ps -> List.concat @@ List.map aux ps
+      | And ps -> List.map (fun l -> List.flatten l) (List.choose_list_list (List.map aux ps))
+      | _ -> raise @@ InterExn "to dnf"
+    in
+    List.map (fun l -> And l) (aux a)
 end
