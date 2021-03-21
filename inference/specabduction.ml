@@ -33,6 +33,15 @@ module SpecAbduction = struct
     imps: (V.t list -> (V.t list option)) StrMap.t;
   }
 
+  let sort_singles_by_fset l =
+    let l' =
+      List.sort (fun a b ->
+          compare (List.length a.Env.fset) (List.length b.Env.fset)
+        ) l
+    in
+    let _ = printf "sorted %s\n" @@ List.to_string (fun a -> a.Env.hole.name) l' in
+    l'
+
   let loop_counter = ref 0
 
   let default_range = [1;2;3]
@@ -529,10 +538,12 @@ module SpecAbduction = struct
           let single_env = make_single_abd_env env.vc spec_env target_hole in
           single_env :: r
         ) env.spec_envs [] in
-      let concat_env = List.find "multi_infer" (fun x ->
-          String.equal "push" x.Env.hole.name) single_envs in
-      let _ = Single_abd.infer ctx env.vc concat_env in
-      let _ = raise @@ InterExn "end" in
+      let single_envs = sort_singles_by_fset single_envs in
+      (* let _ = raise @@ InterExn "end" in
+       * let concat_env = List.find "multi_infer" (fun x ->
+       *     String.equal "push" x.Env.hole.name) single_envs in
+       * let _ = Single_abd.infer ctx env.vc concat_env in
+       * let _ = raise @@ InterExn "end" in *)
       let single_envs = Array.of_list single_envs in
       let rec check_all () =
         let rec aux total_env idx changenum =

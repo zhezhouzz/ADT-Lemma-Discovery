@@ -102,7 +102,7 @@ let pos_query ctx vc_env env =
   | S.Timeout -> raise (InterExn "pos query time out!")
   | S.SmtSat m ->
     let fv = S.get_unknown_fv ctx m env.unknown_fv in
-    let _ = Printf.printf "pos:fv = %s\n" (boollist_to_string fv) in
+    let _ = Printf.printf "may pos:fv = %s\n" (boollist_to_string fv) in
     Some fv
 
 open Printf
@@ -352,7 +352,9 @@ let infer ctx vc_env env =
   in
   let env_opt = max_loop vc_env env in
   let _ = match env_opt with
-    | None -> Printf.printf "maxed\n"
+    | None ->
+      let _ = summary_fv_num env in
+      Printf.printf "maxed\n"
     | Some (_, env) ->
       let _ = Printf.printf "max spec:\n%s\n" (Ast.layout_spec
                                                  (get_increamental_spec env.current)) in
