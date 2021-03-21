@@ -114,11 +114,16 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Iff (p1, p2) -> Boolean.mk_iff ctx (aux p1) (aux p2) in
     aux epr
   let avoid_timeout_constraint ctx fv body =
-    let ps1 = List.map (fun x ->
-        Arithmetic.mk_ge ctx x (Arithmetic.Integer.mk_numeral_i ctx 0)) fv in
-    let ps2 = List.map (fun x ->
-        Arithmetic.mk_le ctx x (Arithmetic.Integer.mk_numeral_i ctx 10)) fv in
-    Boolean.mk_implies ctx (Boolean.mk_and ctx (ps1 @ ps2)) body
+    let is = List.init 5 (fun i -> Arithmetic.Integer.mk_numeral_i ctx i) in
+    let ps = List.map (fun x ->
+        Boolean.mk_or ctx (List.map (fun i -> Boolean.mk_eq ctx x i) is)
+      ) fv in
+    Boolean.mk_implies ctx (Boolean.mk_and ctx ps) body
+    (* let ps1 = List.map (fun x ->
+     *     Arithmetic.mk_ge ctx x (Arithmetic.Integer.mk_numeral_i ctx 0)) fv in
+     * let ps2 = List.map (fun x ->
+     *     Arithmetic.mk_le ctx x (Arithmetic.Integer.mk_numeral_i ctx 4)) fv in
+     * Boolean.mk_implies ctx (Boolean.mk_and ctx (ps1 @ ps2)) body *)
   let forallformula_to_z3 ctx (fv, epr) =
     let fv = List.map (fun var -> tpedvar_to_z3 ctx var) fv in
     make_forall ctx fv (avoid_timeout_constraint ctx fv @@ to_z3 ctx epr)

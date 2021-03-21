@@ -226,7 +226,9 @@ let neg_query ctx vc_env env new_spec =
        * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
       match S.check ctx neg_phi with
       | S.SmtUnsat -> Pass
-      | S.Timeout -> raise (InterExn "neg query time out!")
+      | S.Timeout ->
+        let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
+        raise (InterExn "neg query time out!")
       | S.SmtSat m ->
         let bounds = S.get_preds_interp m in
         let applied_args = StrMap.find "gather_neg_fvec_to_tab_flow"
