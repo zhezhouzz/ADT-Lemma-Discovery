@@ -152,26 +152,36 @@ let gather_neg_fvec_to_tab ctx vc_env env qvrange model =
   vc_env.multi_pre
 
 let pos_verify_flow ctx vc_env env flow fv =
-  let spec = make_spec_with_fv env fv in
-  let new_spectable = StrMap.update env.hole.name
-      (fun v -> match v with
-         | None -> raise @@ InterExn "never happen multi_apply_constraint"
-         | Some _ -> Some spec)
-      vc_env.spectable in
-  let neg_phi = Ast.to_z3 ctx
-      (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
-  (* let _ = Printf.printf "verify:%s\n" (Expr.to_string neg_phi) in *)
-  let if_pos =
-    match S.check ctx neg_phi with
-    | S.SmtUnsat ->
-      (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
-      true
-    | S.Timeout -> raise (InterExn "verify candidate pos time out!")
-    | S.SmtSat _ ->
-      let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in
-      false
-  in
-  if_pos
+  (* let _ = StrMap.iter (fun name args ->
+   *     printf "%s: [%s]\n" name (List.to_string
+   *                                 (fun x -> List.to_string T.layouttvar x)
+   *                                 args
+   *                              )
+   *   ) flow.applied_args_map in
+   * let _ = printf "env.hole.name:%s\n" env.hole.name in *)
+  match StrMap.find_opt flow.applied_args_map env.hole.name with
+  | None -> true
+  | _ ->
+    let spec = make_spec_with_fv env fv in
+    let new_spectable = StrMap.update env.hole.name
+        (fun v -> match v with
+           | None -> raise @@ InterExn "never happen multi_apply_constraint"
+           | Some _ -> Some spec)
+        vc_env.spectable in
+    let neg_phi = Ast.to_z3 ctx
+        (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
+    (* let _ = Printf.printf "verify:%s\n" (Expr.to_string neg_phi) in *)
+    let if_pos =
+      match S.check ctx neg_phi with
+      | S.SmtUnsat ->
+        (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
+        true
+      | S.Timeout -> raise (InterExn "verify candidate pos time out!")
+      | S.SmtSat _ ->
+        let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in
+        false
+    in
+    if_pos
 
 let pos_verify_update_env ctx vc_env env fv =
   let res = List.map (fun flow ->
@@ -227,29 +237,32 @@ let neg_query ctx vc_env env new_sr =
            | Some _ -> Some (get_increamental_spec new_sr))
         vc_env.spectable in
     let once flow =
-      let neg_phi = Ast.to_z3 ctx
-        (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
-      (* let _ = Printf.printf "neg_query ast:%s\n"
-       *   (Ast.vc_layout (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post)))) in
-       * let _ = StrMap.iter (fun name spec ->
-       *   printf "%s\n" (Ast.layout_spec_entry name spec)
-       * ) new_spectable in
-       * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
-      match S.check ctx neg_phi with
-      | S.SmtUnsat -> Pass
-      | S.Timeout ->
-        let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
-        raise (InterExn "neg query time out!")
-      | S.SmtSat m ->
-        let bounds = S.get_preds_interp m in
-        let applied_args = StrMap.find "gather_neg_fvec_to_tab_flow"
-            flow.applied_args_map env.hole.name in
-        let _ = gather_neg_fvec_to_tab_flow ctx env applied_args bounds m in
-        (* let _ = Hashtbl.iter (fun vec label ->
-         *     printf "%s:%s\n" (boollist_to_string vec) (D.layout_label label)
-         *   ) env.fvtab in *)
-        let _ = summary_fv_num env in
-        NeedRefine
+      match StrMap.find_opt flow.applied_args_map env.hole.name with
+      | None -> Pass
+      | _ ->
+        let neg_phi = Ast.to_z3 ctx
+            (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
+        (* let _ = Printf.printf "neg_query ast:%s\n"
+         *   (Ast.vc_layout (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post)))) in
+         * let _ = StrMap.iter (fun name spec ->
+         *   printf "%s\n" (Ast.layout_spec_entry name spec)
+         * ) new_spectable in
+         * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
+        match S.check ctx neg_phi with
+        | S.SmtUnsat -> Pass
+        | S.Timeout ->
+          let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
+          raise (InterExn "neg query time out!")
+        | S.SmtSat m ->
+          let bounds = S.get_preds_interp m in
+          let applied_args = StrMap.find "gather_neg_fvec_to_tab_flow"
+              flow.applied_args_map env.hole.name in
+          let _ = gather_neg_fvec_to_tab_flow ctx env applied_args bounds m in
+          (* let _ = Hashtbl.iter (fun vec label ->
+           *     printf "%s:%s\n" (boollist_to_string vec) (D.layout_label label)
+           *   ) env.fvtab in *)
+          let _ = summary_fv_num env in
+          NeedRefine
     in
     let res = List.map once vc_env.multi_pre in
     if List.for_all is_pass res

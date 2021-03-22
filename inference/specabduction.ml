@@ -545,29 +545,37 @@ module SpecAbduction = struct
        *     String.equal "push" x.Env.hole.name) single_envs in
        * let _ = Single_abd.infer ctx env.vc concat_env in
        * let _ = raise @@ InterExn "end" in *)
-      let single_envs = Array.of_list single_envs in
-      let rec check_all () =
-        let rec aux total_env idx changenum =
-          if idx == Array.length single_envs then total_env, changenum else
-            let total_env, changenum =
-              match Single_abd.infer ctx total_env single_envs.(idx) with
-              | Some (total_env, single_env) ->
-                let _ = Single_abd.refresh_single_abd_env single_env in
-                let _ = Array.set single_envs idx single_env in
-                let total_env = Single_abd.update_vc_env total_env single_env in
-                (* let _ = printf "updated total env\n" in
-                 * let _ = StrMap.iter (fun name spec ->
-                 *     printf "%s\n" @@ Ast.layout_spec_entry name spec
-                 *   ) total_env.spectable in *)
-                total_env, changenum + 1
-              | None -> total_env, changenum
-            in
-            aux total_env (idx + 1) changenum
-        in
-        let total_env, changenum = aux env.vc 0 0 in
-        if changenum == 0 then total_env else total_env
-            (* check_all () *)
-      in
-      let total_env = check_all () in
+      let total_env = List.fold_left (fun total_env single_env ->
+          match Single_abd.infer ctx total_env single_env with
+          | None -> total_env
+          | Some (total_env, _) -> total_env
+        ) env.vc single_envs in
       total_env
+
+
+      (* let single_envs = Array.of_list single_envs in
+       * let rec check_all () =
+       *   let rec aux total_env idx changenum =
+       *     if idx == Array.length single_envs then total_env, changenum else
+       *       let total_env, changenum =
+       *         match Single_abd.infer ctx total_env single_envs.(idx) with
+       *         | Some (total_env, single_env) ->
+       *           let _ = Single_abd.refresh_single_abd_env single_env in
+       *           let _ = Array.set single_envs idx single_env in
+       *           let total_env = Single_abd.update_vc_env total_env single_env in
+       *           (\* let _ = printf "updated total env\n" in
+       *            * let _ = StrMap.iter (fun name spec ->
+       *            *     printf "%s\n" @@ Ast.layout_spec_entry name spec
+       *            *   ) total_env.spectable in *\)
+       *           total_env, changenum + 1
+       *         | None -> total_env, changenum
+       *       in
+       *       aux total_env (idx + 1) changenum
+       *   in
+       *   let total_env, changenum = aux env.vc 0 0 in
+       *   if changenum == 0 then total_env else total_env
+       *       (\* check_all () *\)
+       * in
+       * let total_env = check_all () in
+       * total_env *)
 end
