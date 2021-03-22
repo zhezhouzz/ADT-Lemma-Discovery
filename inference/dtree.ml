@@ -18,10 +18,12 @@ module type Dtree = sig
   val to_spec: feature t -> Language.SpecAst.spec
   val of_fastdt: Ml.FastDT.FastDT.dt -> feature_set -> feature t
   val classify: Sample.FeatureVector.data -> feature t
-  val classify_hash: feature_set -> (bool list, label) Hashtbl.t -> feature t * int t
+  val classify_hash: feature_set ->
+    (bool list, 'a) Hashtbl.t -> ('a -> bool) -> feature t * int t
   val len: feature t -> int
   val dt_summary: feature t -> feature_set -> (int * int)
   val layout_label: label -> string
+  val is_pos: label -> bool
 end
 
 module Dtree : Dtree = struct
@@ -219,7 +221,7 @@ module Dtree : Dtree = struct
     let samples = List.map (fun (a, b) -> a, Array.of_list b) labeled_vecs in
     classify_ dfeature_set (Array.of_list samples)
 
-  let classify_hash fset htab =
+  let classify_hash fset htab is_pos =
     (* let _ = Hashtbl.iter (fun vec label ->
      *     printf "%s:%s\n" (boollist_to_string vec) (layout_label label)
      *   ) htab in *)
@@ -228,10 +230,10 @@ module Dtree : Dtree = struct
     let iter = ref 0 in
     let _ =
       Hashtbl.iter (fun f v ->
-        let _ =
-        match v with
-        | Pos -> Array.set samples !iter (true, Array.of_list f)
-        | Neg | MayNeg -> Array.set samples !iter (false, Array.of_list f)
+          let _ =
+            if is_pos v
+            then Array.set samples !iter (true, Array.of_list f)
+            else Array.set samples !iter (false, Array.of_list f)
         in
         iter := !iter + 1
         ) htab
@@ -241,4 +243,7 @@ module Dtree : Dtree = struct
     let res_idx = of_fastdt_idx dt in
     res, res_idx
 
+  let is_pos = function
+    | Pos -> true
+    | _ -> false
 end

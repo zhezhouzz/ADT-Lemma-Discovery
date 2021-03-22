@@ -127,7 +127,9 @@ let gather_neg_fvec_to_tab_flow ctx env applied_args qvrange model =
              *     (boollist_to_string vec') in *)
             match Hashtbl.find_opt env.fvtab vec' with
             | Some D.Neg -> raise @@ InterExn "never happen single gather"
-            | Some D.Pos | Some D.MayNeg -> ()
+            | Some D.Pos -> ()
+            | Some D.MayNeg ->
+              let _ = counter := !counter + 1 in ()
             | None ->
               let _ = counter := !counter + 1 in
               (* Hashtbl.add env.fvtab vec' D.MayNeg *)
@@ -254,7 +256,7 @@ let neg_query ctx vc_env env new_sr =
           let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
           raise (InterExn "neg query time out!")
         | S.SmtSat m ->
-          let bounds = S.get_preds_interp m in
+          let bounds = S.Z3aux.get_preds_interp m in
           let applied_args = StrMap.find "gather_neg_fvec_to_tab_flow"
               flow.applied_args_map env.hole.name in
           let _ = gather_neg_fvec_to_tab_flow ctx env applied_args bounds m in
@@ -271,7 +273,7 @@ let neg_query ctx vc_env env new_sr =
       let dt, dt_idx =
         if Hashtbl.length env.fvtab == 0
         then D.T, D.T
-        else D.classify_hash env.fset env.fvtab in
+        else D.classify_hash env.fset env.fvtab D.is_pos in
       let learned = body_to_spec env @@ Epr.simplify_ite @@ D.to_epr dt in
       let new_sr' = {new_sr with additional_dt = dt_idx; additional_spec = learned} in
       let _ = counter := !counter + 1 in
@@ -314,7 +316,7 @@ let weaker_safe_loop ctx vc_env env =
     let dt_spec, dt_idx =
       if Hashtbl.length env.fvtab == 0
       then D.T, D.T
-      else D.classify_hash env.fset env.fvtab in
+      else D.classify_hash env.fset env.fvtab D.is_pos in
     let learned_body = Epr.simplify_ite @@ D.to_epr dt_spec in
     let new_spec = body_to_spec env learned_body in
     let new_sr = {env.current with additional_dt = dt_idx; additional_spec = new_spec} in

@@ -89,16 +89,16 @@ module Helper = struct
     let spec_tab = add_spec spec_tab "Le"
         [T.Int, "x";T.Int, "y"] [] (int_le x y) in
     let spec_tab = add_spec spec_tab "le"
-        [T.Bool, "bool0";T.Int, "x";T.Int, "y";] []
+        [T.Int, "x";T.Int, "y";T.Bool, "bool0";] []
         (int_eq (SE.Op (T.Bool, "<=", [x;y])) bool0) in
     let spec_tab = add_spec spec_tab "lt"
-        [T.Bool, "bool0";T.Int, "x";T.Int, "y";] []
+        [T.Int, "x";T.Int, "y";T.Bool, "bool0";] []
         (int_eq (SE.Op (T.Bool, "<", [x;y])) bool0) in
     let spec_tab = add_spec spec_tab "intadd"
         [T.Int, "x";T.Int, "y";T.Int, "z"] []
         (int_eq (SE.Op (T.Bool, "+", [x;y])) z) in
     let spec_tab = add_spec spec_tab "inteq"
-        [T.Bool, "bool0";T.Int, "x";T.Int, "y";] []
+        [T.Int, "x";T.Int, "y";T.Bool, "bool0";] []
         (int_eq (SE.Op (T.Bool, "==", [x;y])) bool0) in
     let spec_tab = add_spec spec_tab "equal"
         [T.Int, "x";T.Int, "y"] [] (int_eq x y) in

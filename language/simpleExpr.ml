@@ -61,7 +61,7 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
     let vars = List.remove_duplicates String.equal (aux expr) in
     consts, vars
 
-  open Z3aux
+  open Solver.Z3aux
   open Z3
   open Arithmetic
   open Boolean

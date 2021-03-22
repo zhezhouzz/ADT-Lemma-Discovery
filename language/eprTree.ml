@@ -14,6 +14,7 @@ module type EprTree = sig
   val layout: t -> string
   val layout_forallformula: forallformula -> string
   val pretty_layout_forallformula: forallformula -> string
+  val pretty_layout_epr: t -> string
   val substm: SE.t Utils.StrMap.t -> t -> t
   val subst: t -> string list -> SE.t list -> t
   val subst_forallformula: forallformula -> string list -> SE.t list -> forallformula
@@ -113,6 +114,8 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     let qvstr = List.map T.layouttvar forallvars in
     if (List.length forallvars) == 0 then layout body else
       sprintf "forall %s,%s" (List.inner_layout qvstr " " "") (pretty_layout 0 body)
+
+  let pretty_layout_epr t = pretty_layout 0 t
 
   let layout_forallformula (forallvars, body) =
     let qvstr = List.map T.layouttvar forallvars in

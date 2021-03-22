@@ -13,13 +13,14 @@ module type AstTree = sig
   val layout: t -> string
   val vc_layout: t -> string
   val layout_spec: spec -> string
+  val print_spectable: spec Utils.StrMap.t -> unit
   val layout_spec_entry: string -> spec -> string
   val eq: t -> t -> bool
   val get_app_args: t -> string -> E.SE.t list list
   val neg_spec: string -> t -> t
   val implies_to_and: t -> t
   val merge_and: t -> t
-  val make_match: matched:Tp.Tp.tpedvar list -> branchs:((t * Tp.Tp.tpedvar) list * t) list -> t
+  val make_match: Tp.Tp.tpedvar list -> ((t * Tp.Tp.tpedvar) list * t) list -> t
   val to_dnf: t -> t list
 end
 
@@ -146,6 +147,11 @@ module AstTree (E: Epr.Epr) : AstTree
     sprintf "%s(%s):=\n%s" name
       (List.to_string T.layouttvar args) (E.pretty_layout_forallformula formula)
 
+  let print_spectable spectable =
+    StrMap.iter (fun name spec ->
+        printf "%s\n" (layout_spec_entry name spec)
+      ) spectable
+
   let eq a b =
     let rec aux a b =
       match (a, b) with
@@ -164,8 +170,8 @@ module AstTree (E: Epr.Epr) : AstTree
     aux a b
 
   let make_match
-      ~(matched:Tp.Tp.tpedvar list)
-      ~(branchs:((t * Tp.Tp.tpedvar) list * t) list) =
+      (matched:Tp.Tp.tpedvar list)
+      (branchs:((t * Tp.Tp.tpedvar) list * t) list) =
     let matched : E.SE.t list = List.map E.SE.from_tpedvar matched in
     let handle_banch (matched', body) =
       let ps = List.flatten @@
@@ -202,7 +208,7 @@ module AstTree (E: Epr.Epr) : AstTree
       | SpecApply (_, _) -> [[a]]
       | Or ps -> List.concat @@ List.map aux ps
       | And ps -> List.map (fun l -> List.flatten l) (List.choose_list_list (List.map aux ps))
-      | _ -> raise @@ InterExn "to dnf"
+      | _ -> raise @@ InterExn (sprintf "to dnf(%s)" (layout a))
     in
     List.map (fun l -> And l) (aux a)
 end

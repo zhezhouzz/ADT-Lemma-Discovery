@@ -142,9 +142,11 @@ let make_lets l body =
  *   () *)
 
 let bench_post = fun args -> SpecApply("Post", args)
-let set_post spectable args qv body =
-  let spectable = StrMap.add "Post" (args, (qv, body)) spectable in
+let set_spec spectable name args qv body =
+  let spectable = StrMap.add name (args, (qv, body)) spectable in
   spectable
+let set_post spectable args qv body =
+  set_spec spectable "Post" args qv body
 
 let make_hole name argstp imp =
   let names = T.auto_name argstp in

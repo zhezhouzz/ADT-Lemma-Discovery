@@ -18,6 +18,7 @@ module type Ast = sig
   val elem_not_conj: t -> t
   val extract_variables: t -> (int list * (E.SE.tp * string) list)
   val eliminate_cond: t -> t list
+  val eliminate_cond_one: t -> t
 end
 
 module Ast (A: AstTree.AstTree): Ast = struct
@@ -69,9 +70,10 @@ module Ast (A: AstTree.AstTree): Ast = struct
         E.forallformula_exec body env
     in
     aux ast
+  open Solver.Z3aux
   open Z3
   open Arithmetic
-  open Z3aux
+
   let spec_to_z3 ctx name (args, forallf) =
     let fdecl = FuncDecl.mk_func_decl_s ctx name
         (List.init (List.length args) (fun _ -> Integer.mk_sort ctx))
@@ -151,6 +153,35 @@ module Ast (A: AstTree.AstTree): Ast = struct
     let qargs = List.map (tpedvar_to_z3 ctx) qargs in
     make_forall ctx qargs body
 
+  let eliminate_cond_one ast =
+    let rec aux = function
+      | ForAll _ -> raise @@ InterExn "eliminate_cond:never happen"
+      | Implies (p1, p2) -> Implies (aux p1, aux p2)
+      | Ite (p1, p2, p3) ->
+        (match p1 with
+         | SpecApply (specname, argsvalue) ->
+           (match argsvalue with
+           | [] -> raise @@ InterExn "bad ast to z3 in cond"
+           | _ ->
+             let argsvalue' = List.rev @@ List.tl @@ List.rev argsvalue in
+             Or [
+               And [SpecApply (specname,
+                               argsvalue' @ [SE.Literal (T.Bool, SE.L.Bool true)]);
+                    aux p2];
+               And [SpecApply (specname,
+                               argsvalue' @ [SE.Literal (T.Bool, SE.L.Bool false)]);
+                    aux p3];
+             ]
+           )
+         | _ -> raise @@ InterExn "bad ast to z3 in cond")
+      | Not _ -> raise @@ InterExn "eliminate_cond:never happen"
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Iff (_, _) -> raise @@ InterExn "eliminate_cond:never happen"
+      | SpecApply (spec_name, argsvalue) -> SpecApply (spec_name, argsvalue)
+    in
+    aux ast
+
   let eliminate_cond ast =
     let rec aux = function
       | ForAll _ -> raise @@ InterExn "eliminate_cond:never happen"
@@ -163,16 +194,21 @@ module Ast (A: AstTree.AstTree): Ast = struct
          | SpecApply (specname, argsvalue) ->
            (match argsvalue with
            | [] -> raise @@ InterExn "bad ast to z3 in cond"
-           | _ :: args ->
+           | _ ->
+             let argsvalue' = List.rev @@ List.tl @@ List.rev argsvalue in
              let p2s = aux p2 in
              let p3s = aux p3 in
              (List.map (fun p2 ->
-                 Implies(SpecApply (specname, SE.Literal (T.Bool, SE.L.Bool true)::args),
-                         p2)
+                  Implies(
+                    SpecApply (specname,
+                               argsvalue' @ [SE.Literal (T.Bool, SE.L.Bool true)]),
+                    p2)
                 ) p2s) @
              (List.map (fun p3 ->
-                  Implies(SpecApply (specname, SE.Literal (T.Bool, SE.L.Bool false)::args),
-                          p3)
+                  Implies(
+                    SpecApply (specname,
+                               argsvalue' @ [SE.Literal (T.Bool, SE.L.Bool true)]),
+                    p3)
                 ) p3s)
            )
          | _ -> raise @@ InterExn "bad ast to z3 in cond")

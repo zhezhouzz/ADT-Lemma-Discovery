@@ -9,7 +9,7 @@
  ;;spec_customstk
  ;;spec_splayhp
  ;;spec_leftisthp
- ;;spec_unbset
+ spec_unbset
  ;;spec_rbset
  ;;spec_stream
  ;;spec_bankersq

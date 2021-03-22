@@ -17,12 +17,17 @@ module SpecAbduction = struct
   open Z3
   open LH
 
+  type label =
+    | MultiPos
+    | MultiMayNeg
+    | MultiMayNegCache
+
   type spec_env = {
     dt: int D.t;
     qv: T.tpedvar list;
     fset: F.t list;
     (* applied_args: T.tpedvar list list; *)
-    fvtab: (bool list, D.label) Hashtbl.t;
+    fvtab: (bool list, label) Hashtbl.t;
     abduciable: Epr.forallformula;
   }
 
@@ -32,6 +37,10 @@ module SpecAbduction = struct
     holes: hole StrMap.t;
     imps: (V.t list -> (V.t list option)) StrMap.t;
   }
+
+  let is_pos = function
+    | MultiPos -> true
+    | _ -> false
 
   let sort_singles_by_fset l =
     let l' =
@@ -103,10 +112,10 @@ module SpecAbduction = struct
     let _ = printf "len(fvs) = %i\n" (List.length fvs) in
     let _ = List.iter (fun fv ->
         match Hashtbl.find_opt env.fvtab fv with
-        | Some Pos -> ()
-        | Some Neg -> raise @@ InterExn "never happen sampling"
-        | Some MayNeg -> Hashtbl.replace env.fvtab fv Pos
-        | None -> Hashtbl.add env.fvtab fv Pos
+        | Some MultiPos -> ()
+        | Some MultiMayNegCache -> raise @@ InterExn "never happen sampling"
+        | Some MultiMayNeg -> Hashtbl.replace env.fvtab fv MultiPos
+        | None -> Hashtbl.add env.fvtab fv MultiPos
       ) fvs in
     List.length fvs
 
@@ -118,6 +127,7 @@ module SpecAbduction = struct
     let _ =
       List.map (fun args ->
           let args = List.map SE.from_tpedvar args in
+          let _ = printf "args:%s\n" (List.to_string SE.layout args) in
           let extract_fvec _ values =
             let vec = List.map
                 (fun feature ->
@@ -127,13 +137,19 @@ module SpecAbduction = struct
             (* let _ = printf "[vec]:%s%s\n" (List.to_string Epr.layout vec)
              *     (boollist_to_string vec') in *)
             match Hashtbl.find_opt env.fvtab vec' with
-            | Some Neg ->
+            | Some MultiMayNeg ->
               raise @@ InterExn "never happen gather_neg_fvec_to_tab"
-            | Some Pos | Some MayNeg -> ()
+            | Some MultiPos ->
+              let _ = printf "pos:%s\n"  (boollist_to_string vec') in
+              ()
+            | Some MultiMayNegCache ->
+              let _ = counter := !counter + 1 in
+              let _ = printf "may neg cache:%s\n"  (boollist_to_string vec') in
+              ()
             | None ->
               let _ = counter := !counter + 1 in
               let _ = printf "neg:%s\n"  (boollist_to_string vec') in
-              Hashtbl.add env.fvtab vec' MayNeg
+              Hashtbl.add env.fvtab vec' MultiMayNegCache
           in
           let _ = List.choose_list_list_order_fold extract_fvec () sub_assignment in
           ()
@@ -267,10 +283,10 @@ module SpecAbduction = struct
     let dt, dtidx =
       if Hashtbl.length env.fvtab == 0
       then D.T, D.T
-      else D.classify_hash env.fset env.fvtab in
+      else D.classify_hash env.fset env.fvtab is_pos in
     let abduciable = D.to_epr dt in
-    let _ = printf "\traw abduciable:%s\n" (Epr.layout abduciable) in
     let abduciable = Epr.simplify_ite abduciable in
+    let _ = printf "\traw abduciable:\n%s\n" (Epr.pretty_layout_epr abduciable) in
     let abduciable = env.qv, abduciable in
     {env with abduciable = abduciable; dt = dtidx}
 
@@ -288,7 +304,7 @@ module SpecAbduction = struct
            let _ = total_neg_num := !total_neg_num + neg_num in
            ()
         ) flow.Env.applied_args_map in
-    (* let _ = printf "total_neg_num:%i\n" (!total_neg_num) in *)
+    let _ = printf "total_neg_num:%i\n" (!total_neg_num) in
     if !total_neg_num == 0 then Some flow.pre_flow else None
 
   let update_env_spectable env =
@@ -318,38 +334,40 @@ module SpecAbduction = struct
     let smt_query = Ast.to_z3 ctx
         (Ast.Not (Ast.Implies (flow.Env.pre_flow, env.vc.Env.post)))
         env.vc.Env.spectable in
-      let _ = printf "smt_query\n%s\n" (Expr.to_string smt_query) in
       match S.check ctx smt_query with
       | S.SmtUnsat -> Verified
-      | S.Timeout -> raise (InterExn "multi inference time out!")
+      | S.Timeout ->
+        let _ = printf "%s\n" (Expr.to_string smt_query) in
+        raise (InterExn "multi inference time out!")
       | S.SmtSat model ->
-        let qvrange = S.get_preds_interp model in
+        let qvrange = S.Z3aux.get_preds_interp model in
         (match inplace_gather_fv ctx model qvrange env flow with
          | None -> Gathered
          | Some pre ->
+           let _ = printf "smt_query\n%s\n" (Expr.to_string smt_query) in
+           let _ = printf "model:\n%s\n" (Model.to_string model) in
            (printf "cannot gather fv in ast:%s\n" (Ast.vc_layout pre); CannotGather)
         )
 
-  (* let inplace_update_env ctx model qvrange env flow =
-   *   let n = update_spec_env ctx model qvrange env flow.applied_args_map in
-   *   if n <= 0
-   *   then NotExistsInHyp pre.pre_flow
-   *   else
-   * 
-   *       Some flow else None
-   *     ) None env.multi_pre in
-   *   match false_opt with
-   *   | Some pre -> NotExistsInHyp pre.pre_flow
-   *   | None ->
-   *     let spec_envs' = StrMap.map learn_in_spec_env env.spec_envs in
-   *     SpecEnvUpdated {env with spec_envs = spec_envs'} *)
-
   let sample_num = 10
+
+  let negcache_to_neg env =
+    StrMap.iter (fun _ spec_env ->
+        Hashtbl.filter_map_inplace (fun _ label ->
+            match label with
+            | MultiPos -> Some MultiPos
+            | MultiMayNeg | MultiMayNegCache -> Some MultiMayNeg
+          ) spec_env.fvtab
+      ) env.spec_envs
 
   let refinement_loop ctx env =
     let _ = printf "refinement_loop\n" in
     let rec neg_refine_loop env =
       let _ = loop_counter := !loop_counter + 1 in
+      (* let (fvs, res) = List.fold_left (fun (fvs, res) flow ->
+       *     let (fvs, r) = inplace_verify_and_gather_fv ctx env flow fvs in
+       *     fvs, res @ [r]
+       *   ) (Hashtbl.create 1000, []) env.vc.Env.multi_pre in *)
       let res = List.map (fun flow ->
           inplace_verify_and_gather_fv ctx env flow
         ) env.vc.Env.multi_pre in
@@ -358,6 +376,7 @@ module SpecAbduction = struct
       else if List.exists is_cannot_gather res
       then None
       else
+        let _ = negcache_to_neg env in
         let spec_envs' = StrMap.map learn_in_spec_env env.spec_envs in
         let env = {env with spec_envs = spec_envs'} in
         let env = update_env_spectable env in
@@ -485,8 +504,9 @@ module SpecAbduction = struct
     let fvtab' = Hashtbl.create 10000 in
     let _ = Hashtbl.iter (fun vec label ->
         match label with
-        | D.Pos -> Hashtbl.add fvtab' vec D.Pos
-        | D.Neg | D.MayNeg -> Hashtbl.add fvtab' vec D.MayNeg
+        | MultiPos -> Hashtbl.add fvtab' vec D.Pos
+        | MultiMayNeg -> Hashtbl.add fvtab' vec D.MayNeg
+        | MultiMayNegCache -> raise @@ InterExn "never happen in make_single_abd_env"
       ) spec_env.fvtab in
     let single_env = {
       Env.current = current;
@@ -520,7 +540,11 @@ module SpecAbduction = struct
 
   let multi_infer ctx pre post spectable holel preds bpreds startX maxX =
     let pre, holel = instantiate_bool pre holel in
-    let pres = List.map Ast.merge_and @@ Ast.to_dnf pre in
+    let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
+    let _ = List.iter (fun pre ->
+        printf "[pre]\n%s\n" (Ast.vc_layout pre)
+      ) pres in
+    let _ = Ast.print_spectable spectable in
     let env = consistent_solution ctx pres post spectable holel preds bpreds startX maxX in
     match env with
     | None -> raise @@ InterExn "search_hyp: quantified variables over bound"
