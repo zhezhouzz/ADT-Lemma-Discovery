@@ -324,10 +324,18 @@ let refresh_single_abd_env env =
   let _ = Hashtbl.filter_map_inplace (fun _ label ->
       match label with
       | D.Pos -> Some D.Pos
-      | D.Neg -> None
-      | D.MayNeg -> None
+      | D.Neg -> Some D.MayNeg
+      | D.MayNeg -> Some D.MayNeg
     ) env.fvtab in
   ()
+
+let update_vc_env vc_env spec_env =
+  let new_spectable = StrMap.update spec_env.hole.name
+      (fun v -> match v with
+         | None -> raise @@ InterExn "refresh_vc_env"
+         | Some _ -> Some (get_increamental_spec spec_env.current))
+      vc_env.spectable in
+  {vc_env with spectable = new_spectable}
 
 let infer ctx vc_env env =
   let _ = Printf.printf "single infer: %s\n" (env.hole.name) in

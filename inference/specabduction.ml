@@ -539,8 +539,9 @@ module SpecAbduction = struct
           single_env :: r
         ) env.spec_envs [] in
       let single_envs = sort_singles_by_fset single_envs in
-      (* let _ = raise @@ InterExn "end" in
-       * let concat_env = List.find "multi_infer" (fun x ->
+      (* let single_envs = List.rev single_envs in *)
+      (* let _ = raise @@ InterExn "end" in *)
+      (* let concat_env = List.find "multi_infer" (fun x ->
        *     String.equal "push" x.Env.hole.name) single_envs in
        * let _ = Single_abd.infer ctx env.vc concat_env in
        * let _ = raise @@ InterExn "end" in *)
@@ -553,13 +554,19 @@ module SpecAbduction = struct
               | Some (total_env, single_env) ->
                 let _ = Single_abd.refresh_single_abd_env single_env in
                 let _ = Array.set single_envs idx single_env in
+                let total_env = Single_abd.update_vc_env total_env single_env in
+                (* let _ = printf "updated total env\n" in
+                 * let _ = StrMap.iter (fun name spec ->
+                 *     printf "%s\n" @@ Ast.layout_spec_entry name spec
+                 *   ) total_env.spectable in *)
                 total_env, changenum + 1
               | None -> total_env, changenum
             in
             aux total_env (idx + 1) changenum
         in
         let total_env, changenum = aux env.vc 0 0 in
-        if changenum == 0 then total_env else check_all ()
+        if changenum == 0 then total_env else total_env
+            (* check_all () *)
       in
       let total_env = check_all () in
       total_env
