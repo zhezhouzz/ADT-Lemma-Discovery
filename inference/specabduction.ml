@@ -538,6 +538,42 @@ module SpecAbduction = struct
     in
     search_hyp startX
 
+  let merge_current sr fset =
+    let spec, dt = D.merge_dt fset sr.Env.init_dt sr.Env.additional_dt in
+    (* let spec, dt = D.subtract_dt fset sr.Env.additional_dt sr.Env.init_dt in *)
+    spec, dt
+
+  let merge_envs total_env single_envs_arr =
+    Array.fold_left (fun total_env single_env ->
+        let spec, _ = merge_current single_env.Env.current single_env.Env.fset in
+        let abduciable = D.to_epr spec in
+        let abduciable = Epr.simplify_ite abduciable in
+        let spec = single_env.hole.args, (single_env.qv, abduciable) in
+        let _ = printf "merged [%s]:\n%s\n"
+            single_env.hole.name (Ast.layout_spec spec) in
+        let new_spectable = StrMap.update single_env.Env.hole.name
+            (fun v -> match v with
+               | None -> raise @@ InterExn "merge_envs"
+               | Some _ -> Some spec)
+            total_env.Env.spectable in
+        {total_env with Env.spectable = new_spectable}
+      ) total_env single_envs_arr
+
+  let verify_flow ctx vc flow =
+    let smt_query = Ast.to_z3 ctx
+        (Ast.Not (Ast.Implies (flow.Env.pre_flow, vc.Env.post)))
+        vc.Env.spectable in
+    match S.check ctx smt_query with
+    | S.SmtUnsat -> true
+    | S.Timeout ->
+      let _ = printf "%s\n" (Expr.to_string smt_query) in
+      raise (InterExn "multi inference time out!")
+    | S.SmtSat _ -> false
+
+  let verify ctx vc =
+    let res = List.map (fun flow -> verify_flow ctx vc flow) vc.Env.multi_pre in
+    List.for_all (fun x -> x) res
+
   let multi_infer ctx pre post spectable holel preds bpreds startX maxX =
     let pre, holel = instantiate_bool pre holel in
     let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
@@ -563,19 +599,56 @@ module SpecAbduction = struct
           single_env :: r
         ) env.spec_envs [] in
       let single_envs = sort_singles_by_fset single_envs in
-      (* let single_envs = List.rev single_envs in *)
-      (* let _ = raise @@ InterExn "end" in *)
-      (* let concat_env = List.find "multi_infer" (fun x ->
-       *     String.equal "push" x.Env.hole.name) single_envs in
-       * let _ = Single_abd.infer ctx env.vc concat_env in
-       * let _ = raise @@ InterExn "end" in *)
-      let total_env = List.fold_left (fun total_env single_env ->
-          match Single_abd.infer ctx total_env single_env with
-          | None -> total_env
-          | Some (total_env, _) -> total_env
-        ) env.vc single_envs in
+      let single_envs_arr = Array.of_list single_envs in
+      let rec aux total_env idx =
+        if idx >= Array.length single_envs_arr
+        then total_env
+        else
+        let single_env = single_envs_arr.(idx) in
+        match Single_abd.infer ctx total_env single_env with
+        | None -> aux total_env (idx + 1)
+        | Some (total_env, single_env') ->
+          let _ = Array.set single_envs_arr idx single_env' in
+          aux total_env (idx + 1)
+      in
+      let total_env = aux env.vc 0 in
+      let total_env = merge_envs total_env single_envs_arr in
+      let if_verified = verify ctx total_env in
+      let _ = printf "verify merged:%b\n" if_verified in
+
+      let top_spec = StrMap.find "update_env" env.spec_envs "top" in
+      let top_hole = StrMap.find "update_env" env.holes "top" in
+      let spectable' = StrMap.update "top" (fun spec ->
+          match spec with
+          | None -> raise @@ InterExn "update_env"
+          | Some _ -> Some (top_hole.args, top_spec.abduciable)
+        ) total_env.spectable in
+      let total_env = {total_env with spectable = spectable'} in
+      let if_verified = verify ctx total_env in
+      let _ = printf "verify merged/top:%b\n" if_verified in
+
+      let push_spec = StrMap.find "update_env" env.spec_envs "push" in
+      let push_hole = StrMap.find "update_env" env.holes "push" in
+      let spectable' = StrMap.update "push" (fun spec ->
+          match spec with
+          | None -> raise @@ InterExn "update_env"
+          | Some _ -> Some (push_hole.args, push_spec.abduciable)
+        )   total_env.spectable in
+      let total_env = {total_env with spectable = spectable'} in
+      let if_verified = verify ctx total_env in
+      let _ = printf "verify merged/top/push:%b\n" if_verified in
+      let _ = StrMap.iter (fun name spec ->
+          printf "%s\n" (Ast.layout_spec_entry name spec)
+        ) total_env.spectable in
       total_env
 
+
+  (* let single_envs = List.rev single_envs in *)
+  (* let _ = raise @@ InterExn "end" in *)
+  (* let concat_env = List.find "multi_infer" (fun x ->
+   *     String.equal "push" x.Env.hole.name) single_envs in
+   * let _ = Single_abd.infer ctx env.vc concat_env in
+   * let _ = raise @@ InterExn "end" in *)
 
       (* let single_envs = Array.of_list single_envs in
        * let rec check_all () =

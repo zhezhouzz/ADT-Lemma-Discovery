@@ -20,6 +20,8 @@ module type Dtree = sig
   val classify: Sample.FeatureVector.data -> feature t
   val classify_hash: feature_set ->
     (bool list, 'a) Hashtbl.t -> ('a -> bool) -> feature t * int t
+  val merge_dt: feature_set -> int t -> int t -> feature t * int t
+  val subtract_dt: feature_set -> int t -> int t -> feature t * int t
   val len: feature t -> int
   val dt_summary: feature t -> feature_set -> (int * int)
   val layout_label: label -> string
@@ -143,9 +145,9 @@ module Dtree : Dtree = struct
     let rec aux = function
       | FastDT.Leaf {c_t; c_f} ->
         let res =
-        if (Float.abs c_t) < 1e-3 then F
-        else if (Float.abs c_f) < 1e-3 then T
-        else raise @@ InterExn (sprintf "Bad Dt Result(%f, %f)" c_t c_f)
+          if (Float.abs c_t) < 1e-3 then F
+          else if (Float.abs c_f) < 1e-3 then T
+          else raise @@ InterExn (sprintf "Bad Dt Result(%f, %f)" c_t c_f)
         in
         (* let _ = Printf.printf "leaf(%f,%f) ->(%f,%f,%f) = %s\n" c_t c_f
          *     (Float.abs c_t) (Float.abs c_f) (1e-3) (layout res) in *)
@@ -234,8 +236,8 @@ module Dtree : Dtree = struct
             if is_pos v
             then Array.set samples !iter (true, Array.of_list f)
             else Array.set samples !iter (false, Array.of_list f)
-        in
-        iter := !iter + 1
+          in
+          iter := !iter + 1
         ) htab
     in
     let dt = FastDT.make_dt ~samples:samples ~max_d:500 in
@@ -246,4 +248,38 @@ module Dtree : Dtree = struct
   let is_pos = function
     | Pos -> true
     | _ -> false
+
+  let two_dt f fset dt1 dt2 =
+    let len = List.length fset in
+    let fv_arr = Array.init len (fun _ -> false) in
+    let rec next idx =
+      if idx >= len then None
+      else if not (fv_arr.(idx)) then (Array.set fv_arr idx true; Some idx)
+      else
+        match next (idx + 1) with
+        | None -> None
+        | Some _ -> (Array.set fv_arr idx false; Some 0)
+    in
+    let ftab = Hashtbl.create 10000 in
+    let rec aux idx =
+      let fvec = Array.to_list fv_arr in
+      (* let _ = Printf.printf "iter:%s\n" (boollist_to_string fvec) in *)
+      let dt1_b = exec_vector_idx dt1 fvec in
+      let dt2_b = exec_vector_idx dt2 fvec in
+      let _ = if f dt1_b dt2_b then
+          Hashtbl.add ftab fvec Pos
+        else
+          Hashtbl.add ftab fvec Neg
+      in
+      match next idx with
+      | None -> ()
+      | Some idx -> aux idx
+    in
+    (aux 0; classify_hash fset ftab is_pos)
+
+  let merge_dt fset dt1 dt2 =
+    two_dt (fun dt1_b dt2_b -> dt1_b || dt2_b) fset dt1 dt2
+
+  let subtract_dt fset dt1 dt2 =
+    two_dt (fun dt1_b dt2_b -> dt1_b && not dt2_b) fset dt1 dt2
 end
