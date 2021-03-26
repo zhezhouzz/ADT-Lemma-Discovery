@@ -71,10 +71,46 @@ module Tp = struct
 
   let auto_name tps =
     let res, _ =
-    List.fold_left (fun (r, counter) tp ->
-        let name, counter = counter_set counter tp in
-        r @ [name], counter
+      List.fold_left (fun (r, counter) tp ->
+          let name, counter = counter_set counter tp in
+          r @ [name], counter
         ) ([], make_counter ()) tps
     in
     res
+
+  open Yojson.Basic
+  let encode = function
+    | Bool -> `String "B"
+    | Int -> `String "I"
+    | IntList -> `String "IL"
+    | IntTree -> `String "IT"
+    | IntTreeI -> `String "ITI"
+    | IntTreeB -> `String "ITB"
+  let decode json =
+    let open Util in
+    let tp = to_string json in
+    if String.equal "B" tp then Bool
+    else if String.equal "I" tp then Int
+    else if String.equal "IL" tp then IntList
+    else if String.equal "IT" tp then IntTree
+    else if String.equal "ITI" tp then IntTreeI
+    else if String.equal "ITB" tp then IntTreeB
+    else raise @@ InterExn "Lit.Tree::decode wrong type"
+
+  let tpedvar_encode (tp, name) =
+    `Assoc ["t", `String "tpv";
+            "tp", encode tp;
+            "n", `String name]
+
+  let tpedvar_decode json =
+    let open Util in
+    let treetp = json |> member "t" |> to_string in
+    if String.equal "tpv" treetp then
+      let tp = json |> member "tp" |> decode in
+      let name = json |> member "n" |> to_string in
+      (tp, name)
+    else raise @@ InterExn (Printf.sprintf "%s::decode wrong type" "tpedvar")
+
+  let tpedvar_eq (tp1, name1) (tp2, name2) =
+    (eq tp1 tp2) && (String.equal name1 name2)
 end

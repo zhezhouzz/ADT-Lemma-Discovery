@@ -4,6 +4,7 @@ module Ast = Language.SpecAst
 module Epr = Ast.E
 module SE = Epr.SE
 module S = Solver
+module SZ = S.Z3aux
 module T = Tp.Tp
 module F = Feature.Feature
 module FV = Sample.FeatureVector
@@ -83,6 +84,11 @@ let fv_no_repeat env =
   let c = Epr.Not (Epr.Or c) in
   c
 
+type pos_fv =
+  | NoPosFv
+  | MayNoPosFv
+  | PosFv of bool list
+
 let pos_query ctx vc_env env =
   let pre = Ast.Or (List.map (fun flow -> flow.pre_flow) vc_env.multi_pre) in
   let spec = make_spec_with_unknown env in
@@ -91,19 +97,33 @@ let pos_query ctx vc_env env =
          | None -> raise @@ InterExn "never happen multi_apply_constraint"
          | Some _ -> Some spec)
       vc_env.spectable in
-  let pos_phi = Ast.to_z3 ctx (Ast.Implies (pre, vc_env.post)) new_spectable in
-  let force_enum_neg = Epr.to_z3 ctx
-      (fv_not_in_curr_constraint env) in
+  let force_enum_neg = Epr.to_z3 ctx (fv_not_in_curr_constraint env) in
   let force_no_repeat = Epr.to_z3 ctx @@ fv_no_repeat env in
-  let pos_query = Boolean.mk_and ctx [pos_phi; force_enum_neg; force_no_repeat] in
+  let build_pos_query version =
+    let pos_phi =
+      Ast.to_z3 ctx (Ast.Implies (pre, vc_env.post)) new_spectable version vc_env.vars in
+    Boolean.mk_and ctx [pos_phi; force_enum_neg; force_no_repeat]
+  in
+  let handle_model m =
+    let fv = S.get_unknown_fv ctx m env.unknown_fv in
+    (* let _ = Printf.printf "may pos:fv = %s\n" (boollist_to_string fv) in *)
+    PosFv fv
+  in
+  let version = SZ.V1 in
+  let pos_query = build_pos_query version in
   (* let _ = Printf.printf "pos_query:\n%s\n" (Expr.to_string pos_query) in *)
   match S.check ctx pos_query with
-  | S.SmtUnsat -> None
-  | S.Timeout -> raise (InterExn "pos query time out!")
-  | S.SmtSat m ->
-    let fv = S.get_unknown_fv ctx m env.unknown_fv in
-    let _ = Printf.printf "may pos:fv = %s\n" (boollist_to_string fv) in
-    Some fv
+  | S.SmtUnsat ->
+    let version = SZ.V2 in
+    let pos_query = build_pos_query version in
+    (match S.check ctx pos_query with
+     | S.SmtUnsat -> NoPosFv
+     | S.Timeout -> MayNoPosFv
+       (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
+     | S.SmtSat m -> handle_model m)
+  | S.Timeout -> MayNoPosFv
+    (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
+  | S.SmtSat m -> handle_model m
 
 open Printf
 
@@ -159,7 +179,7 @@ let pos_verify_flow ctx vc_env env flow fv =
    *                                 (fun x -> List.to_string T.layouttvar x)
    *                                 args
    *                              )
-   *   ) flow.applied_args_map in
+   *   ) flow.applied_args_map iin
    * let _ = printf "env.hole.name:%s\n" env.hole.name in *)
   match StrMap.find_opt flow.applied_args_map env.hole.name with
   | None -> true
@@ -170,17 +190,25 @@ let pos_verify_flow ctx vc_env env flow fv =
            | None -> raise @@ InterExn "never happen multi_apply_constraint"
            | Some _ -> Some spec)
         vc_env.spectable in
-    let neg_phi = Ast.to_z3 ctx
-        (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
+    let build_neg_phi version = Ast.to_z3 ctx
+        (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable version vc_env.vars in
+    let version = SZ.V1 in
+    let neg_phi = build_neg_phi version in
     (* let _ = Printf.printf "verify:%s\n" (Expr.to_string neg_phi) in *)
     let if_pos =
       match S.check ctx neg_phi with
       | S.SmtUnsat ->
         (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
         true
-      | S.Timeout -> raise (InterExn "verify candidate pos time out!")
+      | S.Timeout -> true
+        (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
+        (* let version = SZ.V1 in
+         * let neg_phi = build_neg_phi version in
+         * (match S.check ctx neg_phi with
+         *  | S.SmtUnsat | S.Timeout -> raise (InterExn "verify candidate pos time out!")
+         *  | S.SmtSat _ -> false) *)
       | S.SmtSat _ ->
-        let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in
+        (* let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in *)
         false
     in
     if_pos
@@ -242,21 +270,8 @@ let neg_query ctx vc_env env new_sr =
       match StrMap.find_opt flow.applied_args_map env.hole.name with
       | None -> Pass
       | _ ->
-        let neg_phi = Ast.to_z3 ctx
-            (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable in
-        (* let _ = Printf.printf "neg_query ast:%s\n"
-         *   (Ast.vc_layout (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post)))) in
-         * let _ = StrMap.iter (fun name spec ->
-         *   printf "%s\n" (Ast.layout_spec_entry name spec)
-         * ) new_spectable in
-         * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
-        match S.check ctx neg_phi with
-        | S.SmtUnsat -> Pass
-        | S.Timeout ->
-          let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
-          raise (InterExn "neg query time out!")
-        | S.SmtSat m ->
-          let bounds = S.Z3aux.get_preds_interp m in
+        let handle_sat m version =
+          let bounds = S.Z3aux.get_preds_interp m version in
           let applied_args = StrMap.find "gather_neg_fvec_to_tab_flow"
               flow.applied_args_map env.hole.name in
           let _ = gather_neg_fvec_to_tab_flow ctx env applied_args bounds m in
@@ -265,6 +280,30 @@ let neg_query ctx vc_env env new_sr =
            *   ) env.fvtab in *)
           let _ = summary_fv_num env in
           NeedRefine
+        in
+        let build_neg_phi version = Ast.to_z3 ctx
+            (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable version
+            vc_env.vars
+        in
+        let version = SZ.V1 in
+        let neg_phi = build_neg_phi version in
+        (* let _ = Printf.printf "neg_query ast:%s\n"
+         *   (Ast.vc_layout (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post)))) in
+         * let _ = StrMap.iter (fun name spec ->
+         *   printf "%s\n" (Ast.layout_spec_entry name spec)
+         * ) new_spectable in
+         * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
+        match S.check ctx neg_phi with
+        | S.SmtUnsat -> Pass
+        | S.Timeout -> Pass
+          (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
+          (* let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
+           * let version = SZ.V1 in
+           * let neg_phi = build_neg_phi version in
+           * (match S.check ctx neg_phi with
+           *  | S.SmtUnsat | S.Timeout -> raise (InterExn "neg query time out!")
+           *  | S.SmtSat m -> handle_sat m version) *)
+        | S.SmtSat m -> handle_sat m version
     in
     let res = List.map once vc_env.multi_pre in
     if List.for_all is_pass res
@@ -352,34 +391,54 @@ let update_vc_env vc_env spec_env =
       vc_env.spectable in
   {vc_env with spectable = new_spectable}
 
-let infer ctx vc_env env =
+type pos_loop_result =
+   | NoWeaker
+   | MayNoWeaker
+   | NewWeaker of spec_env
+
+let infer ctx vc_env env time_bound =
   let _ = Printf.printf "single infer: %s\n" (env.hole.name) in
   let _ = Printf.printf "env.fset: %s\n" (F.layout_set env.fset) in
+  let _ = summary_fv_num env in
   let max_loop_counter = ref 0 in
+  let start_time = Sys.time () in
   let rec max_loop vc_env env =
     let rec find_pos env =
       match pos_query ctx vc_env env with
-      | None -> None
-      | Some fv ->
+      | NoPosFv -> NoWeaker
+      | MayNoPosFv -> MayNoWeaker
+      | PosFv fv ->
         let if_pos = pos_verify_update_env ctx vc_env env fv in
-        if not if_pos then find_pos env else Some env
+        if not if_pos then find_pos env else NewWeaker env
     in
     match find_pos env with
-    | None ->
-      if !max_loop_counter == 0 then None else Some (vc_env, env)
-    | Some env ->
+    | NoWeaker ->
+      if !max_loop_counter == 0 then AlreadyMaxed else NewMaxed (vc_env, env)
+    | MayNoWeaker ->
+      if !max_loop_counter == 0 then MayAlreadyMaxed else Weaker (vc_env, env)
+    | NewWeaker env ->
       let _ = max_loop_counter := !max_loop_counter + 1 in
       let vc_env, env = weaker_safe_loop ctx vc_env env in
       (* let _ = Printf.printf "new current:\n%s\n" (Ast.layout_spec env.current) in *)
-      max_loop vc_env env
+      let end_time = Sys.time () in
+      if end_time -. start_time > time_bound
+      then Weaker (vc_env, env)
+      else max_loop vc_env env
   in
   let env_opt = max_loop vc_env env in
   let _ = match env_opt with
-    | None ->
+    | AlreadyMaxed ->
       let _ = summary_fv_num env in
       Printf.printf "maxed\n"
-    | Some (_, env) ->
+    | MayAlreadyMaxed ->
+      let _ = summary_fv_num env in
+      Printf.printf "may maxed\n"
+    | NewMaxed (_, env) ->
       let _ = Printf.printf "max spec:\n%s\n" (Ast.layout_spec
+                                                 (get_increamental_spec env.current)) in
+      summary_fv_num env
+    | Weaker (_, env) ->
+      let _ = Printf.printf "weaker spec:\n%s\n" (Ast.layout_spec
                                                  (get_increamental_spec env.current)) in
       summary_fv_num env
   in

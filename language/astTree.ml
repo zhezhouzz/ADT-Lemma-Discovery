@@ -22,6 +22,13 @@ module type AstTree = sig
   val merge_and: t -> t
   val make_match: Tp.Tp.tpedvar list -> ((t * Tp.Tp.tpedvar) list * t) list -> t
   val to_dnf: t -> t list
+  val encode: t -> Yojson.Basic.t
+  val decode: Yojson.Basic.t -> t
+  val spec_encode: spec -> Yojson.Basic.t
+  val spec_decode: Yojson.Basic.t -> spec
+  val spectable_eq: spec Utils.StrMap.t -> spec Utils.StrMap.t -> bool
+  val spectable_encode: spec Utils.StrMap.t -> Yojson.Basic.t
+  val spectable_decode: Yojson.Basic.t -> spec Utils.StrMap.t
 end
 
 module AstTree (E: Epr.Epr) : AstTree
@@ -42,6 +49,7 @@ module AstTree (E: Epr.Epr) : AstTree
     | Iff of t * t
     | SpecApply of string * E.SE.t list
   type spec = (Tp.Tp.tpedvar list) * E.forallformula
+
   let rec layout = function
     | ForAll ff -> E.layout_forallformula ff
     | Implies (p1, p2) -> sprintf "(%s => %s)" (layout p1) (layout p2)
@@ -211,4 +219,101 @@ module AstTree (E: Epr.Epr) : AstTree
       | _ -> raise @@ InterExn (sprintf "to dnf(%s)" (layout a))
     in
     List.map (fun l -> And l) (aux a)
+
+  open Yojson.Basic
+  let treetp_name = "A"
+  let encode_field = encode_field_ treetp_name
+  let decode_field = decode_field_ treetp_name
+  let rec encode = function
+    | ForAll _ -> raise @@ InterExn "never happen ast encode"
+    | Implies (p1, p2) -> encode_field "AImplies" (`List [encode p1; encode p2])
+    | And ps -> encode_field "AAnd" (`List (List.map encode ps))
+    | Or ps -> encode_field "AOr" (`List (List.map encode ps))
+    | Not p -> encode_field "ANot" (`List [encode p])
+    | Iff (p1, p2) -> encode_field "AIff" (`List [encode p1; encode p2])
+    | Ite (p1, p2, p3) -> encode_field "AIte" (`List [encode p1; encode p2; encode p3])
+    | SpecApply (specname, args) ->
+      encode_field "ASpecApply"
+        (`List [`String specname; `List (List.map E.SE.encode args)])
+  let rec decode json =
+    let e = InterExn (Printf.sprintf "%s::decode wrong field" treetp_name) in
+    let field, value = decode_field json in
+    match field, value with
+    (* | field, _ when String.equal "Forall" field -> True *)
+    | field, `List [p1;p2] when String.equal "AImplies" field ->
+      Implies (decode p1, decode p2)
+    | field, `List ps when String.equal "AAnd" field -> And (List.map decode ps)
+    | field, `List ps when String.equal "AOr" field -> Or (List.map decode ps)
+    | field, `List [p] when String.equal "ANot" field -> Not (decode p)
+    | field, `List [p1;p2] when String.equal "AIff" field -> Iff (decode p1, decode p2)
+    | field, `List [p1;p2;p3] when String.equal "AIte" field ->
+      Ite (decode p1, decode p2, decode p3)
+    | field, `List [specname;`List args] when String.equal "ASpecApply" field ->
+      SpecApply (to_string specname, List.map E.SE.decode args)
+    | _ -> raise e
+
+  let spec_tpname = "spec"
+
+  let spec_encode (args, specbody) =
+    `Assoc ["treetp", `String spec_tpname;
+            "args", `List (List.map T.tpedvar_encode args);
+            "specbody", E.forallformula_encode specbody]
+
+  let spec_decode json =
+    let e = InterExn (Printf.sprintf "%s::decode wrong type" spec_tpname) in
+    let open Util in
+    let treetp = json |> member "treetp" |> to_string in
+    if String.equal spec_tpname treetp then
+      let qv =
+        match json |> member "args" with
+        | `List qv -> List.map T.tpedvar_decode qv
+        | _ -> raise e
+      in
+      let body = json |> member "specbody" |> E.forallformula_decode in
+      (qv, body)
+    else raise e
+
+  let spectable_encode tab =
+    let j = StrMap.fold (fun name spec r ->
+        (* let _ = printf "spectable_encode find name:%s\n" name in *)
+        (`Assoc ["name", `String name;
+                 "spec", spec_encode spec]) :: r
+      ) tab [] in
+    `List j
+
+  let spectable_decode = function
+    | `List l ->
+      List.fold_left (fun r json ->
+          let name = json |> Util.member "name" |> Util.to_string in
+          (* let _ = printf "spectable_decode find name:%s\n" name in *)
+          let spec = json |> Util.member "spec" |> spec_decode in
+          StrMap.add name spec r
+        ) StrMap.empty l
+    | _ -> raise @@ InterExn (Printf.sprintf "%s::decode wrong type" "spec table")
+
+  let spec_eq (args1, body1) (args2, body2) =
+    if List.length args1 != List.length args2
+    then false
+    else
+    (List.for_all (fun (arg1, arg2) ->
+        T.tpedvar_eq arg1 arg2
+        ) (List.combine args1 args2)) && (E.eq_forallformula body1 body2)
+
+  let spectable_eq_succ t1 t2 =
+    StrMap.fold (fun name spec r ->
+        if not r then false else
+          match StrMap.find_opt t2 name with
+          | Some spec' when spec_eq spec spec' -> true
+          | Some spec' ->
+            (printf "%s not eq!\nspec 1:\n%s\nspec 2:\n%s\n"
+               name (layout_spec spec) (layout_spec spec');
+             false)
+          | _ ->
+            (printf "%s not eq!\nspec 1:\n%s\nspec 2:\n%s\n"
+               name (layout_spec spec) "none";
+             false)
+      ) t1 true
+
+  let spectable_eq t1 t2 =
+    (spectable_eq_succ t1 t2) (* && (spectable_eq_succ t2 t1) *)
 end

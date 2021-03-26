@@ -4,6 +4,7 @@
 )
 (tests
  (names
+ serialization
  ;; spec_customstk2
  spec_customstk3
  ;;spec_customstk

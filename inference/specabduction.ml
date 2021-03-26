@@ -6,6 +6,7 @@ module SpecAbduction = struct
   module Epr = Ast.E
   module SE = Epr.SE
   module S = Solver
+  module SZ = S.Z3aux
   module T = Tp.Tp
   module F = Feature.Feature
   module FV = Sample.FeatureVector
@@ -75,11 +76,10 @@ module SpecAbduction = struct
       | _ -> None, List.rev @@ List.tl @@ List.rev hole.args
 
   let sampling hole imp env num =
-    let _ = printf "sampling %s\n" hole.name in
     let _, current_epr = env.abduciable in
     let _, inputs = get_inputs hole in
-    let _ = printf "args = %s\n" (List.to_string T.layouttvar hole.args) in
-    let _ = printf "inputs = %s\n" (List.to_string T.layouttvar inputs) in
+    (* let _ = printf "args = %s\n" (List.to_string T.layouttvar hole.args) in
+     * let _ = printf "inputs = %s\n" (List.to_string T.layouttvar inputs) in *)
     let inputtps,_ = List.split inputs in
     let samples = R.gens ~chooses:default_range ~num:num
         ~tps:inputtps ~bound: samplebound in
@@ -93,9 +93,9 @@ module SpecAbduction = struct
     let qvsamples = R.gens ~chooses:default_qv_range ~num:(List.length samples)
         ~tps:qvtypes ~bound: samplebound in
     let s = List.combine samples qvsamples in
-    let _ = List.iter (fun (s1,s2) -> printf "{%s},{%s}]\n"
-                          (List.to_string V.layout s1)
-                          (List.to_string V.layout s2)) s in
+    (* let _ = List.iter (fun (s1,s2) -> printf "{%s},{%s}]\n"
+     *                       (List.to_string V.layout s1)
+     *                       (List.to_string V.layout s2)) s in *)
     let extract_fv (args_value, qv_value) =
       let m = StrMap.empty in
       let m = List.fold_left (fun m ((_, name), v) ->
@@ -109,7 +109,7 @@ module SpecAbduction = struct
       else Some (List.map (fun feature -> F.exec feature m) env.fset)
     in
     let fvs = List.filter_map extract_fv s in
-    let _ = printf "len(fvs) = %i\n" (List.length fvs) in
+    let _ = printf "sampling [%s] len(fvs) = %i\n" hole.name (List.length fvs) in
     let _ = List.iter (fun fv ->
         match Hashtbl.find_opt env.fvtab fv with
         | Some MultiPos -> ()
@@ -119,7 +119,7 @@ module SpecAbduction = struct
       ) fvs in
     List.length fvs
 
-  let gather_neg_fvec_to_tab ctx hole env applied_args qvrange model =
+  let gather_neg_fvec_to_tab ctx hole env applied_args qvrange model query =
     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
     let sub_assignment = List.map (fun _ -> se_range) env.qv in
     let _, names = List.split (hole.args @ env.qv) in
@@ -127,28 +127,29 @@ module SpecAbduction = struct
     let _ =
       List.map (fun args ->
           let args = List.map SE.from_tpedvar args in
-          let _ = printf "args:%s\n" (List.to_string SE.layout args) in
+          (* let _ = printf "args:%s\n" (List.to_string SE.layout args) in *)
           let extract_fvec _ values =
             let vec = List.map
                 (fun feature ->
                    Epr.subst (F.to_epr feature) names (args @ values)) env.fset in
             (* let _ = printf "[vec]:%s\n" (List.to_string Epr.layout vec) in *)
             let vec' = List.map (fun e -> S.get_pred model (Epr.to_z3 ctx e)) vec in
-            (* let _ = printf "[vec]:%s%s\n" (List.to_string Epr.layout vec)
-             *     (boollist_to_string vec') in *)
             match Hashtbl.find_opt env.fvtab vec' with
             | Some MultiMayNeg ->
+              let _ = printf "%s\n" (Expr.to_string query) in
+              let _ = printf "[vec]:%s%s\n" (List.to_string Epr.layout vec)
+                  (boollist_to_string vec') in
               raise @@ InterExn "never happen gather_neg_fvec_to_tab"
             | Some MultiPos ->
-              let _ = printf "pos:%s\n"  (boollist_to_string vec') in
+              (* let _ = printf "pos:%s\n"  (boollist_to_string vec') in *)
               ()
             | Some MultiMayNegCache ->
               let _ = counter := !counter + 1 in
-              let _ = printf "may neg cache:%s\n"  (boollist_to_string vec') in
+              (* let _ = printf "may neg cache:%s\n"  (boollist_to_string vec') in *)
               ()
             | None ->
               let _ = counter := !counter + 1 in
-              let _ = printf "neg:%s\n"  (boollist_to_string vec') in
+              (* let _ = printf "neg:%s\n"  (boollist_to_string vec') in *)
               Hashtbl.add env.fvtab vec' MultiMayNegCache
           in
           let _ = List.choose_list_list_order_fold extract_fvec () sub_assignment in
@@ -237,7 +238,7 @@ module SpecAbduction = struct
      fvtab = fvtab;
      abduciable = abduciable;}
 
-  let init_env (pre, post) spectable preds bpreds numX holel =
+  let init_env (pre, post) vars spectable preds bpreds numX holel =
     let holes, imps = List.fold_left (fun (m, imp_m) (hole, imp) ->
         (StrMap.add hole.name hole m,
          StrMap.add hole.name imp imp_m)
@@ -269,6 +270,7 @@ module SpecAbduction = struct
       ) spec_envs spectable
     in
     let vc = {
+      Env.vars = vars;
       Env.multi_pre =  multi_pre;
       Env.post = post;
       Env.spectable = spectable;
@@ -286,21 +288,20 @@ module SpecAbduction = struct
       else D.classify_hash env.fset env.fvtab is_pos in
     let abduciable = D.to_epr dt in
     let abduciable = Epr.simplify_ite abduciable in
-    let _ = printf "\traw abduciable:\n%s\n" (Epr.pretty_layout_epr abduciable) in
+    (* let _ = printf "\traw abduciable:\n%s\n" (Epr.pretty_layout_epr abduciable) in *)
     let abduciable = env.qv, abduciable in
     {env with abduciable = abduciable; dt = dtidx}
 
-  let inplace_gather_fv ctx model qvrange env flow =
+  let inplace_gather_fv ctx model query qvrange env flow =
     let total_neg_num = ref 0 in
     let _ = StrMap.iter
         (fun specname applied_args ->
            let hole = StrMap.find "update_spec_env" env.holes specname in
            let spec_env = StrMap.find "update_spec_env" env.spec_envs specname in
            let neg_num =
-             gather_neg_fvec_to_tab ctx hole spec_env applied_args qvrange model
+             gather_neg_fvec_to_tab ctx hole spec_env applied_args qvrange model query
            in
-           (* let _ = printf "total_neg_num:%i neg_num:%i\n"
-            *     (!total_neg_num) neg_num in *)
+           let _ = printf "[%s] neg_num:%i\n" hole.name neg_num in
            let _ = total_neg_num := !total_neg_num + neg_num in
            ()
         ) flow.Env.applied_args_map in
@@ -331,25 +332,38 @@ module SpecAbduction = struct
     | _ -> false
 
   let inplace_verify_and_gather_fv ctx env flow =
-    let smt_query = Ast.to_z3 ctx
+    let handle_model smt_query model version =
+      let qvrange = S.Z3aux.get_preds_interp model version in
+      (match inplace_gather_fv ctx model smt_query qvrange env flow with
+       | None -> Gathered
+       | Some pre ->
+         let _ = printf "smt_query\n%s\n" (Expr.to_string smt_query) in
+         let _ = printf "model:\n%s\n" (Model.to_string model) in
+         (printf "cannot gather fv in ast:%s\n" (Ast.vc_layout pre); CannotGather)
+      )
+    in
+    let build_smt_query version =
+      Ast.to_z3 ctx
         (Ast.Not (Ast.Implies (flow.Env.pre_flow, env.vc.Env.post)))
-        env.vc.Env.spectable in
+        env.vc.Env.spectable version env.vc.Env.vars
+    in
+    let version = S.Z3aux.V1 in
+    let smt_query = build_smt_query version in
       match S.check ctx smt_query with
       | S.SmtUnsat -> Verified
+        (* let version = S.Z3aux.V2 in
+         * let smt_query = build_smt_query version in
+         * (match S.check ctx smt_query with
+         *  | S.SmtUnsat -> Verified
+         *  | S.Timeout ->
+         *    let _ = printf "%s\n" (Expr.to_string smt_query) in
+         *    raise (InterExn "multi inference time out!")
+         *  | S.SmtSat model -> handle_model smt_query model version) *)
       | S.Timeout ->
-        let _ = printf "%s\n" (Expr.to_string smt_query) in
-        raise (InterExn "multi inference time out!")
-      | S.SmtSat model ->
-        let qvrange = S.Z3aux.get_preds_interp model in
-        (match inplace_gather_fv ctx model qvrange env flow with
-         | None -> Gathered
-         | Some pre ->
-           let _ = printf "smt_query\n%s\n" (Expr.to_string smt_query) in
-           let _ = printf "model:\n%s\n" (Model.to_string model) in
-           (printf "cannot gather fv in ast:%s\n" (Ast.vc_layout pre); CannotGather)
-        )
+        raise @@ InterExn (Printf.sprintf "[%s]inplace_verify_and_gather_fv time out!" (SZ.layout_imp_version version))
+      | S.SmtSat model -> handle_model smt_query model version
 
-  let sample_num = 10
+  let sample_num = 20
 
   let negcache_to_neg env =
     StrMap.iter (fun _ spec_env ->
@@ -363,6 +377,7 @@ module SpecAbduction = struct
   let refinement_loop ctx env =
     let _ = printf "refinement_loop\n" in
     let rec neg_refine_loop env =
+      (* let _ = printf "neg loop\n" in *)
       let _ = loop_counter := !loop_counter + 1 in
       (* let (fvs, res) = List.fold_left (fun (fvs, res) flow ->
        *     let (fvs, r) = inplace_verify_and_gather_fv ctx env flow fvs in
@@ -526,12 +541,10 @@ module SpecAbduction = struct
       let b = pow a (n / 2) in
       b * b * (if n mod 2 = 0 then 1 else a)
 
-  let consistent_solution ctx pres post spectable holel preds bpreds startX maxX =
+  let consistent_solution ctx pres post vars spectable holel preds bpreds startX =
     let rec search_hyp numX =
-      if numX > maxX then
-        None
-      else
-        let env = init_env (pres, post) spectable preds bpreds numX holel in
+      (* if numX > maxX then None else *)
+      let env = init_env (pres, post) vars spectable preds bpreds numX holel in
         match refinement_loop ctx env with
         | None -> search_hyp (numX + 1)
         | Some spec -> Some spec
@@ -560,38 +573,55 @@ module SpecAbduction = struct
       ) total_env single_envs_arr
 
   let verify_flow ctx vc flow =
-    let smt_query = Ast.to_z3 ctx
+    let build_smt_query version = Ast.to_z3 ctx
         (Ast.Not (Ast.Implies (flow.Env.pre_flow, vc.Env.post)))
-        vc.Env.spectable in
+        vc.Env.spectable version vc.Env.vars in
+    let version = S.Z3aux.V2 in
+    let smt_query = build_smt_query version in
     match S.check ctx smt_query with
     | S.SmtUnsat -> true
     | S.Timeout ->
       let _ = printf "%s\n" (Expr.to_string smt_query) in
-      raise (InterExn "multi inference time out!")
+      raise @@ InterExn (Printf.sprintf "[%s]verify_flow time out!" (SZ.layout_imp_version version))
     | S.SmtSat _ -> false
 
   let verify ctx vc =
     let res = List.map (fun flow -> verify_flow ctx vc flow) vc.Env.multi_pre in
     List.for_all (fun x -> x) res
 
-  let multi_infer ctx pre post spectable holel preds bpreds startX maxX =
+  let spectable_filter_result names spectable =
+    List.fold_left (fun m name ->
+        let spec = StrMap.find "spectable_filter_result" spectable name in
+        StrMap.add name spec m) StrMap.empty names
+
+  let time_bound = 600.0
+
+  let multi_infer name ctx pre post vars spectable holel preds bpreds startX =
     let pre, holel = instantiate_bool pre holel in
+    let names = List.map (fun (hole, _) -> hole.name) holel in
     let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
     let _ = List.iter (fun pre ->
         printf "[pre]\n%s\n" (Ast.vc_layout pre)
       ) pres in
     let _ = Ast.print_spectable spectable in
-    let env = consistent_solution ctx pres post spectable holel preds bpreds startX maxX in
+    let env = consistent_solution ctx pres post vars spectable holel preds bpreds startX in
     match env with
     | None -> raise @@ InterExn "search_hyp: quantified variables over bound"
     | Some env ->
+      let result = spectable_filter_result names env.vc.spectable in
       let _ = StrMap.iter (fun name spec ->
           printf "%s\n" (Ast.layout_spec_entry name spec)
-        ) env.vc.Env.spectable in
+        ) result in
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"
             name (List.length env.fset) (pow 2 (List.length env.fset))
         ) env.spec_envs in
+      (* let _ = printf "verify result:%b\n" (verify ctx env.vc) in *)
+      (* let result' = Ast.spectable_decode @@ Ast.spectable_encode result in *)
+      (* let _ = printf "json encode/decode: %b\n"
+       *     (Ast.spectable_eq result result') in *)
+      let _ = Yojson.Basic.to_file (name ^ "_" ^ "consistent.json")
+          (Ast.spectable_encode result) in
       (* let _ = raise @@ InterExn "end" in *)
       let single_envs = StrMap.fold (fun specname spec_env r ->
           let target_hole = StrMap.find "multi_infer" env.holes specname in
@@ -605,42 +635,54 @@ module SpecAbduction = struct
         then total_env
         else
         let single_env = single_envs_arr.(idx) in
-        match Single_abd.infer ctx total_env single_env with
-        | None -> aux total_env (idx + 1)
-        | Some (total_env, single_env') ->
+        match Single_abd.infer ctx total_env single_env time_bound with
+        | Env.AlreadyMaxed -> aux total_env (idx + 1)
+        | Env.MayAlreadyMaxed -> aux total_env (idx + 1)
+        | Env.NewMaxed (total_env, single_env') ->
+          let _ = Array.set single_envs_arr idx single_env' in
+          aux total_env (idx + 1)
+        | Env.Weaker (total_env, single_env') ->
           let _ = Array.set single_envs_arr idx single_env' in
           aux total_env (idx + 1)
       in
       let total_env = aux env.vc 0 in
-      let total_env = merge_envs total_env single_envs_arr in
-      let if_verified = verify ctx total_env in
-      let _ = printf "verify merged:%b\n" if_verified in
+      let result = spectable_filter_result names total_env.spectable in
+      let _ = Yojson.Basic.to_file (name ^ "_" ^ "maximal.json")
+          (Ast.spectable_encode result) in
+      result
 
-      let top_spec = StrMap.find "update_env" env.spec_envs "top" in
-      let top_hole = StrMap.find "update_env" env.holes "top" in
-      let spectable' = StrMap.update "top" (fun spec ->
-          match spec with
-          | None -> raise @@ InterExn "update_env"
-          | Some _ -> Some (top_hole.args, top_spec.abduciable)
-        ) total_env.spectable in
-      let total_env = {total_env with spectable = spectable'} in
-      let if_verified = verify ctx total_env in
-      let _ = printf "verify merged/top:%b\n" if_verified in
+  (* let _ = StrMap.iter (fun name spec ->
+   *     printf "%s\n" (Ast.layout_spec_entry name spec)
+   *   ) result in
+   * let _ = printf "\n\n\n" in
+   * let _ = StrMap.iter (fun name spec ->
+   *     printf "%s\n" (Ast.layout_spec_entry name spec)
+   *   ) result' in *)
+      (* let total_env = merge_envs total_env single_envs_arr in
+       * let if_verified = verify ctx total_env in
+       * let _ = printf "verify merged:%b\n" if_verified in *)
 
-      let push_spec = StrMap.find "update_env" env.spec_envs "push" in
-      let push_hole = StrMap.find "update_env" env.holes "push" in
-      let spectable' = StrMap.update "push" (fun spec ->
-          match spec with
-          | None -> raise @@ InterExn "update_env"
-          | Some _ -> Some (push_hole.args, push_spec.abduciable)
-        )   total_env.spectable in
-      let total_env = {total_env with spectable = spectable'} in
-      let if_verified = verify ctx total_env in
-      let _ = printf "verify merged/top/push:%b\n" if_verified in
-      let _ = StrMap.iter (fun name spec ->
-          printf "%s\n" (Ast.layout_spec_entry name spec)
-        ) total_env.spectable in
-      total_env
+      (* let top_spec = StrMap.find "update_env" env.spec_envs "top" in
+       * let top_hole = StrMap.find "update_env" env.holes "top" in
+       * let spectable' = StrMap.update "top" (fun spec ->
+       *     match spec with
+       *     | None -> raise @@ InterExn "update_env"
+       *     | Some _ -> Some (top_hole.args, top_spec.abduciable)
+       *   ) total_env.spectable in
+       * let total_env = {total_env with spectable = spectable'} in
+       * let if_verified = verify ctx total_env in
+       * let _ = printf "verify merged/top:%b\n" if_verified in
+       *
+       * let push_spec = StrMap.find "update_env" env.spec_envs "push" in
+       * let push_hole = StrMap.find "update_env" env.holes "push" in
+       * let spectable' = StrMap.update "push" (fun spec ->
+       *     match spec with
+       *     | None -> raise @@ InterExn "update_env"
+       *     | Some _ -> Some (push_hole.args, push_spec.abduciable)
+       *   )   total_env.spectable in
+       * let total_env = {total_env with spectable = spectable'} in
+       * let if_verified = verify ctx total_env in
+       * let _ = printf "verify merged/top/push:%b\n" if_verified in *)
 
 
   (* let single_envs = List.rev single_envs in *)

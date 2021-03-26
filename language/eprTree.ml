@@ -20,6 +20,10 @@ module type EprTree = sig
   val subst_forallformula: forallformula -> string list -> SE.t list -> forallformula
   val eq: t -> t -> bool
   val eq_forallformula: forallformula -> forallformula -> bool
+  val encode: t -> Yojson.Basic.t
+  val decode: Yojson.Basic.t -> t
+  val forallformula_encode: forallformula -> Yojson.Basic.t
+  val forallformula_decode: Yojson.Basic.t -> forallformula
 end
 
 module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
@@ -42,6 +46,56 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     | Iff of t * t
   type free_variable = Tp.Tp.tpedvar
   type forallformula = free_variable list * t
+
+  open Yojson.Basic
+  let treetp_name = "E"
+  let encode_field = encode_field_ treetp_name
+  let decode_field = decode_field_ treetp_name
+  let rec encode = function
+    | True -> encode_field "ETrue" (`List [])
+    | Atom bexpr -> encode_field "EAtom" (`List [SE.encode bexpr])
+    | Implies (p1, p2) -> encode_field "EImplies" (`List [encode p1; encode p2])
+    | And ps -> encode_field "EAnd" (`List (List.map encode ps))
+    | Or ps -> encode_field "EOr" (`List (List.map encode ps))
+    | Not p -> encode_field "ENot" (`List [encode p])
+    | Iff (p1, p2) -> encode_field "EIff" (`List [encode p1; encode p2])
+    | Ite (p1, p2, p3) -> encode_field "EIte" (`List [encode p1; encode p2; encode p3])
+  let rec decode json =
+    let e = InterExn (Printf.sprintf "%s::decode wrong field" treetp_name) in
+    let field, value = decode_field json in
+    match field, value with
+    | field, `List [] when String.equal "ETrue" field -> True
+    | field, `List [bexpr] when String.equal "EAtom" field -> Atom (SE.decode bexpr)
+    | field, `List [p1;p2] when String.equal "EImplies" field ->
+      Implies (decode p1, decode p2)
+    | field, `List ps when String.equal "EAnd" field -> And (List.map decode ps)
+    | field, `List ps when String.equal "EOr" field -> Or (List.map decode ps)
+    | field, `List [p] when String.equal "ENot" field -> Not (decode p)
+    | field, `List [p1;p2] when String.equal "EIff" field -> Iff (decode p1, decode p2)
+    | field, `List [p1;p2;p3] when String.equal "EIte" field ->
+      Ite (decode p1, decode p2, decode p3)
+    | _ -> raise e
+
+  let forallformula_tpname = "ff"
+
+  let forallformula_encode (qv, body) =
+    `Assoc ["treetp", `String forallformula_tpname;
+            "qv", `List (List.map T.tpedvar_encode qv);
+            "body", encode body]
+
+  let forallformula_decode json =
+    let e = InterExn (Printf.sprintf "%s::decode wrong type" forallformula_tpname) in
+    let open Util in
+    let treetp = json |> member "treetp" |> to_string in
+    if String.equal forallformula_tpname treetp then
+      let qv =
+        match json |> member "qv" with
+        | `List qv -> List.map T.tpedvar_decode qv
+        | _ -> raise e
+      in
+      let body = json |> member "body" |> decode in
+      (qv, body)
+    else raise e
 
   (* let sym_and = "/\\"
    * let sym_or = "\\/"

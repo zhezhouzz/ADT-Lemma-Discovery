@@ -14,8 +14,8 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
+let bench_name = "customstk" in
 let ctx = init () in
-let preds = ["list_member"; "list_head"] in
 let bpreds = ["=="] in
 let trace1_value = [
   "is_empty", [V.B false;V.L [1;2];];
@@ -54,15 +54,6 @@ let push_program = function
   | _ -> raise @@ InterExn "bad prog"
 in
 let push, push_hole = make_hole "push" [T.Int; T.IntList; T.IntList] push_program in
-let spectable = predefined_spec_tab in
-let spectable = set_post spectable
-    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
-    [T.Int, "u"]
-    (E.And [
-        E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
-        E.Implies (list_head l3 u, E.Or [list_head l1 u; list_head l2 u]);
-      ])
-in
 let s1, s2, nu_tail, nu_concat, nu_push, nu =
   map6 list_var ("s1", "s2", "nu_tail", "nu_concat", "nu_push", "nu") in
 let nu_is_empty = bool_var "nu_is_empty" in
@@ -89,7 +80,31 @@ let holel = [is_empty_hole;
  *     Printf.printf "?%s(%s)\n" hole.name (List.to_string T.layouttvar hole.args)
  *   ) holes *)
 (* in *)
-let total_env = SpecAbd.multi_infer ctx pre post spectable holel preds bpreds 1 1 in
+let elems = [T.Int, "nu_top"] in
+let spectable_post = set_post (predefined_spec_tab)
+    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
+    [T.Int, "u"]
+    (E.And [
+        E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
+        E.Implies (list_head l3 u, E.Or [list_head l1 u; list_head l2 u]);
+      ])
+in
+let preds = ["list_member"; "list_head"] in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" bench_name 1) ctx pre post elems spectable_post holel preds bpreds 1 in *)
+let spectable_post = set_post (predefined_spec_tab)
+    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
+    [T.Int, "u"; T.Int, "v"]
+    (E.And [
+        E.Iff(list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
+        E.Implies(E.Or [list_order l1 u v; list_order l2 u v],
+                  list_order l3 u v);
+      ])
+in
+let preds = ["list_member"; "list_head"; "list_order"] in
+(* let preds = ["list_member"; "list_order"] in *)
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds bpreds 1 in
 (* let _ = StrMap.iter (fun name spec ->
  *     printf "%s\n" (Ast.layout_spec_entry name spec)
  *   ) (total_env.spectable) in

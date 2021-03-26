@@ -6,7 +6,8 @@ module type Epr = sig
   val exec: t -> value Utils.StrMap.t -> bool
   val forallformula_exec: forallformula -> value Utils.StrMap.t -> bool
   val to_z3: Z3.context -> t -> Z3.Expr.expr
-  val forallformula_to_z3: Z3.context -> forallformula -> Z3.Expr.expr
+  val forallformula_to_z3: Z3.context -> forallformula ->
+    Solver.Z3aux.imp_version -> Z3.Expr.expr
   val neg_forallf: forallformula -> Tp.Tp.tpedvar list * forallformula
   val related_dt: t -> string list -> string list
   val desugar: t -> t
@@ -119,9 +120,9 @@ module Epr (E: EprTree.EprTree): Epr = struct
      * let ps2 = List.map (fun x ->
      *     Arithmetic.mk_le ctx x (Arithmetic.Integer.mk_numeral_i ctx 4)) fv in
      * Boolean.mk_implies ctx (Boolean.mk_and ctx (ps1 @ ps2)) body *)
-  let forallformula_to_z3 ctx (fv, epr) =
+  let forallformula_to_z3 ctx (fv, epr) version =
     let fv = List.map (fun var -> tpedvar_to_z3 ctx var) fv in
-    make_forall ctx fv (to_z3 ctx epr)
+    make_forall ctx fv (to_z3 ctx epr) version
   let neg_forallf (fv, epr) = fv, ([], Not epr)
   let related_dt e fv =
     let rec aux = function

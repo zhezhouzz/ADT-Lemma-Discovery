@@ -18,6 +18,7 @@ type vc = {
   multi_pre: flow list;
   post: Ast.t;
   spectable: Ast.spec StrMap.t;
+  vars: T.tpedvar list
 }
 
 type single_result = {
@@ -35,3 +36,9 @@ type spec_env = {
   unknown_fv: T.tpedvar list;
   fvtab: (bool list, D.label) Hashtbl.t
 }
+
+type maximal_result =
+  | AlreadyMaxed
+  | MayAlreadyMaxed
+  | NewMaxed of vc * spec_env
+  | Weaker of vc * spec_env

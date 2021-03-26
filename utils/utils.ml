@@ -656,3 +656,17 @@ let map4 f (a, b, c, d) = (f a, f b, f c, f d)
 let map5 f (a, b, c, d, e) = (f a, f b, f c, f d, f e)
 let map6 f (a, b, c, d, e, g) = (f a, f b, f c, f d, f e, f g)
 let map7 f (a, b, c, d, e, g, h) = (f a, f b, f c, f d, f e, f g, f h)
+
+open Yojson.Basic
+let encode_field_ treetp_name field value =
+  `Assoc ["t", `String treetp_name;
+          "f", `String field;
+          "v", value]
+let decode_field_ treetp_name json =
+  let open Util in
+  let treetp = json |> member "t" |> to_string in
+  if String.equal treetp_name treetp then
+    let field = json |> member "f" |> to_string in
+    let value = json |> member "v" in
+    (field, value)
+  else raise @@ InterExn (Printf.sprintf "%s::decode wrong type" treetp_name)

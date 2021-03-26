@@ -1,4 +1,4 @@
 (library
  (name tp)
- (libraries utils)
+ (libraries utils yojson)
 )

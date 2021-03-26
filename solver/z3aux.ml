@@ -33,13 +33,15 @@ type imp_version =
    | V1
    | V2
 
-let impv = V2
+let layout_imp_version = function
+  | V1 -> "V1"
+  | V2 -> "V2"
 
 open Utils
 
-let bound = 5
+let bound = 4
 
-let get_preds_interp model =
+let get_preds_interp model impv =
   match impv with
   | V1 -> List.init bound (fun x -> x)
   | V2 ->
@@ -67,6 +69,15 @@ let get_preds_interp model =
     | None -> [0]
     | Some ma -> (ma + 1) :: bounds
 
+let neg_avoid_timeout_constraint ctx vars body =
+  if List.length vars == 0 then body else
+    let vars = List.map (tpedvar_to_z3 ctx) vars in
+    let is = List.init bound (fun i -> Arithmetic.Integer.mk_numeral_i ctx i) in
+    let ps = List.map (fun x ->
+        Boolean.mk_or ctx (List.map (fun i -> Boolean.mk_eq ctx x i) is)
+      ) vars in
+    Boolean.mk_and ctx [(Boolean.mk_and ctx ps); body]
+
 let avoid_timeout_constraint ctx fv body =
   let is = List.init bound (fun i -> Arithmetic.Integer.mk_numeral_i ctx i) in
   let ps = List.map (fun x ->
@@ -74,7 +85,7 @@ let avoid_timeout_constraint ctx fv body =
     ) fv in
   Boolean.mk_implies ctx (Boolean.mk_and ctx ps) body
 
-let make_forall ctx forallvars body =
+let make_forall ctx forallvars body impv =
   let body =
     match impv with
     | V1 -> avoid_timeout_constraint ctx forallvars body
