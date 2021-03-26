@@ -127,7 +127,10 @@ let pos_query ctx vc_env env =
 
 open Printf
 
-type smt_status = Pass | NeedRefine
+type smt_status =
+  | Pass
+  | NeedRefine
+  (* | FailBack *)
 
 let gather_neg_fvec_to_tab_flow ctx env applied_args qvrange model =
     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
@@ -191,7 +194,8 @@ let pos_verify_flow ctx vc_env env flow fv =
            | Some _ -> Some spec)
         vc_env.spectable in
     let build_neg_phi version = Ast.to_z3 ctx
-        (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable version vc_env.vars in
+        (Ast.Not (Ast.Implies (flow.pre_flow, vc_env.post))) new_spectable version vc_env.vars
+    in
     let version = SZ.V1 in
     let neg_phi = build_neg_phi version in
     (* let _ = Printf.printf "verify:%s\n" (Expr.to_string neg_phi) in *)
@@ -200,13 +204,13 @@ let pos_verify_flow ctx vc_env env flow fv =
       | S.SmtUnsat ->
         (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
         true
-      | S.Timeout -> true
-        (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
-        (* let version = SZ.V1 in
-         * let neg_phi = build_neg_phi version in
-         * (match S.check ctx neg_phi with
-         *  | S.SmtUnsat | S.Timeout -> raise (InterExn "verify candidate pos time out!")
-         *  | S.SmtSat _ -> false) *)
+      | S.Timeout ->
+      raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version))
+      (* let version = SZ.V1 in
+       * let neg_phi = build_neg_phi version in
+       * (match S.check ctx neg_phi with
+       *  | S.SmtUnsat | S.Timeout -> raise (InterExn "verify candidate pos time out!")
+       *  | S.SmtSat _ -> false) *)
       | S.SmtSat _ ->
         (* let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in *)
         false
@@ -295,8 +299,8 @@ let neg_query ctx vc_env env new_sr =
          * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
         match S.check ctx neg_phi with
         | S.SmtUnsat -> Pass
-        | S.Timeout -> Pass
-          (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
+        | S.Timeout ->
+          raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version))
           (* let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
            * let version = SZ.V1 in
            * let neg_phi = build_neg_phi version in
@@ -369,8 +373,7 @@ let weaker_safe_loop ctx vc_env env =
           vc_env.spectable in
       {vc_env with spectable = new_spectable;},
       {env with current = new_sr;}
-    | NeedRefine ->
-      loop ()
+    | NeedRefine -> loop ()
   in
   loop ()
 
