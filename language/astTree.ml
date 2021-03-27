@@ -10,6 +10,7 @@ module type AstTree = sig
     | Iff of t * t
     | SpecApply of string * E.SE.t list
   type spec = (Tp.Tp.tpedvar list) * E.forallformula
+  type let_binding = t option * Tp.Tp.tpedvar list
   val layout: t -> string
   val vc_layout: t -> string
   val layout_spec: spec -> string
@@ -20,7 +21,8 @@ module type AstTree = sig
   val neg_spec: string -> t -> t
   val implies_to_and: t -> t
   val merge_and: t -> t
-  val make_match: Tp.Tp.tpedvar list -> ((t * Tp.Tp.tpedvar) list * t) list -> t
+  val make_match: Tp.Tp.tpedvar list -> Tp.Tp.tpedvar list ->
+    (let_binding * let_binding) list -> t
   val to_dnf: t -> t list
   val encode: t -> Yojson.Basic.t
   val decode: Yojson.Basic.t -> t
@@ -94,10 +96,11 @@ module AstTree (E: Epr.Epr) : AstTree
 
   let merge_and a =
     let rec get_and = function
-      | ForAll _ | Implies (_, _) | Or _ | Not _ | Iff (_, _) | Ite (_, _, _) ->
+      | ForAll _ | Or _ | Not _ | Iff (_, _) | Ite (_, _, _) ->
         raise @@ InterExn "never happen in merge and"
       | And ps -> List.flatten (List.map get_and ps)
       | SpecApply (_, _) as a -> [a]
+      | Implies (_, _) as a -> [a]
     in
     let rec aux = function
       | ForAll _ | Implies (_, _) | Not _ | Iff (_, _) | Ite (_, _, _) | SpecApply (_, _)->
@@ -177,19 +180,48 @@ module AstTree (E: Epr.Epr) : AstTree
     in
     aux a b
 
+  type let_binding = t option * Tp.Tp.tpedvar list
+
   let make_match
-      (matched:Tp.Tp.tpedvar list)
-      (branchs:((t * Tp.Tp.tpedvar) list * t) list) =
+      (matched:Tp.Tp.tpedvar list) (target:Tp.Tp.tpedvar list)
+      (branchs:(let_binding * let_binding) list) =
     let matched : E.SE.t list = List.map E.SE.from_tpedvar matched in
-    let handle_banch (matched', body) =
-      let ps = List.flatten @@
-        List.map (fun (x, (t, x')) ->
-          let x' = E.SE.from_tpedvar x' in
-          [t;SpecApply("equal", [x;x'])]
-        ) (List.combine matched matched')
-      in
-      And (ps @ [body])
+    let target : E.SE.t list = List.map E.SE.from_tpedvar target in
+    let handle_case matched_vars (body, matched_vars') =
+      let matched_vars' = List.map E.SE.from_tpedvar matched_vars' in
+      let eq_specs = List.filter_map
+          (fun (x, x') ->
+             if E.SE.eq x x' then None else Some (SpecApply("equal", [x;x']))
+          )
+          (List.combine matched_vars matched_vars') in
+      match body with
+      | None -> eq_specs
+      | Some body -> body :: eq_specs
     in
+    let handle_banch (incase, outcase) =
+      And ((handle_case matched incase) @ (handle_case target outcase))
+    in
+    (* let handle_banch (matched', target') =
+     *   let ps = List.flatten @@
+     *     List.map (fun (x, (t, x')) ->
+     *         let x' = E.SE.from_tpedvar x' in
+     *         let eq_spec = SpecApply("equal", [x;x']) in
+     *         match t with
+     *         | None -> [eq_spec]
+     *         | Some t -> [t;eq_spec]
+     *     ) (List.combine matched matched')
+     *   in
+     *   let qs = List.flatten @@
+     *     List.map (fun (x, (t, x')) ->
+     *         let x' = E.SE.from_tpedvar x' in
+     *         let eq_spec = SpecApply("equal", [x;x']) in
+     *         match t with
+     *         | None -> [eq_spec]
+     *         | Some t -> [t;eq_spec]
+     *       ) (List.combine target target')
+     *   in
+     *   And (ps @ qs)
+     * in *)
     Or (List.map handle_banch branchs)
 
   let get_app_args t specname =
@@ -216,6 +248,7 @@ module AstTree (E: Epr.Epr) : AstTree
       | SpecApply (_, _) -> [[a]]
       | Or ps -> List.concat @@ List.map aux ps
       | And ps -> List.map (fun l -> List.flatten l) (List.choose_list_list (List.map aux ps))
+      | Implies (_,_) -> [[a]]
       | _ -> raise @@ InterExn (sprintf "to dnf(%s)" (layout a))
     in
     List.map (fun l -> And l) (aux a)

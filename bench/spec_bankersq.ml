@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname =  "bankersq" in
+let bench_name =  "bankersq" in
 let ctx = init () in
 let f, r, nu_lazy1, nu_reverse, nu_cons, lnil, nu_lazy2 =
   map7 list_var ("f","r","nu_lazy1", "nu_reverse", "nu_cons", "lnil", "nu_lazy2") in

@@ -11,7 +11,7 @@ open Utils
 
 type flow = {
   pre_flow: Ast.t;
-  applied_args_map: (T.tpedvar list list) StrMap.t
+  applied_args_map: (SE.t list list) StrMap.t
 }
 
 type vc = {

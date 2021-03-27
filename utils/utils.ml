@@ -657,6 +657,12 @@ let map5 f (a, b, c, d, e) = (f a, f b, f c, f d, f e)
 let map6 f (a, b, c, d, e, g) = (f a, f b, f c, f d, f e, f g)
 let map7 f (a, b, c, d, e, g, h) = (f a, f b, f c, f d, f e, f g, f h)
 
+let time f =
+  let t = Sys.time() in
+  let fx = f () in
+  let delta = (Sys.time() -. t) in
+  fx, delta
+
 open Yojson.Basic
 let encode_field_ treetp_name field value =
   `Assoc ["t", `String treetp_name;

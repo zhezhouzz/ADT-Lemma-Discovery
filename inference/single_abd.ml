@@ -89,6 +89,8 @@ type pos_fv =
   | MayNoPosFv
   | PosFv of bool list
 
+let pos_query_c = ref 0
+
 let pos_query ctx vc_env env =
   let pre = Ast.Or (List.map (fun flow -> flow.pre_flow) vc_env.multi_pre) in
   let spec = make_spec_with_unknown env in
@@ -108,6 +110,16 @@ let pos_query ctx vc_env env =
     let fv = S.get_unknown_fv ctx m env.unknown_fv in
     (* let _ = Printf.printf "may pos:fv = %s\n" (boollist_to_string fv) in *)
     PosFv fv
+  in
+  let _ = if String.equal env.hole.name "top" then
+      if !pos_query_c > 2 then
+        let _ = Printf.printf "%s\n" (Expr.to_string @@ build_pos_query SZ.V2) in
+        let _ = Hashtbl.iter (fun vec label ->
+            Printf.printf "<%s>:%s\n" (boollist_to_string vec) (D.layout_label label)
+          ) env.fvtab in
+        raise @@ InterExn "pos end"
+      else ()
+    else ()
   in
   let version = SZ.V1 in
   let pos_query = build_pos_query version in
@@ -139,7 +151,7 @@ let gather_neg_fvec_to_tab_flow ctx env applied_args qvrange model =
     let counter = ref 0 in
     let _ =
       List.map (fun args ->
-          let args = List.map SE.from_tpedvar args in
+          (* let args = List.map SE.from_tpedvar args in *)
           let extract_fvec _ values =
             let vec = List.map
                 (fun feature ->
@@ -212,7 +224,10 @@ let pos_verify_flow ctx vc_env env flow fv =
        *  | S.SmtUnsat | S.Timeout -> raise (InterExn "verify candidate pos time out!")
        *  | S.SmtSat _ -> false) *)
       | S.SmtSat _ ->
-        (* let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in *)
+        let _ = if String.equal env.hole.name "top" then
+            pos_query_c := (!pos_query_c) + 1
+          else () in
+        let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in
         false
     in
     if_pos
@@ -437,12 +452,16 @@ let infer ctx vc_env env time_bound =
       let _ = summary_fv_num env in
       Printf.printf "may maxed\n"
     | NewMaxed (_, env) ->
-      let _ = Printf.printf "max spec:\n%s\n" (Ast.layout_spec
-                                                 (get_increamental_spec env.current)) in
+      let _ = Printf.printf "max spec:\n%s\n"
+          ""
+          (* (Ast.layout_spec (get_increamental_spec env.current)) *)
+      in
       summary_fv_num env
     | Weaker (_, env) ->
-      let _ = Printf.printf "weaker spec:\n%s\n" (Ast.layout_spec
-                                                 (get_increamental_spec env.current)) in
+      let _ = Printf.printf "weaker spec:\n%s\n"
+          ""
+          (* (Ast.layout_spec (get_increamental_spec env.current)) *)
+      in
       summary_fv_num env
   in
   env_opt

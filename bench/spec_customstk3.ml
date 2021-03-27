@@ -17,26 +17,18 @@ open Frontend.Fast.Fast
 let bench_name = "customstk" in
 let ctx = init () in
 let bpreds = ["=="] in
-let trace1_value = [
-  "is_empty", [V.B false;V.L [1;2];];
-  "top", [V.L [1;2]; V.I 1];
-  "tail", [V.L [1;2]; V.L [2]];
-  "concat", [V.L [2]; V.L [2;3]; V.L [2;2;3]];
-  "push", [V.I 1; V.L [2;2;3]; V.L [1;2;2;3]];] in
-let trace2_value = [
-  "is_empty", [ V.B true; V.L [];];] in
 let concat_program = function
   | [V.L l1; V.L l2] -> Some [V.L (l1 @ l2)]
   | _ -> raise @@ InterExn "bad prog"
 in
 let concat, concat_hole =
   make_hole "concat" [T.IntList; T.IntList; T.IntList] concat_program in
-let is_empty_program = function
-  | [V.L []] -> Some [V.B true]
-  | [V.L _] -> Some [V.B false]
-  | _ -> raise @@ InterExn "bad prog"
-in
-let is_empty, is_empty_hole = make_hole "is_empty" [T.Bool;T.IntList;] is_empty_program in
+let is_empty, is_empty_hole = make_hole_from_info
+    {name = "is_empty"; intps = [T.IntList;T.Bool;]; outtps = [];
+     prog = function
+       | [V.L []] -> Some [V.B true]
+       | [V.L _] -> Some [V.B false]
+       | _ -> raise @@ InterExn "bad prog"} in
 let top_program = function
   | [V.L []] -> None
   | [V.L (h :: _)] -> Some [V.I h]
@@ -59,7 +51,7 @@ let s1, s2, nu_tail, nu_concat, nu_push, nu =
 let nu_is_empty = bool_var "nu_is_empty" in
 let nu_top = int_var "nu_top" in
 let pre =
-  Ast.Ite (is_empty [nu_is_empty; s1;],
+  Ast.Ite (is_empty [s1;nu_is_empty;],
            poly_eq [s2;nu],
            And [top [s1; nu_top];
                 tail [s1; nu_tail];
@@ -68,10 +60,10 @@ let pre =
                ]
           )
 in
-let post = bench_post [s1;s2;nu] in
+let post = SpecApply("concat", [s1;s2;nu]) in
 (* let _ = SpecAbd.sampling concat_hole () 10 in *)
 let holel = [is_empty_hole;
-             concat_hole;
+             (* concat_hole; *)
              top_hole;
              push_hole;
              tail_hole] in
@@ -81,7 +73,7 @@ let holel = [is_empty_hole;
  *   ) holes *)
 (* in *)
 let elems = [T.Int, "nu_top"] in
-let spectable_post = set_post (predefined_spec_tab)
+let spectable_post = set_spec (predefined_spec_tab) "concat"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
     [T.Int, "u"]
     (E.And [
@@ -92,7 +84,7 @@ in
 let preds = ["list_member"; "list_head"] in
 (* let total_env = SpecAbd.multi_infer
  *     (sprintf "%s%i" bench_name 1) ctx pre post elems spectable_post holel preds bpreds 1 in *)
-let spectable_post = set_post (predefined_spec_tab)
+let spectable_post = set_spec (predefined_spec_tab) "concat"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
     [T.Int, "u"; T.Int, "v"]
     (E.And [
@@ -102,7 +94,6 @@ let spectable_post = set_post (predefined_spec_tab)
       ])
 in
 let preds = ["list_member"; "list_head"; "list_order"] in
-(* let preds = ["list_member"; "list_order"] in *)
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds bpreds 1 in
 (* let _ = StrMap.iter (fun name spec ->

@@ -13,12 +13,6 @@ open Language.Helper
 open Frontend.Fast.Fast
 ;;
 
-let time f x =
-  let t = Sys.time() in
-  let fx = f x in
-  let delta = (Sys.time() -. t) in
-  fx, delta
-
 let get_head dttp =
   match dttp with
   | T.IntList -> "list.dfy.text", "List"
@@ -152,3 +146,13 @@ let make_hole name argstp imp =
   let names = T.auto_name argstp in
   let hole = {name = name; args = List.combine argstp names} in
   (fun args -> SpecApply(name, args)), (hole, imp)
+
+type hole_info = {
+  name: string;
+  intps: Tp.Tp.t list;
+  outtps: Tp.Tp.t list;
+  prog: V.t list -> (V.t list) option
+}
+
+let make_hole_from_info info =
+  make_hole info.name (info.intps @ info.outtps) info.prog

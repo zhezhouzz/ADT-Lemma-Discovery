@@ -78,8 +78,8 @@ module SpecAbduction = struct
   let sampling hole imp env num =
     let _, current_epr = env.abduciable in
     let _, inputs = get_inputs hole in
-    (* let _ = printf "args = %s\n" (List.to_string T.layouttvar hole.args) in
-     * let _ = printf "inputs = %s\n" (List.to_string T.layouttvar inputs) in *)
+    let _ = printf "args = %s\n" (List.to_string T.layouttvar hole.args) in
+    let _ = printf "inputs = %s\n" (List.to_string T.layouttvar inputs) in
     let inputtps,_ = List.split inputs in
     let samples = R.gens ~chooses:default_range ~num:num
         ~tps:inputtps ~bound: samplebound in
@@ -93,9 +93,9 @@ module SpecAbduction = struct
     let qvsamples = R.gens ~chooses:default_qv_range ~num:(List.length samples)
         ~tps:qvtypes ~bound: samplebound in
     let s = List.combine samples qvsamples in
-    (* let _ = List.iter (fun (s1,s2) -> printf "{%s},{%s}]\n"
-     *                       (List.to_string V.layout s1)
-     *                       (List.to_string V.layout s2)) s in *)
+    let _ = List.iter (fun (s1,s2) -> printf "{%s},{%s}]\n"
+                          (List.to_string V.layout s1)
+                          (List.to_string V.layout s2)) s in
     let extract_fv (args_value, qv_value) =
       let m = StrMap.empty in
       let m = List.fold_left (fun m ((_, name), v) ->
@@ -109,14 +109,19 @@ module SpecAbduction = struct
       else Some (List.map (fun feature -> F.exec feature m) env.fset)
     in
     let fvs = List.filter_map extract_fv s in
-    let _ = printf "sampling [%s] len(fvs) = %i\n" hole.name (List.length fvs) in
+    let counter = ref 0 in
     let _ = List.iter (fun fv ->
         match Hashtbl.find_opt env.fvtab fv with
         | Some MultiPos -> ()
         | Some MultiMayNegCache -> raise @@ InterExn "never happen sampling"
-        | Some MultiMayNeg -> Hashtbl.replace env.fvtab fv MultiPos
-        | None -> Hashtbl.add env.fvtab fv MultiPos
+        | Some MultiMayNeg ->
+          let _ = counter := !counter + 1 in
+          Hashtbl.replace env.fvtab fv MultiPos
+        | None ->
+          let _ = counter := !counter + 1 in
+          Hashtbl.add env.fvtab fv MultiPos
       ) fvs in
+    let _ = printf "sampling [%s] len(fvs) = %i\n" hole.name (!counter) in
     List.length fvs
 
   let gather_neg_fvec_to_tab ctx hole env applied_args qvrange model query =
@@ -126,14 +131,15 @@ module SpecAbduction = struct
     let counter = ref 0 in
     let _ =
       List.map (fun args ->
-          let args = List.map SE.from_tpedvar args in
+          (* let args = List.map SE.from_tpedvar args in *)
           (* let _ = printf "args:%s\n" (List.to_string SE.layout args) in *)
           let extract_fvec _ values =
             let vec = List.map
                 (fun feature ->
                    Epr.subst (F.to_epr feature) names (args @ values)) env.fset in
-            (* let _ = printf "[vec]:%s\n" (List.to_string Epr.layout vec) in *)
             let vec' = List.map (fun e -> S.get_pred model (Epr.to_z3 ctx e)) vec in
+            (* let _ = printf "[vec]:%s%s\n" (List.to_string Epr.layout vec)
+             *     (boollist_to_string vec') in *)
             match Hashtbl.find_opt env.fvtab vec' with
             | Some MultiMayNeg ->
               let _ = printf "%s\n" (Expr.to_string query) in
@@ -230,7 +236,7 @@ module SpecAbduction = struct
     let fset = F.make_set_from_preds_multidt preds bpreds
         (hole.args @ qv) in
     let _ = printf "init-set:%s\n" (F.layout_set fset) in
-    let fvtab = Hashtbl.create 1000 in
+    let fvtab = Hashtbl.create 10000 in
     let abduciable = [], Epr.Not Epr.True in
     { dt = D.F;
      qv = qv;
@@ -246,9 +252,7 @@ module SpecAbduction = struct
     let multi_pre =
       List.map (fun pre ->
           let applied_args_map = StrMap.mapi (fun name _ ->
-              List.map (fun args ->
-                  List.map SE.to_tpedvar args
-                ) (Ast.get_app_args pre name)
+             Ast.get_app_args pre name
             ) holes in
           let applied_args_map = StrMap.filter (fun _ r ->
               match r with
@@ -339,7 +343,10 @@ module SpecAbduction = struct
        | Some pre ->
          let _ = printf "smt_query\n%s\n" (Expr.to_string smt_query) in
          let _ = printf "model:\n%s\n" (Model.to_string model) in
-         (printf "cannot gather fv in ast:%s\n" (Ast.vc_layout pre); CannotGather)
+         let _ = printf "flow:\n%s\n" (Ast.vc_layout flow.Env.pre_flow) in
+         let _ = raise @@ InterExn "inplace_verify_and_gather_fv end" in
+         (printf "cannot gather fv in ast:%s\n" (Ast.vc_layout pre);
+          CannotGather)
       )
     in
     let build_smt_query version =
@@ -363,7 +370,7 @@ module SpecAbduction = struct
         raise @@ InterExn (Printf.sprintf "[%s]inplace_verify_and_gather_fv time out!" (SZ.layout_imp_version version))
       | S.SmtSat model -> handle_model smt_query model version
 
-  let sample_num = 20
+  let sample_num = 1000
 
   let negcache_to_neg env =
     StrMap.iter (fun _ spec_env ->
@@ -437,7 +444,8 @@ module SpecAbduction = struct
           then
             match args with
             | [] -> raise @@ InterExn "never happen in instantiate_bool"
-            | _ :: args ->
+            | _ ->
+              let args = List.rev @@ List.tl @@ List.rev args in
               Or [And [SpecApply(specname_true, args); aux p2];
                   And [SpecApply(specname_false, args); aux p3];]
           else Ite (SpecApply (specname', args), aux p2, aux p3)
@@ -479,7 +487,8 @@ module SpecAbduction = struct
         then
           match h.args with
           | [] -> raise @@ InterExn "never happen in instantiate_bool"
-          | _ :: args ->
+          | _ ->
+            let args = List.rev @@ List.tl @@ List.rev h.args in
             let specname_true = h.name ^ "#t" in
             let specname_false = h.name ^ "#f" in
             let insted_imp b = fun inp ->
@@ -545,6 +554,10 @@ module SpecAbduction = struct
     let rec search_hyp numX =
       (* if numX > maxX then None else *)
       let env = init_env (pres, post) vars spectable preds bpreds numX holel in
+      let _ = StrMap.iter (fun name env ->
+          printf "[%s] space: 2^%i = %i\n"
+            name (List.length env.fset) (pow 2 (List.length env.fset))
+        ) env.spec_envs in
         match refinement_loop ctx env with
         | None -> search_hyp (numX + 1)
         | Some spec -> Some spec
@@ -578,6 +591,7 @@ module SpecAbduction = struct
         vc.Env.spectable version vc.Env.vars in
     let version = S.Z3aux.V2 in
     let smt_query = build_smt_query version in
+    let _ = printf "%s\n" (Expr.to_string smt_query) in
     match S.check ctx smt_query with
     | S.SmtUnsat -> true
     | S.Timeout ->
@@ -597,13 +611,14 @@ module SpecAbduction = struct
   let time_bound = 600.0
 
   let multi_infer name ctx pre post vars spectable holel preds bpreds startX =
-    let pre, holel = instantiate_bool pre holel in
+    (* let pre, holel = instantiate_bool pre holel in *)
     let names = List.map (fun (hole, _) -> hole.name) holel in
     let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
     let _ = List.iter (fun pre ->
         printf "[pre]\n%s\n" (Ast.vc_layout pre)
       ) pres in
     let _ = Ast.print_spectable spectable in
+    (* let _ = raise @@ InterExn "end" in *)
     let env = consistent_solution ctx pres post vars spectable holel preds bpreds startX in
     match env with
     | None -> raise @@ InterExn "search_hyp: quantified variables over bound"
@@ -622,7 +637,7 @@ module SpecAbduction = struct
        *     (Ast.spectable_eq result result') in *)
       let _ = Yojson.Basic.to_file (name ^ "_" ^ "consistent.json")
           (Ast.spectable_encode result) in
-      (* let _ = raise @@ InterExn "end" in *)
+      let _ = raise @@ InterExn "end" in
       let single_envs = StrMap.fold (fun specname spec_env r ->
           let target_hole = StrMap.find "multi_infer" env.holes specname in
           let single_env = make_single_abd_env env.vc spec_env target_hole in
@@ -634,16 +649,19 @@ module SpecAbduction = struct
         if idx >= Array.length single_envs_arr
         then total_env
         else
-        let single_env = single_envs_arr.(idx) in
-        match Single_abd.infer ctx total_env single_env time_bound with
-        | Env.AlreadyMaxed -> aux total_env (idx + 1)
-        | Env.MayAlreadyMaxed -> aux total_env (idx + 1)
-        | Env.NewMaxed (total_env, single_env') ->
-          let _ = Array.set single_envs_arr idx single_env' in
-          aux total_env (idx + 1)
-        | Env.Weaker (total_env, single_env') ->
-          let _ = Array.set single_envs_arr idx single_env' in
-          aux total_env (idx + 1)
+          let single_env = single_envs_arr.(idx) in
+          let single_result, delta_time =
+            time (fun _ -> Single_abd.infer ctx total_env single_env time_bound) in
+          let _ = printf "time: single: %s: %fs\n" single_env.Env.hole.name delta_time in
+          match single_result with
+          | Env.AlreadyMaxed -> aux total_env (idx + 1)
+          | Env.MayAlreadyMaxed -> aux total_env (idx + 1)
+          | Env.NewMaxed (total_env, single_env') ->
+            let _ = Array.set single_envs_arr idx single_env' in
+            aux total_env (idx + 1)
+          | Env.Weaker (total_env, single_env') ->
+            let _ = Array.set single_envs_arr idx single_env' in
+            aux total_env (idx + 1)
       in
       let total_env = aux env.vc 0 in
       let result = spectable_filter_result names total_env.spectable in
