@@ -402,9 +402,8 @@ module Tree = struct
         match t with
         | Leaf -> false
         | Node (a, l, r) ->
-          if eq a u
-          then exists (fun x -> eq x v) l
-          else aux (aux before l) r
+          if (eq a u) && (exists (fun x -> eq x v) l) then true else
+            aux (aux false l) r
     in
     aux false t
 
@@ -414,9 +413,8 @@ module Tree = struct
         match t with
         | Leaf -> false
         | Node (a, l, r) ->
-          if eq a u
-          then exists (fun x -> eq x v) r
-          else aux (aux before l) r
+          if (eq a u) && (exists (fun x -> eq x v) r) then true else
+            aux (aux false l) r
     in
     aux false t
 
@@ -510,9 +508,8 @@ module LabeledTree = struct
         match t with
         | Leaf -> false
         | Node (_, a, l, r) ->
-          if eq a u
-          then exists (fun x -> eq x v) l
-          else aux (aux before l) r
+          if (eq a u) && (exists (fun x -> eq x v) l) then true else
+            aux (aux false l) r
     in
     aux false t
 
@@ -522,9 +519,8 @@ module LabeledTree = struct
         match t with
         | Leaf -> false
         | Node (_, a, l, r) ->
-          if eq a u
-          then exists (fun x -> eq x v) r
-          else aux (aux before l) r
+          if (eq a u) && (exists (fun x -> eq x v) r) then true else
+            aux (aux false l) r
     in
     aux false t
 

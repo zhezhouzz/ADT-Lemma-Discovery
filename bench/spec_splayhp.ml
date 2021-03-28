@@ -98,48 +98,8 @@ let pre =
        [T.IntTree, "tree2"; T.IntTree, "tree3"])
        ]
 in
-
-(* let vc =
- *   Ast.Ite(e [nu_e1; tr;],
- *           Implies (e [booltrue; te], partition [pivot; te; te; te]),
- *           Implies(t [a; x; b; tr],
- *                   Ite(le [nu_le1; x; pivot;],
- *                       Ite(e [nu_e2; b;],
- *                           Implies (e [booltrue; te], partition [pivot; tr; tr; te]),
- *                           Implies (t [b1; y; b2; b],
- *                                    Ite(le [nu_le2; y; pivot;],
- *                                        Implies(
- *                                          And[partition [pivot; b2; small; big];
- *                                              t [a; x; b1; tr1]; t [tr1; y; small; tr2];],
- *                                          partition [pivot; tr; tr2; big]),
- *                                        Implies(
- *                                          And[partition [pivot; b1; small; big];
- *                                              t [a; x; small; tr1]; t [big; y; b2; tr2];],
- *                                          partition [pivot; tr; tr1; tr2])
- *                                       )
- *                                   )
- *                          ),
- *                       Ite(e [nu_e3; a;],
- *                           Implies (e [booltrue; te], partition [pivot; tr; te; tr]),
- *                           Implies (t [a1; y; a2; a],
- *                                    Ite(le [nu_le3; y; pivot;],
- *                                        Implies(And
- *                                                  [partition [pivot; a2; small; big];
- *                                                   t [a1; y; small; tr1]; t [big; x; b; tr2];],
- *                                                partition [pivot; tr; tr1; tr2]),
- *                                        Implies(And[partition [pivot; a1; small; big];
- *                                                    t [a2; x; b; tr1]; t [big; y; tr1; tr2];],
- *                                                partition [pivot; tr; small; tr2])
- *                                       )
- *                                   )
- *                          )
- *                      )
- *                  )
- *          )
- * in *)
 let post = partition [pivot; tr; tree2; tree3] in
 let elems = [T.Int, "pivot"; T.Int, "x"; T.Int, "y";] in
-let preds = ["tree_member"; "tree_left"; "tree_right"] in
 let holel = [e_hole;
              t_hole
             ] in
@@ -182,6 +142,18 @@ in
  *          *   ]); *\)
  *       ])
  * in *)
+let preds = ["tree_member"; "tree_left"; "tree_right"] in
+(* let treelc = Tree.Leaf in
+ * let treeh = 3 in
+ * let treerc = Tree.(Node(3,Node(1,Node(1,Node(2,Leaf,Leaf),Leaf),Leaf),Leaf)) in
+ * let tree3 = Tree.(Node(treeh,treelc, treerc)) in
+ * let _ = printf "treel:%s\n" (Tree.layout string_of_int treelc) in
+ * let _ = printf "treeh:%s\n" (string_of_int treeh) in
+ * let _ = printf "treer:%s\n" (Tree.layout string_of_int treerc) in
+ * let _ = printf "tree:%s\n" (Tree.layout string_of_int tree3) in
+ * let _ = printf "treerc 3 1 = %b\n" (Tree.left_child (fun x y -> x == y) treerc 3 1) in
+ * let _ = printf "tree 3 1 = %b\n" (Tree.left_child (fun x y -> x == y) tree3 3 1) in
+ * let _ = raise @@ InterExn "end" in *)
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" testnam 1) ctx pre post elems spectable holel preds bpreds 2 in
 ();;

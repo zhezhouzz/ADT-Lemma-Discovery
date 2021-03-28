@@ -95,7 +95,7 @@ let spectable_post = set_spec (predefined_spec_tab) "concat"
 in
 let preds = ["list_member"; "list_head"; "list_order"] in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds bpreds 1 in
+    (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds bpreds 2 in
 (* let _ = StrMap.iter (fun name spec ->
  *     printf "%s\n" (Ast.layout_spec_entry name spec)
  *   ) (total_env.spectable) in

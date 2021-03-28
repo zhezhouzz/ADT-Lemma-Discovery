@@ -36,6 +36,30 @@ let spectable = add_spec spectable "R" ["a"] [] (redb a) in
 let spectable = add_spec spectable "B" ["a"] [] (blackb a) in
 let balance args =
   Implies (SpecApply ("BalancePre", args), SpecApply ("BalancePost", args)) in
+let pre =
+  Ast.make_match [T.Bool, "r1"; T.IntTreeB "tree1"; T.Int, "x"; T.IntTreeB "tree1";] [T.IntTree, "tree2"; T.IntTree, "tree3"]
+    [
+      (Some (e [nu_e]), [(T.IntTree, "nu_e")]),
+      (None, [(T.IntTree, "nu_e"); (T.IntTree, "tr")]);
+      (Some (t [a1; y; a2; a]), [T.IntTree, "a";]),
+      (Some
+         (Ite(le [y; pivot;nu_le3;],
+              And[partition [pivot; a2; small; big];
+                  t [a1; y; small; tr1];
+                  t [big; x; b; tr2];
+                  poly_eq [tr1; tree2];
+                  poly_eq [tr2; tree3];
+                 ],
+              And[partition [pivot; a1; small; big];
+                  t [a2; x; b; tr1];
+                  t [big; y; tr1; tr2];
+                  poly_eq [small; tree2];
+                  poly_eq [tr2; tree3];
+                 ]
+             )),
+       [T.IntTree, "tree2"; T.IntTree, "tree3"]
+      )
+    ]
 let vcs =
   let precond = And [black [r1]; red [r2]; e [booltrue;te;];] in
   let bodys =

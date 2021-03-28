@@ -14,7 +14,8 @@ module type Feature = sig
   val get_vars: t -> string list * string list
   val make_set: (Tp.Tp.t * string) list -> set
   val make_set_from_preds: string list -> string list -> (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
-  val make_set_from_preds_multidt: string list -> string list -> (Tp.Tp.t * string) list -> set
+  (* val make_set_from_preds_multidt: string list -> string list -> (Tp.Tp.t * string) list -> set *)
+  val make_set_from_preds_max: string list -> string list -> (Tp.Tp.t * string) list -> (Tp.Tp.t * string) list -> set
   val make_target: (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
   val subst:string Utils.StrMap.t -> t -> t
 end
@@ -131,21 +132,63 @@ module Feature : Feature = struct
     in
     pr_features @ eq_features @ comp_features
 
-  let make_set_from_preds_multidt preds basicpreds variables =
-    let bvariables, variables = List.partition
+  (* let make_set_from_preds_multidt preds basicpreds variables =
+   *   let bvariables, variables = List.partition
+   *       (fun (tp, _) -> match tp with
+   *          | T.Bool -> true
+   *          | _ -> false) variables in
+   *   let bfeatures = List.map (fun (_, name) -> Bo name) bvariables in
+   *   let dts, basics = List.partition
+   *       (fun (tp, _) -> T.is_dt tp) variables in
+   *   (\* let _ = Printf.printf "dts: %s\n" (List.to_string T.layouttvar dts) in *\)
+   *   (\* let _ = Printf.printf "basics: %s\n" (List.to_string T.layouttvar basics) in *\)
+   *   bfeatures @ (
+   *     List.fold_left (fun featureset dt ->
+   *         featureset @ (make_set_from_preds preds basicpreds dt basics)
+   *       ) [] dts
+   *   ) *)
+
+  let make_set_from_preds_max preds basicpreds args qv =
+    let bargs, args = List.partition
         (fun (tp, _) -> match tp with
            | T.Bool -> true
-           | _ -> false) variables in
-    let bfeatures = List.map (fun (_, name) -> Bo name) bvariables in
+           | _ -> false) args in
+    let bfeatures = List.map (fun (_, name) -> Bo name) bargs in
     let dts, basics = List.partition
-        (fun (tp, _) -> T.is_dt tp) variables in
-    (* let _ = Printf.printf "dts: %s\n" (List.to_string T.layouttvar dts) in *)
-    (* let _ = Printf.printf "basics: %s\n" (List.to_string T.layouttvar basics) in *)
-    bfeatures @ (
+        (fun (tp, _) -> T.is_dt tp) args in
+    let make_eq_features elems =
+      List.map (fun (a, b) -> Base ("==", a, b)) @@
+      List.remove_duplicates (fun (a, b) (a', b') ->
+          (a == a' && b = b') || (a == b' && b == a')) @@
+      List.filter (fun (a, b) -> a <> b) @@
+      List.cross elems elems
+    in
+    let eq_features =
+      match List.find_opt (fun p -> String.equal p "==") basicpreds with
+      | Some _ -> make_eq_features (snd @@ List.split (basics @ qv))
+      | None -> []
+    in
+    let make_pr_features preds dt elems =
+      let _, dt = dt in
+      let _, elems = List.split elems in
+      let aux info =
+        let args_set = List.combination_l elems info.P.num_int in
+        let args_set =
+          if info.P.permu then
+            List.concat (List.map (fun l -> List.permutation l) args_set)
+          else args_set
+        in
+        List.map (fun args -> Pr (info.P.name, [dt], args)) args_set
+      in
+      List.fold_left (fun r info -> r @ (aux info)) []
+        (List.map P.find_pred_info_by_name preds)
+    in
+    let pr_features =
       List.fold_left (fun featureset dt ->
-          featureset @ (make_set_from_preds preds basicpreds dt basics)
+          featureset @ (make_pr_features preds dt qv)
         ) [] dts
-    )
+    in
+    bfeatures @ eq_features @ pr_features
 
   let make_set vars =
     let variable_split (dts, elems, bs) (tp, name) =

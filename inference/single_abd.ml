@@ -439,9 +439,12 @@ let infer ctx vc_env env time_bound =
       let vc_env, env = weaker_safe_loop ctx vc_env env in
       (* let _ = Printf.printf "new current:\n%s\n" (Ast.layout_spec env.current) in *)
       let end_time = Sys.time () in
-      if end_time -. start_time > time_bound
-      then Weaker (vc_env, env)
-      else max_loop vc_env env
+      match time_bound with
+      | None -> max_loop vc_env env
+      | Some time_bound ->
+        if end_time -. start_time > time_bound
+        then Weaker (vc_env, env)
+        else max_loop vc_env env
   in
   let env_opt = max_loop vc_env env in
   let _ = match env_opt with
