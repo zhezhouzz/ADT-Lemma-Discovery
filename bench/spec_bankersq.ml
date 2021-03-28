@@ -13,71 +13,114 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let bench_name =  "bankersq" in
+let testname =  "bankersq" in
 let ctx = init () in
-let f, r, nu_lazy1, nu_reverse, nu_cons, lnil, nu_lazy2 =
-  map7 list_var ("f","r","nu_lazy1", "nu_reverse", "nu_cons", "lnil", "nu_lazy2") in
-let f1, r1 = map_double list_var ("f1", "r1") in
-let x, lenf, lenr, lenf1, lenr1 =
-  map5 int_var ("x", "lenf", "lenr", "lenf1", "lenr1") in
+let cons, cons_hole = make_hole_from_info
+    {name = "BankersqCons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.I h; V.L t] -> Some [V.L (h :: t)]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let nil, nil_hole = make_hole_from_info
+    {name = "BankersqNil"; intps = []; outtps = [T.IntList];
+     prog = function
+       | [] -> Some [V.L []]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let liblazy, liblazy_hole = make_hole_from_info
+    {name = "Lazy"; intps = [T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.L l] -> Some (Lazy.force (lazy [V.L l]))
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let reverse, reverse_hole= make_hole_from_info
+    {name = "BankersqReverse"; intps = [T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.L l] -> Some [V.L (List.rev l)]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let concat, concat_hole = make_hole_from_info
+    {name = "BankersqConcat"; intps = [T.IntList;T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.L l1; V.L l2] -> Some [V.L (l1 @ l2)]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let f, r, f', r' = map4 list_var ("f", "r", "f'", "r'") in
+let lenf, lenr, lenf', lenr' = map4 int_var ("lenf", "lenr", "lenf'", "lenr'") in
+let x, lenf1, lenr1 = map_triple int_var ("x", "lenf1", "lenr1") in
 let nu_le = bool_var "nu_le" in
-let preds = ["list_member"; "list_head"; "list_order"] in
+let nu_lazy1, nu_reverse, nu_cons, nu_nil, nu_lazy2, f1, r1 =
+  map7 list_var ("nu_lazy1", "nu_reverse", "nu_cons", "nu_nil", "nu_lazy2", "f1", "r1") in
+(* let f1, r1 = map_double list_var ("f1", "r1") in
+ * let x, lenf, lenr, lenf1, lenr1 =
+ *   map5 int_var ("x", "lenf", "lenr", "lenf1", "lenr1") in
+ * let nu_le = bool_var "nu_le" in *)
 let bpreds = ["=="] in
-let is_empty, is_empty_hole = make_hole "is_empty" [T.Bool;T.IntList;] in
-let cons, cons_hole = make_hole "cons" [T.Int; T.IntList; T.IntList] in
-let reverse, reverse_hole = make_hole "reverse" [T.IntList; T.IntList] in
-let concat, concat_hole = make_hole "concat" [T.IntList; T.IntList; T.IntList] in
-let liblazy, liblazy_hole = make_hole "liblazy" [T.IntList; T.IntList] in
-let trace1_value = [
-  "is_empty", [V.B false;V.L [2;3];];
-  "cons", [V.I 2; V.L [3]; V.L [2;3];];
-  "cons", [V.I 2; V.L [1]; V.L [2;1];];
-  "liblazy", [V.L [2;1];V.L [2;1];];
-  "liblazy", [V.L [];V.L [];];
-  "reverse", [V.L [3;2;1];V.L [1;2;3];];
-  "reverse", [V.L [];V.L [];];
-  "concat", [V.L [3;2;1];V.L [1]; V.L [3;2;1;1];];
-] in
-let trace2_value = [
-  "is_empty", [ V.B true; V.L [];];] in
-let spectable = predefined_spec_tab in
 let snoc args = SpecApply ("Snoc", args) in
-let vc =
-  Implies(And[
-      intadd [lenr;const1;lenr1];
-      cons [x; r; nu_cons;];
-      liblazy [nu_cons; r1];
-    ],
-          Ast.Ite(le [nu_le; lenr1; lenf],
-                  snoc [lenf;f;lenr;r;x;lenf;f;lenr1;r1],
-                  Implies(
-                    And [intadd [lenf;lenr1;lenf1];
-                         reverse [r1;nu_reverse];
-                         concat [f;nu_reverse;f1];
-                         is_empty [booltrue; lnil];
-                         liblazy [lnil; nu_lazy2];
-                        ],
-                    snoc [lenf;f;lenr;r;x;lenf1;f1;const0;nu_lazy2]
-                  )
-                 )
-    )
+let pre =
+  And[
+    intadd [lenr;const1;lenr1];
+    cons [x; r; nu_cons;];
+    liblazy [nu_cons; r1];
+    Ast.Ite(le [lenr1; lenf; nu_le;],
+            And [poly_eq [lenf;lenf']; poly_eq [f;f']; poly_eq [lenr;lenr']; poly_eq [r;r']],
+            And[
+              intadd [lenf;lenr1;lenf1];reverse [r1;nu_reverse]; concat [f;nu_reverse;f1];
+              nil [nu_nil]; liblazy [nu_nil; nu_lazy2];
+              poly_eq [lenf1;lenf']; poly_eq [f1;f']; poly_eq [const0;lenr'];
+              poly_eq [nu_lazy2;r']
+            ]
+           )
+  ]
 in
-let vcs = Ast.eliminate_cond vc in
-let holes = [is_empty_hole; cons_hole; liblazy_hole; concat_hole; reverse_hole;] in
-let traces = [trace1_value; trace2_value] in
-let f, f', r, r' = map4 list_var ("f", "f'", "r", "r'") in
+let elems = [T.Int, "x";] in
+let post = snoc [lenf;f;lenr;r;x;lenf';f';lenr';r'] in
+(* let vc =
+ *   Implies(And[
+ *       intadd [lenr;const1;lenr1];
+ *       cons [x; r; nu_cons;];
+ *       liblazy [nu_cons; r1];
+ *     ],
+ *           Ast.Ite(le [nu_le; lenr1; lenf],
+ *                   snoc [lenf;f;lenr;r;x;lenf;f;lenr1;r1],
+ *                   Implies(
+ *                     And [intadd [lenf;lenr1;lenf1];
+ *                          reverse [r1;nu_reverse];
+ *                          concat [f;nu_reverse;f1];
+ *                          is_empty [booltrue; lnil];
+ *                          liblazy [lnil; nu_lazy2];
+ *                         ],
+ *                     snoc [lenf;f;lenr;r;x;lenf1;f1;const0;nu_lazy2]
+ *                   )
+ *                  )
+ *     )
+ * in *)
+let holel = [
+  nil_hole;
+  cons_hole;
+  liblazy_hole;
+  concat_hole;
+  reverse_hole;] in
+let preds = ["list_member";] in
+let spectable = add_spec predefined_spec_tab "Snoc"
+    [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
+     T.Int, "lenf'";T.IntList, "f'";T.Int, "lenr'";T.IntList, "r'"]
+    [T.Int,"u"]
+    (E.Iff(Or[list_member f u; list_member r u; int_eq u x],
+           Or[list_member f' u; list_member r' u]
+          ))
+in
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+let preds = ["list_member"; "list_head"; "list_order"] in
 let spectable = add_spec spectable "Snoc"
-    ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
-    (Iff(Or[list_member f u; list_member r u; int_eq u x],
-         Or[list_member f' u; list_member r' u]
+    [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
+     T.Int, "lenf'";T.IntList, "f'";T.Int, "lenr'";T.IntList, "r'"]
+    [T.Int,"u"]
+    (Iff(Or[list_member f u; list_member r u],
+         Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
         ))
 in
-let _ = test ctx vcs spectable holes preds bpreds 1 1 traces in
-(* let spectable = add_spec spectable "Snoc"
- *     ["lenf";"f";"lenr";"r";"x";"lenf'";"f'";"lenr'";"r'"] ["u"]
- *     (Iff(Or[list_member f u; list_member r u],
- *          Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
- *         ))
- * in
- * let _ = test ctx vcs spectable holes preds bpreds 2 2 traces in *)
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 1 in
 ();;

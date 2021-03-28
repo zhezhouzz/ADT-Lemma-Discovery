@@ -15,42 +15,76 @@ open Frontend.Fast.Fast
 ;;
 let testname = "batchedq" in
 let ctx = init () in
-let l1, f, r, nu_rev=
-  map4 list_var ("l1", "f","r", "nu_rev") in
+let cons, cons_hole = make_hole_from_info
+    {name = "ListCons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.I h; V.L t] -> Some [V.L (h :: t)]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let nil, nil_hole = make_hole_from_info
+    {name = "ListNil"; intps = []; outtps = [T.IntList];
+     prog = function
+       | [] -> Some [V.L []]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let is_empty, is_empty_hole = make_hole_from_info
+    {name = "ListIsEmpty"; intps = [T.IntList]; outtps = [T.Bool];
+     prog = function
+       | [V.L []] -> Some [V.B true]
+       | [V.L _ ] -> Some [V.B false]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let rev, rev_hole = make_hole_from_info
+    {name = "ListRev"; intps = [T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.L l] -> Some [V.L (List.rev l)]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
+let f, f', r, r', f1 = map5 list_var ("f", "f'","r", "r'", "f1") in
 let nu_empty = bool_var "nu_empty" in
-let preds = ["list_member"; "list_head"; "list_order"] in
 let bpreds = ["=="] in
-let is_empty, is_empty_hole = make_hole "is_empty" [T.Bool;T.IntList;] in
-let cons, cons_hole = make_hole "cons" [T.Int; T.IntList; T.IntList] in
-let rev, rev_hole = make_hole "rev" [T.IntList; T.IntList] in
-let trace1_value = [
-  "is_empty", [V.B false;V.L [2;3];];
-  "cons", [V.I 2; V.L [3]; V.L [2;3];];
-  "cons", [V.I 2; V.L [1]; V.L [2;1];];
-] in
-let trace2_value = [
-  "is_empty", [ V.B true; V.L [];];] in
-let spectable = predefined_spec_tab in
 let tail args = SpecApply ("Tail", args) in
-let vc =
-  Implies(cons [x;f;l1],
-          Ite(is_empty [nu_empty;f],
-              Implies(rev [r;nu_rev], tail [l1;r;nu_rev;f]),
-              tail [l1;r;f;r]
-             )
-         )
-    in
-let vcs = Ast.eliminate_cond vc in
-let holes = [is_empty_hole; cons_hole; rev_hole] in
-let traces = [trace1_value; trace2_value] in
-let spectable = add_spec spectable "Tail" ["l1";"l2";"l3";"l4"] ["u"]
+let pre = make_match [T.IntList, "l"; T.IntList, "r"] [T.IntList, "l'"; T.IntList, "r'"]
+    [(Some (cons [x;f1;f]), [T.IntList, "l"; T.IntList, "r"]),
+     (Some (
+        Ite(is_empty [f1;nu_empty],
+            And [rev [r;f']; poly_eq [f1;r']],
+            And [poly_eq [f1;f']; poly_eq [r;r'];]
+           )
+      ), [T.IntList, "l'"; T.IntList, "r'"]
+     )
+    ]
+in
+let elems = [] in
+let post = tail [f;r;f';r'] in
+(* let vc =
+ *   Implies(cons [x;f;l1],
+ *           Ite(is_empty [nu_empty;f],
+ *               Implies(rev [r;nu_rev], tail [l1;r;nu_rev;f]),
+ *               tail [l1;r;f;r]
+ *              )
+ *          )
+ *     in *)
+let holel = [
+  is_empty_hole;
+  cons_hole;
+  rev_hole;
+  nil_hole] in
+let preds = ["list_member"; "list_head";] in
+let spectable = add_spec predefined_spec_tab "Tail"
+    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3";T.IntList, "l4"]
+    [T.Int, "u"]
     (E.And [
         E.Iff (Or[list_member l3 u; list_head l1 u; list_member l4 u;],
                E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let _ = test ctx vcs spectable holes preds bpreds 1 1 traces in
-let spectable = add_spec spectable "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+let preds = ["list_member"; "list_head"; "list_order"] in
+let spectable = add_spec predefined_spec_tab "Tail"
+    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3";T.IntList, "l4"]
+    [T.Int, "u"; T.Int, "v"]
     (E.And [
         E.Iff (Or[list_member l3 u; list_member l4 u; list_head l1 u],
                E.Or [list_member l1 u; list_member l2 u]);
@@ -58,5 +92,7 @@ let spectable = add_spec spectable "Tail" ["l1";"l2";"l3";"l4"] ["u";"v"]
                    Or[list_order l1 u v; list_order l2 v u])
       ])
 in
-let _ = test ctx vcs spectable holes preds bpreds 2 2 traces in
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
+
 ();;

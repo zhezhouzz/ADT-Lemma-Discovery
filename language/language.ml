@@ -79,6 +79,7 @@ module Helper = struct
   let int_eq a b = E.Atom (SE.Op (T.Bool, "==", [a;b]))
   let le = fun args -> SpecApply("le", args)
   let lt = fun args -> SpecApply("lt", args)
+  let gt = fun args -> SpecApply("gt", args)
   let intadd = fun args -> SpecApply("intadd", args)
   let inteq = fun args -> SpecApply("inteq", args)
   let poly_eq = fun args -> SpecApply("equal", args)
@@ -94,6 +95,9 @@ module Helper = struct
     let spec_tab = add_spec spec_tab "lt"
         [T.Int, "x";T.Int, "y";T.Bool, "bool0";] []
         (int_eq (SE.Op (T.Bool, "<", [x;y])) bool0) in
+    let spec_tab = add_spec spec_tab "gt"
+        [T.Int, "x";T.Int, "y";T.Bool, "bool0";] []
+        (int_eq (SE.Op (T.Bool, ">", [x;y])) bool0) in
     let spec_tab = add_spec spec_tab "intadd"
         [T.Int, "x";T.Int, "y";T.Int, "z"] []
         (int_eq (SE.Op (T.Bool, "+", [x;y])) z) in
