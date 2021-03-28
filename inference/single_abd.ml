@@ -124,15 +124,15 @@ let pos_query ctx vc_env env =
   let version = SZ.V1 in
   let pos_query = build_pos_query version in
   (* let _ = Printf.printf "pos_query:\n%s\n" (Expr.to_string pos_query) in *)
-  match S.check ctx pos_query with
-  | S.SmtUnsat ->
-    let version = SZ.V2 in
-    let pos_query = build_pos_query version in
-    (match S.check ctx pos_query with
-     | S.SmtUnsat -> NoPosFv
-     | S.Timeout -> MayNoPosFv
-       (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
-     | S.SmtSat m -> handle_model m)
+  match clock "z3(pos_query)" (fun _ -> S.check ctx pos_query) with
+  | S.SmtUnsat -> NoPosFv
+    (* let version = SZ.V2 in
+     * let pos_query = build_pos_query version in
+     * (match S.check ctx pos_query with
+     *  | S.SmtUnsat -> NoPosFv
+     *  | S.Timeout -> MayNoPosFv
+     *    (\* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *\)
+     *  | S.SmtSat m -> handle_model m) *)
   | S.Timeout -> MayNoPosFv
     (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
   | S.SmtSat m -> handle_model m
@@ -212,7 +212,7 @@ let pos_verify_flow ctx vc_env env flow fv =
     let neg_phi = build_neg_phi version in
     (* let _ = Printf.printf "verify:%s\n" (Expr.to_string neg_phi) in *)
     let if_pos =
-      match S.check ctx neg_phi with
+      match clock "z3(pos_verify_flow)" (fun _ -> S.check ctx neg_phi) with
       | S.SmtUnsat ->
         (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
         true
@@ -224,10 +224,10 @@ let pos_verify_flow ctx vc_env env flow fv =
        *  | S.SmtUnsat | S.Timeout -> raise (InterExn "verify candidate pos time out!")
        *  | S.SmtSat _ -> false) *)
       | S.SmtSat _ ->
-        let _ = if String.equal env.hole.name "top" then
-            pos_query_c := (!pos_query_c) + 1
-          else () in
-        let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in
+        (* let _ = if String.equal env.hole.name "top" then
+         *     pos_query_c := (!pos_query_c) + 1
+         *   else () in *)
+        (* let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in *)
         false
     in
     if_pos
@@ -312,7 +312,7 @@ let neg_query ctx vc_env env new_sr =
          *   printf "%s\n" (Ast.layout_spec_entry name spec)
          * ) new_spectable in
          * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
-        match S.check ctx neg_phi with
+        match clock "z3(neg_query)" (fun _ -> S.check ctx neg_phi) with
         | S.SmtUnsat -> Pass
         | S.Timeout ->
           raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version))
@@ -338,36 +338,6 @@ let neg_query ctx vc_env env new_sr =
       loop new_sr'
   in
   loop new_sr
-
-(* let learn_weaker ctx vc_env env =
- *   let current = StrMap.find "never happen learn_weaker"
- *       vc_env.spectable env.hole.name in
- *   let _, (_, cur_body) = current in
- *   let fset_z3 = List.map (fun f -> Epr.to_z3 ctx @@ F.to_epr f) env.fset in
- *   let rec loop () =
- *     let dt, dt_idx =
- *       if Hashtbl.length env.fvtab == 0
- *       then D.T, D.T
- *       else D.classify_hash env.fset env.fvtab in
- *     let learned_body = Epr.simplify_ite @@ D.to_epr dt in
- *     let query = Epr.to_z3 ctx @@ Epr.Not (Epr.Implies (cur_body, learned_body)) in
- *     match S.check ctx query with
- *     | S.SmtUnsat -> body_to_spec env learned_body, dt_idx
- *     | S.Timeout -> raise (InterExn "old pos time out!")
- *     | S.SmtSat m ->
- *       let fv = List.map (fun feature -> S.get_pred m feature) fset_z3 in
- *       let _ = Printf.printf "old pos[%s]\n" (boollist_to_string fv) in
- *       let _ =
- *         match Hashtbl.find_opt env.fvtab fv with
- *         | Some D.MayNeg -> Hashtbl.replace env.fvtab fv D.Pos
- *         | Some label -> raise @@ InterExn
- *             (sprintf "learn_weaker(exists %s -> %s)"
- *                (boollist_to_string fv) (D.layout_label label))
- *         | None -> Hashtbl.add env.fvtab fv D.Pos
- *       in
- *       loop ()
- *   in
- *   loop () *)
 
 let weaker_safe_loop ctx vc_env env =
   let rec loop () =
@@ -422,11 +392,13 @@ let infer ctx vc_env env time_bound =
   let start_time = Sys.time () in
   let rec max_loop vc_env env =
     let rec find_pos env =
-      match pos_query ctx vc_env env with
+      match clock "pos_query" (fun _ -> pos_query ctx vc_env env) with
       | NoPosFv -> NoWeaker
       | MayNoPosFv -> MayNoWeaker
       | PosFv fv ->
-        let if_pos = pos_verify_update_env ctx vc_env env fv in
+        let if_pos =
+          clock "pos_verify_update_env"
+            (fun _ -> pos_verify_update_env ctx vc_env env fv) in
         if not if_pos then find_pos env else NewWeaker env
     in
     match find_pos env with
@@ -436,7 +408,9 @@ let infer ctx vc_env env time_bound =
       if !max_loop_counter == 0 then MayAlreadyMaxed else Weaker (vc_env, env)
     | NewWeaker env ->
       let _ = max_loop_counter := !max_loop_counter + 1 in
-      let vc_env, env = weaker_safe_loop ctx vc_env env in
+      let vc_env, env =
+        clock "weaker_safe_loop"
+        (fun _ -> weaker_safe_loop ctx vc_env env) in
       (* let _ = Printf.printf "new current:\n%s\n" (Ast.layout_spec env.current) in *)
       let end_time = Sys.time () in
       match time_bound with

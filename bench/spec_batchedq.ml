@@ -79,8 +79,8 @@ let spectable = add_spec predefined_spec_tab "Tail"
                E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
 let preds = ["list_member"; "list_head"; "list_order"] in
 let spectable = add_spec predefined_spec_tab "Tail"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3";T.IntList, "l4"]
@@ -94,5 +94,4 @@ let spectable = add_spec predefined_spec_tab "Tail"
 in
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
-
 ();;

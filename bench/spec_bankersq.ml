@@ -33,6 +33,12 @@ let liblazy, liblazy_hole = make_hole_from_info
        | [V.L l] -> Some (Lazy.force (lazy [V.L l]))
        | _ -> raise @@ InterExn "bad prog"
     } in
+let libforce, libforce_hole = make_hole_from_info
+    {name = "Force"; intps = [T.IntList]; outtps = [T.IntList];
+     prog = function
+       | [V.L l] -> Some (Lazy.force (lazy [V.L l]))
+       | _ -> raise @@ InterExn "bad prog"
+    } in
 let reverse, reverse_hole= make_hole_from_info
     {name = "BankersqReverse"; intps = [T.IntList]; outtps = [T.IntList];
      prog = function
@@ -63,7 +69,9 @@ let pre =
     cons [x; r; nu_cons;];
     liblazy [nu_cons; r1];
     Ast.Ite(le [lenr1; lenf; nu_le;],
-            And [poly_eq [lenf;lenf']; poly_eq [f;f']; poly_eq [lenr;lenr']; poly_eq [r;r']],
+            And [poly_eq [lenf;lenf'];
+                 libforce [f;f1]; liblazy [f1;f'];
+                 poly_eq [lenr;lenr']; poly_eq [r1;r']],
             And[
               intadd [lenf;lenr1;lenf1];reverse [r1;nu_reverse]; concat [f;nu_reverse;f1];
               nil [nu_nil]; liblazy [nu_nil; nu_lazy2];
@@ -99,6 +107,7 @@ let holel = [
   nil_hole;
   cons_hole;
   liblazy_hole;
+  libforce_hole;
   concat_hole;
   reverse_hole;] in
 let preds = ["list_member";] in
@@ -110,9 +119,9 @@ let spectable = add_spec predefined_spec_tab "Snoc"
            Or[list_member f' u; list_member r' u]
           ))
 in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
-let preds = ["list_member"; "list_head"; "list_order"] in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+let preds = ["list_member"; "list_order"] in
 let spectable = add_spec spectable "Snoc"
     [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
      T.Int, "lenf'";T.IntList, "f'";T.Int, "lenr'";T.IntList, "r'"]
@@ -122,5 +131,5 @@ let spectable = add_spec spectable "Snoc"
         ))
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 1 in
+    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
 ();;

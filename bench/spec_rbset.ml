@@ -17,9 +17,10 @@ open Frontend.Fast.Fast
 let testname = "rbset" in
 let ctx = init () in
 let bpreds = ["=="] in
+let tree0 = treeb_var "tree0" in
 let tree1, tree2, tree3, a, b, c, d =
-  map7 treei_var ("tree1", "tree2", "tree3", "a", "b", "c", "d") in
-let te, nu, tmp1, tmp2, tmp3, tmp4 = map6 tree_var
+  map7 treeb_var ("tree1", "tree2", "tree3", "a", "b", "c", "d") in
+let te, nu, tmp1, tmp2, tmp3, tmp4 = map6 treeb_var
     ("te", "nu", "tmp1", "tmp2", "tmp3", "tmp4") in
 let r, r1, r2 = map_triple bool_var ("r", "r1", "r2") in
 let x, y, rank1, rank2 = map4 int_var ("x", "y", "rank1", "rank2") in
@@ -159,6 +160,32 @@ let spectable = add_spec spectable "BalancePost"
               );
       ])
 in
+(* let spectable = set_spec spectable "t"
+ *     [T.Bool, "rb"; T.IntTree, "tree0"; T.Int, "x"; T.IntTree, "tree1";T.IntTree, "tree2"]
+ *     [T.Int, "u";T.Int, "v";]
+ *     (And [
+ *         (\* Iff (treeb_head tree2 u, int_eq x u); *\)
+ *         Iff (treeb_member tree2 u,
+ *              Or [treeb_member tree0 u; treeb_member tree1 u; int_eq x u]);
+ *         Iff (treebl tree2 u v, Or [
+ *             treebl tree0  u v;
+ *             treebl tree1 u v;
+ *             And [int_eq x u; treeb_member tree0 v];
+ *           ]);
+ *         Iff (treebr tree2 u v, Or [
+ *             treebr tree0  u v;
+ *             treebr tree1 u v;
+ *             And [int_eq x u; treeb_member tree1 v];
+ *           ]);
+ *         Iff (treebp tree2 u v, Or [
+ *             treebp tree0  u v;
+ *             treebp tree1 u v;
+ *             And [treeb_member tree0 u; treeb_member tree1 v];
+ *           ]);
+ *         (\* Implies (And [int_eq x u; treeb_member tree0 v], treebl tree2 u v);
+ *          * Implies (And [int_eq x u; treeb_member tree1 v], treebr tree2 u v); *\)
+ *       ])
+ * in *)
 let preds = ["treeb_member"; "treeb_left"; "treeb_right"; "treeb_parallel"] in
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in

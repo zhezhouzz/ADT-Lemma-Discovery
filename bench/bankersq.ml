@@ -18,7 +18,7 @@ let testname = "bankersq" in
 (* let snoc (lenf, f, lenr, r) x =
  *   let lenr = lenr + 1 in
  *   let r = lazy (Cons (x, r)) in
- *   if lenr <= lenf then (lenf, f, lenr, r)
+ *   if lenr <= lenf then (lenf, lazy (Lazy.force f), lenr, r)
  *   else (lenf + lenr, f ++ reverse r, 0, lazy Nil) *)
 let ctx = init () in
 let spec_tab = predefined_spec_tab in

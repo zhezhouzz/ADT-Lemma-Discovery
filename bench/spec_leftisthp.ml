@@ -16,8 +16,8 @@ open Frontend.Fast.Fast
 ;;
 let testname = "leftisthp" in
 let ctx = init () in
-let preds = ["treei_head"; "treei_member"; "treei_left"; "treei_right"; "treei_parallel"] in
 let bpreds = ["=="] in
+let tree0 = treei_var "tree0" in
 let tree1, tree2, tree3, a1, a2, b1, b2 =
   map7 treei_var ("tree1", "tree2", "tree3", "a1", "a2", "b1", "b2") in
 let te, nu, tmp1 = map_triple tree_var ("te", "nu", "tmp1") in
@@ -29,12 +29,12 @@ let e, e_hole = make_hole_from_info
        | [] -> Some [V.TI LabeledTree.Leaf]
        | _ -> raise @@ InterExn "bad prog"
     } in
-let t, t_hole = make_hole_from_info
-    {name = "t"; intps = [T.Int; T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
-     prog = function
-       | [V.I r; V.I x; V.TI a; V.TI b] -> Some [V.TI (LabeledTree.Node(r,x,a,b))]
-       | _ -> raise @@ InterExn "bad prog"
-    } in
+(* let t, t_hole = make_hole_from_info
+ *     {name = "t"; intps = [T.Int; T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
+ *      prog = function
+ *        | [V.I r; V.I x; V.TI a; V.TI b] -> Some [V.TI (LabeledTree.Node(r,x,a,b))]
+ *        | _ -> raise @@ InterExn "bad prog"
+ *     } in *)
 let maket, maket_hole = make_hole_from_info
     {name = "maket"; intps = [T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
      prog = function
@@ -63,16 +63,16 @@ let pre =
       [T.IntTreeI, "te"; T.IntTreeI, "tree2";]),
      (None,
       [(T.IntTree, "tree2");]);
-     (Some (And [t [rank1;x;a1;b1;tree1]; t [rank2;y;a2;b2;tree2]]),
+     (Some (And [maket [x;a1;b1;tree1]; maket [y;a2;b2;tree2]]),
       [T.IntTreeI, "tree1"; T.IntTreeI, "tree2";]),
      (Some(
          Ite(le [x;y;nu_le;],
              And[
-               merge [b1;tree2;tmp1]; maket [x;a2;tmp1;nu]],
+               merge [b1;tree2;tmp1]; maket [x;a1;tmp1;tree3]],
              And[
-               merge [tree1;b2;tmp1]; maket [y;a2;tmp1;nu]])
+               merge [tree1;b2;tmp1]; maket [y;a2;tmp1;tree3]])
        ),
-      [(T.IntTreeI, "nu");]);
+      [(T.IntTreeI, "tree3");]);
     ]
 in
 let post = merge [tree1;tree2;tree3] in
@@ -97,9 +97,10 @@ let elems = [T.Int, "x"; T.Int, "y"] in
  *          )
  *     in *)
 let holel = [e_hole;
-             t_hole;
+             (* t_hole; *)
              maket_hole
             ] in
+let preds = ["treei_member";] in
 let spectable = add_spec predefined_spec_tab "MergePre"
     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
     []
@@ -112,18 +113,65 @@ let spectable = add_spec spectable "MergePost"
       ])
 
 in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+let spectable = add_spec predefined_spec_tab "MergePre"
+    [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
+    [T.Int, "u"; T.Int, "v"]
+    (And [
+        Implies (Or[treeil tree1 u v; treeir tree1 u v], int_le u v);
+        Implies (Or[treeil tree2 u v; treeir tree2 u v], int_le u v);
+      ]) in
 let spectable = add_spec spectable "MergePost"
     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
-    [T.Int, "u"]
+    [T.Int, "u"; T.Int, "v"]
     (E.And [
-        E.Implies (treei_head tree3 u,
-                   E.Or [treei_head tree1 u; treei_head tree2 u;]);
+        Implies (Or[treeil tree3 u v; treeir tree3 u v], int_le u v);
         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
       ])
-
 in
+(* let spectable = set_spec spectable "t"
+ *     [T.Int, "rank"; T.Int, "x"; T.IntTree, "tree0"; T.IntTree, "tree1";T.IntTree, "tree2"]
+ *     [T.Int, "u";T.Int, "v";]
+ *     (And [
+ *         Iff (treei_head tree2 u, int_eq x u);
+ *         Iff (treei_member tree2 u,
+ *              Or [treei_member tree0 u; treei_member tree1 u; int_eq x u]);
+ *         Iff (treeil tree2 u v, Or [
+ *             treeil tree0  u v;
+ *             treeil tree1 u v;
+ *             And [int_eq x u; treei_member tree0 v];
+ *           ]);
+ *         Iff (treeir tree2 u v, Or [
+ *             treeir tree0  u v;
+ *             treeir tree1 u v;
+ *             And [int_eq x u; treei_member tree1 v];
+ *           ]);
+ *         (\* Implies (And [int_eq x u; treei_member tree0 v], treeil tree2 u v);
+ *          * Implies (And [int_eq x u; treei_member tree1 v], treeir tree2 u v); *\)
+ *       ])
+ * in
+ * let spectable = set_spec spectable "maket"
+ *     [T.Int, "x"; T.IntTree, "tree0"; T.IntTree, "tree1";T.IntTree, "tree2"]
+ *     [T.Int, "u";T.Int, "v";]
+ *     (And [
+ *         Iff (treei_head tree2 u, int_eq x u);
+ *         Iff (treei_member tree2 u,
+ *              Or [treei_member tree0 u; treei_member tree1 u; int_eq x u]);
+ *         Iff (treeil tree2 u v, Or [
+ *             treeil tree0  u v;
+ *             treeil tree1 u v;
+ *             And [int_eq x u; treei_member tree0 v];
+ *           ]);
+ *         Iff (treeir tree2 u v, Or [
+ *             treeir tree0  u v;
+ *             treeir tree1 u v;
+ *             And [int_eq x u; treei_member tree1 v];
+ *           ]);
+ *       ])
+ * in *)
+let preds = ["treei_member";"treei_left";"treei_right"] in
+let preds = ["treei_member";"treei_left";"treei_right"] in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 1 in
+    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
 ();;
