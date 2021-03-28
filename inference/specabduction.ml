@@ -605,7 +605,7 @@ module SpecAbduction = struct
        *     (Ast.spectable_eq result result') in *)
       let _ = Yojson.Basic.to_file (name ^ "_" ^ "consistent.json")
           (Ast.spectable_encode result) in
-      let _ = raise @@ InterExn "end" in
+      (* let _ = raise @@ InterExn "end" in *)
       let single_envs = StrMap.fold (fun specname spec_env r ->
           let target_hole = StrMap.find "multi_infer" env.holes specname in
           let single_env = make_single_abd_env env.vc spec_env target_hole in

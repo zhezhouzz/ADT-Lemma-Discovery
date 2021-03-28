@@ -39,7 +39,7 @@ let layout_imp_version = function
 
 open Utils
 
-let bound = 5
+let bound = 4
 
 let get_preds_interp model impv =
   match impv with
