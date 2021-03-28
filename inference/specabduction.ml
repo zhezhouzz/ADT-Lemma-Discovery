@@ -90,7 +90,8 @@ module SpecAbduction = struct
         | None -> None
       ) samples in
     let r = List.map (fun i -> V.I i) default_qv_range in
-    let qvsamples = List.choose_list_list [r;r] in
+    let qvsamples = List.choose_list_list
+        (List.map (fun _ -> r) env.qv) in
     let s = List.cross samples qvsamples in
     (* let qvtypes, _ = List.split env.qv in *)
     (* let qvsamples =
@@ -103,7 +104,10 @@ module SpecAbduction = struct
     let extract_fv (args_value, qv_value) =
       (* let _ = printf "{%s},{%s}]\n"
        *     (List.to_string V.layout args_value)
-       *     (List.to_string V.layout qv_value) in *)
+       *     (List.to_string V.layout qv_value) in
+       * let _ = printf "{%s},{%s}]\n"
+       *     (List.to_string T.layouttvar hole.args)
+       *     (List.to_string T.layouttvar env.qv) in *)
       let m = StrMap.empty in
       let m = List.fold_left (fun m ((_, name), v) ->
           StrMap.add name v m
@@ -158,6 +162,8 @@ module SpecAbduction = struct
           (* let args = List.map SE.from_tpedvar args in *)
           (* let _ = printf "args:%s\n" (List.to_string SE.layout args) in *)
           let extract_fvec _ values =
+            (* let _ = printf "names: %s\n" (List.to_string (fun x -> x) names) in *)
+            (* let _ = printf "vs: %s\n" (List.to_string SE.layout (args @ values)) in *)
             let vec = List.map
                 (fun feature ->
                    Epr.subst (F.to_epr feature) names (args @ values)) env.fset in
@@ -599,7 +605,7 @@ module SpecAbduction = struct
        *     (Ast.spectable_eq result result') in *)
       let _ = Yojson.Basic.to_file (name ^ "_" ^ "consistent.json")
           (Ast.spectable_encode result) in
-      (* let _ = raise @@ InterExn "end" in *)
+      let _ = raise @@ InterExn "end" in
       let single_envs = StrMap.fold (fun specname spec_env r ->
           let target_hole = StrMap.find "multi_infer" env.holes specname in
           let single_env = make_single_abd_env env.vc spec_env target_hole in

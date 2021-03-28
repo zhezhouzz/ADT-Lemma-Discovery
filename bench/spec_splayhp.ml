@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testnam = "splayhp" in
+let testname = "splayhp" in
 let ctx = init () in
 let bpreds = ["=="] in
 let tr, a1, a2, b1, b2, te = map6 tree_var ("tr", "a1", "a2", "b1", "b2", "te") in
@@ -155,5 +155,5 @@ let preds = ["tree_member"; "tree_left"; "tree_right"] in
  * let _ = printf "tree 3 1 = %b\n" (Tree.left_child (fun x y -> x == y) tree3 3 1) in
  * let _ = raise @@ InterExn "end" in *)
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testnam 1) ctx pre post elems spectable holel preds bpreds 2 in
+    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 2 in
 ();;
