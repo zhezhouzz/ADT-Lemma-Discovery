@@ -196,9 +196,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
         if List.exists (function True -> true | _ -> false) ps
         then True
         else Or ps
-      | Iff (p1, p2) ->
-        let p1, p2 = map_double aux (p1, p2) in
-        if eq p1 p2 then True else Iff (p1, p2)
+      | Iff (p1, p2) -> Iff (aux p1, aux p2)
       | True -> True
     in
     (* let rec multi_implies t tmp =
@@ -231,7 +229,7 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Or ps -> Or (List.map simplify_same ps)
       | Iff (p1, p2) ->
         let p1, p2 = simplify_same p1, simplify_same p2 in
-        if eq p1 p2 then True else Iff (p1, p2)
+        Iff (p1, p2)
       | True -> True
     in
     (simplify_same (aux a))

@@ -44,22 +44,32 @@ let get_increamental_spec sr =
   let _, (_, additional_body) = sr.additional_spec in
   args, (qv, Epr.Or [init_body; additional_body])
 
-let make_spec_with_unknown env =
+let make_spec_with_unknown env old =
+  let olds = Epr.Or (List.map (fun fv ->
+      Epr.And (List.map (fun (f, b) ->
+          if b then F.to_epr f else Epr.Not (F.to_epr f)
+        ) (List.combine env.fset fv))
+    ) old) in
   let fv_epr = unknown_fv_fset_to_epr env.fset env.unknown_fv in
   let body = get_increamental_body env.current in
   let spec = env.hole.args,
              (env.qv,
-              Epr.And [Epr.Or [body; fv_epr];]) in
+              Epr.And [Epr.Or [body; fv_epr; olds];]) in
   spec
 
-let make_spec_with_fv env fv =
+let make_spec_with_fv env fv old =
+  let olds = Epr.Or (List.map (fun fv ->
+      Epr.And (List.map (fun (f, b) ->
+          if b then F.to_epr f else Epr.Not (F.to_epr f)
+        ) (List.combine env.fset fv))
+    ) old) in
   let fv_epr = Epr.And (List.map (fun (f, b) ->
       if b then F.to_epr f else Epr.Not (F.to_epr f)
     ) (List.combine env.fset fv)) in
   let body = get_increamental_body env.current in
   let spec = env.hole.args,
              (env.qv,
-              Epr.And [Epr.Or [body; fv_epr];]) in
+              Epr.And [Epr.Or [body; fv_epr; olds];]) in
   spec
 
 let fv_not_in_curr_constraint env =
@@ -84,6 +94,19 @@ let fv_no_repeat env =
   let c = Epr.Not (Epr.Or c) in
   c
 
+let fv_no_old_pos env old =
+  let unknown_fv_e = List.map (fun fv -> Epr.Atom (SE.from_tpedvar fv)) env.unknown_fv in
+  let c = List.fold_right (fun fv l ->
+        let c =
+          Epr.And (List.map (fun (arg, b) ->
+              if b then arg else Epr.Not arg
+            ) (List.combine unknown_fv_e fv))
+        in
+        c :: l
+    ) old [] in
+  let c = Epr.Not (Epr.Or c) in
+  c
+
 type pos_fv =
   | NoPosFv
   | MayNoPosFv
@@ -91,20 +114,21 @@ type pos_fv =
 
 let pos_query_c = ref 0
 
-let pos_query ctx vc_env env =
+let pos_query ctx vc_env env old =
   let pre = Ast.Or (List.map (fun flow -> flow.pre_flow) vc_env.multi_pre) in
-  let spec = make_spec_with_unknown env in
+  let spec = make_spec_with_unknown env old in
   let new_spectable = StrMap.update env.hole.name
       (fun v -> match v with
          | None -> raise @@ InterExn "never happen multi_apply_constraint"
          | Some _ -> Some spec)
       vc_env.spectable in
-  let force_enum_neg = Epr.to_z3 ctx (fv_not_in_curr_constraint env) in
+  let force_not_in_curr_constraint = Epr.to_z3 ctx (fv_not_in_curr_constraint env) in
   let force_no_repeat = Epr.to_z3 ctx @@ fv_no_repeat env in
+  let fv_no_old_pos = Epr.to_z3 ctx @@ fv_no_old_pos env old in
   let build_pos_query version =
     let pos_phi =
       Ast.to_z3 ctx (Ast.Implies (pre, vc_env.post)) new_spectable version vc_env.vars in
-    Boolean.mk_and ctx [pos_phi; force_enum_neg; force_no_repeat]
+    Boolean.mk_and ctx [pos_phi; force_not_in_curr_constraint; force_no_repeat; fv_no_old_pos]
   in
   let handle_model m =
     let fv = S.get_unknown_fv ctx m env.unknown_fv in
@@ -188,7 +212,7 @@ let gather_neg_fvec_to_tab ctx vc_env env qvrange model =
     )
   vc_env.multi_pre
 
-let pos_verify_flow ctx vc_env env flow fv =
+let pos_verify_flow ctx vc_env env flow fv old =
   (* let _ = StrMap.iter (fun name args ->
    *     printf "%s: [%s]\n" name (List.to_string
    *                                 (fun x -> List.to_string T.layouttvar x)
@@ -199,7 +223,7 @@ let pos_verify_flow ctx vc_env env flow fv =
   match StrMap.find_opt flow.applied_args_map env.hole.name with
   | None -> true
   | _ ->
-    let spec = make_spec_with_fv env fv in
+    let spec = make_spec_with_fv env fv old in
     let new_spectable = StrMap.update env.hole.name
         (fun v -> match v with
            | None -> raise @@ InterExn "never happen multi_apply_constraint"
@@ -232,9 +256,9 @@ let pos_verify_flow ctx vc_env env flow fv =
     in
     if_pos
 
-let pos_verify_update_env ctx vc_env env fv =
+let pos_verify_update_env ctx vc_env env fv old =
   let res = List.map (fun flow ->
-      pos_verify_flow ctx vc_env env flow fv
+      pos_verify_flow ctx vc_env env flow fv old
     ) vc_env.multi_pre in
   let if_pos = List.for_all (fun b -> b) res in
   let _ =
@@ -384,22 +408,35 @@ type pos_loop_result =
    | MayNoWeaker
    | NewWeaker of spec_env
 
+let heuristic_batch fset =
+  if List.length fset <= 10 then 10
+  else if List.length fset <= 13 then 20
+  else if List.length fset <= 30 then 30
+  else 40
+
 let infer ctx vc_env env time_bound =
+  let batch = heuristic_batch env.fset in
   let _ = Printf.printf "single infer: %s\n" (env.hole.name) in
   let _ = Printf.printf "env.fset: %s\n" (F.layout_set env.fset) in
   let _ = summary_fv_num env in
   let max_loop_counter = ref 0 in
   let start_time = Sys.time () in
   let rec max_loop vc_env env =
-    let rec find_pos env =
-      match clock "pos_query" (fun _ -> pos_query ctx vc_env env) with
-      | NoPosFv -> NoWeaker
-      | MayNoPosFv -> MayNoWeaker
-      | PosFv fv ->
-        let if_pos =
-          clock "pos_verify_update_env"
-            (fun _ -> pos_verify_update_env ctx vc_env env fv) in
-        if not if_pos then find_pos env else NewWeaker env
+    let find_pos env =
+      let rec find_one old resttimes =
+        if (resttimes <= 0) && (List.length old > 0) then NewWeaker env else
+        match clock "pos_query" (fun _ -> pos_query ctx vc_env env old) with
+        | NoPosFv -> NoWeaker
+        | MayNoPosFv -> MayNoWeaker
+        | PosFv fv ->
+          let if_pos =
+            clock "pos_verify_update_env"
+              (fun _ -> pos_verify_update_env ctx vc_env env fv old) in
+          if if_pos
+          then find_one (fv::old) (resttimes - 1)
+          else find_one old (resttimes - 1)
+      in
+      find_one [] batch
     in
     match find_pos env with
     | NoWeaker ->

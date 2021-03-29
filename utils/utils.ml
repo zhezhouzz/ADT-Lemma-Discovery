@@ -659,12 +659,18 @@ let time f =
   let delta = (Sys.time() -. t) in
   fx, delta
 
+type compile_tp = Debug | Opt
+let ctp = Debug
+
 let clock title f =
-  let start_time = Sys.time () in
-  let result = f () in
-  let end_time = Sys.time () in
-  let _ = Printf.printf "delta[%s]:%f\n" title (end_time -. start_time) in
-  result
+  match ctp with
+  | Debug ->
+    let start_time = Sys.time () in
+    let result = f () in
+    let end_time = Sys.time () in
+    let _ = Printf.printf "delta[%s]:%f\n" title (end_time -. start_time) in
+    result
+  | Opt -> f ()
 
 open Yojson.Basic
 let encode_field_ treetp_name field value =
