@@ -72,6 +72,9 @@ module Helper = struct
   let tree_any_order t u v = E.Or [treel t u v; treer t u v; treep t u v]
   let treei_any_order t u v = E.Or [treeil t u v; treeir t u v; treeip t u v]
   let treeb_any_order t u v = E.Or [treebl t u v; treebr t u v; treebp t u v]
+  let tree_ancestor t u v = E.Atom (SE.Op (T.Bool, "tree_ancestor", [t; u; v]))
+  let treei_ancestor t u v = E.Atom (SE.Op (T.Bool, "treei_ancestor", [t; u; v]))
+  let treeb_ancestor t u v = E.Atom (SE.Op (T.Bool, "treeb_ancestor", [t; u; v]))
   let int_ge a b = E.Atom (SE.Op (T.Bool, ">=", [a;b]))
   let int_le a b = E.Atom (SE.Op (T.Bool, "<=", [a;b]))
   let int_lt a b = E.Atom (SE.Op (T.Bool, "<", [a;b]))

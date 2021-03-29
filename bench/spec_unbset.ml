@@ -33,7 +33,8 @@ let t, t_hole = make_hole_from_info
      prog = function
        | [V.T left; V.I x; V.T right] -> Some [V.T (Tree.Node (x, left, right))]
        | _ -> raise @@ InterExn "bad prog"} in
-let insert args = SpecApply ("Insert", args) in
+let insert args =
+  Implies (SpecApply ("InsertPre", args), SpecApply ("InsertPost", args)) in
 let pre =
   Ast.make_match [T.IntTree, "tree3"] [T.IntTree, "nu"]
     [
@@ -58,7 +59,11 @@ let holel = [e_hole;
              t_hole
             ] in
 let preds = ["tree_member";] in
-let spectable = set_spec predefined_spec_tab "Insert"
+let spectable = set_spec predefined_spec_tab "InsertPre"
+    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
+    (E.True)
+in
+let spectable = set_spec spectable "InsertPost"
     [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
     (E.And [
         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
@@ -67,7 +72,11 @@ in
 (* let total_env = SpecAbd.multi_infer
  *     (sprintf "%s%i" bench_name 1) ctx pre post elems spectable holel preds bpreds 1 in *)
 let preds = ["tree_member";"tree_head"] in
-let spectable = set_spec predefined_spec_tab "Insert"
+let spectable = set_spec predefined_spec_tab "InsertPre"
+    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
+    (E.True)
+in
+let spectable = set_spec spectable "InsertPost"
     [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
     (E.And [
         E.Implies(And [tree_head tree1 u; int_lt u x], tree_head tree2 u);
@@ -76,18 +85,29 @@ let spectable = set_spec predefined_spec_tab "Insert"
 in
 (* let total_env = SpecAbd.multi_infer
  *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable holel preds bpreds 1 in *)
-let spectable = set_spec predefined_spec_tab "Insert"
-    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
-    (E.And [
-        E.Implies(tree_head tree1 u,
-                  And [
-                    (* E.Implies (treel tree1 u v, treel tree2 u v) *)
-                    E.Implies(int_lt x u, treel tree2 u x);
-                    (* E.Implies(int_gt x u, treer tree2 u x); *)
-                  ]);
-        E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
-      ])
+let spectable = set_spec predefined_spec_tab "InsertPre"
+    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"; T.Int, "v"]
+    (E.Implies(treel tree1 u x, int_lt x u);)
 in
+let spectable = set_spec spectable "InsertPost"
+    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"; T.Int, "v"]
+    (E.And[
+        E.Implies(treel tree2 u x, int_lt x u);
+        E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
+      ];)
+in
+(* let spectable = set_spec spectable "Insert"
+ *     [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
+ *     (E.And [
+ *         E.Implies(tree_head tree1 u,
+ *                   And [
+ *                     (\* E.Implies (treel tree1 u v, treel tree2 u v) *\)
+ *                     E.Implies(int_lt x u, treel tree2 u x);
+ *                     (\* E.Implies(int_gt x u, treer tree2 u x); *\)
+ *                   ]);
+ *         E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
+ *       ])
+ * in *)
 (* let spectable = set_spec spectable "t"
  *     [T.IntTree, "tree0";T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"]
  *     [T.Int, "u";T.Int, "v";]
@@ -106,7 +126,8 @@ in
  *          *   ]); *\)
  *       ])
  * in *)
-let preds = ["tree_member";"tree_head";"tree_left"] in
+(* let preds = ["tree_member";"tree_head";"tree_left"] in *)
+let preds = ["tree_member";"tree_left"] in
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" bench_name 3) ctx pre post elems spectable holel preds bpreds 2 in
 ();;

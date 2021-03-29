@@ -115,18 +115,33 @@ let spectable = add_spec spectable "MergePost"
 in
 (* let total_env = SpecAbd.multi_infer
  *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+(* let spectable = add_spec predefined_spec_tab "MergePre"
+ *     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
+ *     [T.Int, "u"; T.Int, "v"]
+ *     (And [
+ *         Implies (Or[treeil tree1 u v; treeir tree1 u v], int_le u v);
+ *         Implies (Or[treeil tree2 u v; treeir tree2 u v], int_le u v);
+ *       ]) in
+ * let spectable = add_spec spectable "MergePost"
+ *     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
+ *     [T.Int, "u"; T.Int, "v"]
+ *     (E.And [
+ *         Implies (Or[treeil tree3 u v; treeir tree3 u v], int_le u v);
+ *         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
+ *       ])
+ * in *)
 let spectable = add_spec predefined_spec_tab "MergePre"
     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
     [T.Int, "u"; T.Int, "v"]
     (And [
-        Implies (Or[treeil tree1 u v; treeir tree1 u v], int_le u v);
-        Implies (Or[treeil tree2 u v; treeir tree2 u v], int_le u v);
+        Implies (treei_ancestor tree1 u v, int_le u v);
+        Implies (treei_ancestor tree2 u v, int_le u v);
       ]) in
 let spectable = add_spec spectable "MergePost"
     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
     [T.Int, "u"; T.Int, "v"]
     (E.And [
-        Implies (Or[treeil tree3 u v; treeir tree3 u v], int_le u v);
+        Implies (treei_ancestor tree3 u v, int_le u v);
         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
       ])
 in
@@ -170,8 +185,8 @@ in
  *           ]);
  *       ])
  * in *)
-let preds = ["treei_member";"treei_left";"treei_right"] in
-let preds = ["treei_member";"treei_left";"treei_right"] in
+(* let preds = ["treei_member";"treei_left";"treei_right"] in *)
+let preds = ["treei_member";"treei_ancestor"] in
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
 ();;

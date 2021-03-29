@@ -135,8 +135,8 @@ let spectable = add_spec spectable "BalancePost"
       ])
 in
 let preds = ["treeb_member";] in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
 let spectable = add_spec predefined_spec_tab "BalancePre"
     [T.Bool, "r1"; T.IntTreeB, "tree1"; T.Int, "x"; T.IntTreeB, "tree2";T.IntTreeB, "tree3"]
     [T.Int, "u"; T.Int, "v"]
@@ -187,6 +187,6 @@ in
  *       ])
  * in *)
 let preds = ["treeb_member"; "treeb_left"; "treeb_right"; "treeb_parallel"] in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in *)
 ();;
