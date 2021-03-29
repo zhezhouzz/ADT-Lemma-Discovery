@@ -54,8 +54,8 @@ module SpecAbduction = struct
 
   let loop_counter = ref 0
 
-  let default_range = [1;2;3]
-  let default_qv_range = 0 :: default_range
+  let default_range = [2;3;4]
+  let default_qv_range = 0 :: 1 :: default_range
 
   let samplebound = 4
 

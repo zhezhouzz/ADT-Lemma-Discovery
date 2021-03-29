@@ -39,7 +39,7 @@ let pre =
     [T.IntList, "nu"]
     [(Some (nil [nu_nil;];),
       [T.IntList, "nu_nil";]),
-     (Some (cons [a; nu_nil]),
+     (Some (cons [a; nu_nil; nu]),
       [(T.IntList, "nu");]);
      (Some (cons [a1;x1;x];),
       [T.IntList, "x";]),
@@ -85,6 +85,7 @@ let spectable = add_spec predefined_spec_tab "SetAdd"
 in
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+let preds = ["list_member"; "list_head"; "list_once"] in
 let spectable = add_spec spectable "SetAdd"
     [T.Int, "x"; T.IntList, "l1";T.IntList, "l2"]
     [T.Int, "u";]
@@ -93,6 +94,6 @@ let spectable = add_spec spectable "SetAdd"
         E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
       ])
 in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
 ();;

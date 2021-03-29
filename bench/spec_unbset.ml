@@ -76,15 +76,12 @@ let spectable = set_spec predefined_spec_tab "Insert"
 in
 (* let total_env = SpecAbd.multi_infer
  *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable holel preds bpreds 1 in *)
-(* let preds = ["tree_member";"tree_head";"tree_left";"tree_right";"tree_parallel"] in *)
-(* let preds = ["tree_member";"tree_head";"tree_left";] in *)
-let preds = ["tree_member";"tree_head";"tree_left"] in
-(* let preds = ["tree_head";"tree_left";"tree_right";] in *)
 let spectable = set_spec predefined_spec_tab "Insert"
     [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
     (E.And [
         E.Implies(tree_head tree1 u,
                   And [
+                    (* E.Implies (treel tree1 u v, treel tree2 u v) *)
                     E.Implies(int_lt x u, treel tree2 u x);
                     (* E.Implies(int_gt x u, treer tree2 u x); *)
                   ]);
@@ -109,6 +106,7 @@ in
  *          *   ]); *\)
  *       ])
  * in *)
+let preds = ["tree_member";"tree_head";"tree_left"] in
 let total_env = SpecAbd.multi_infer
     (sprintf "%s%i" bench_name 3) ctx pre post elems spectable holel preds bpreds 2 in
 ();;

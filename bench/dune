@@ -11,7 +11,7 @@
  spec_unbset
  spec_rbset
  spec_trie
- ;;spec_stream
+ spec_stream
  spec_bankersq
  spec_uniquel
  spec_batchedq

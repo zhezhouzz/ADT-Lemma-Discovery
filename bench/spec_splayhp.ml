@@ -103,7 +103,16 @@ let elems = [T.Int, "pivot"; T.Int, "x"; T.Int, "y";] in
 let holel = [e_hole;
              t_hole
             ] in
-let spectable = predefined_spec_tab in
+let spectable = set_spec predefined_spec_tab "PartitionPre"
+    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
+    (E.True) in
+let spectable = set_spec spectable "PartitionPost"
+    [T.Int, "x"; T.IntTree, "tree1";T.IntTree, "tree2";T.IntTree, "tree3"] [T.Int, "u";]
+    (E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u]))
+in
+let preds = ["tree_member";] in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
 let spectable = set_spec predefined_spec_tab "PartitionPre"
     [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
     (E.And [
@@ -119,6 +128,27 @@ let spectable = set_spec spectable "PartitionPost"
       ]
     )
 in
+let preds = ["tree_member"; "tree_left"; "tree_right"] in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in *)
+let spectable = set_spec predefined_spec_tab "PartitionPre"
+    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
+    (E.And [
+        E.Implies (E.And [treel tr1 u v], int_ge u v);
+        E.Implies (E.And [treer tr1 u v], int_le u v);
+      ]) in
+let spectable = set_spec spectable "PartitionPost"
+    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u";]
+    (
+      E.And [
+        E.Implies (E.And [tree_member tr2 u], int_le u x);
+        E.Implies (E.And [tree_member tr3 u], int_ge u x);
+        (E.Iff (tree_member tr1 u, E.Or [tree_member tr2 u; tree_member tr3 u]))
+      ]
+    )
+in
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds bpreds 2 in
 (* let spectable = set_spec spectable "t"
  *     [T.IntTree, "tree0";T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"]
  *     [T.Int, "u";T.Int, "v";]
@@ -142,18 +172,4 @@ in
  *          *   ]); *\)
  *       ])
  * in *)
-let preds = ["tree_member"; "tree_left"; "tree_right"] in
-(* let treelc = Tree.Leaf in
- * let treeh = 3 in
- * let treerc = Tree.(Node(3,Node(1,Node(1,Node(2,Leaf,Leaf),Leaf),Leaf),Leaf)) in
- * let tree3 = Tree.(Node(treeh,treelc, treerc)) in
- * let _ = printf "treel:%s\n" (Tree.layout string_of_int treelc) in
- * let _ = printf "treeh:%s\n" (string_of_int treeh) in
- * let _ = printf "treer:%s\n" (Tree.layout string_of_int treerc) in
- * let _ = printf "tree:%s\n" (Tree.layout string_of_int tree3) in
- * let _ = printf "treerc 3 1 = %b\n" (Tree.left_child (fun x y -> x == y) treerc 3 1) in
- * let _ = printf "tree 3 1 = %b\n" (Tree.left_child (fun x y -> x == y) tree3 3 1) in
- * let _ = raise @@ InterExn "end" in *)
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 2 in
 ();;

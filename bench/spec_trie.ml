@@ -70,7 +70,7 @@ let brancht =
     [T.IntList, "nu"]
     [(Some (nil [nu_nil;];),
       [T.IntList, "nu_nil";]),
-     (Some (t [l;a;nu_e;r]),
+     (Some (t [l;a;r;nu]),
       [(T.IntTree, "nu");]);
      (Some (cons [z;i';i];),
       [T.IntList, "i";]),
@@ -101,7 +101,8 @@ let holel =
    cons_hole;
    e_hole;
    t_hole] in
-let preds = ["list_member";] in
+(* let preds = ["list_member"; "list_head"; "tree_member"; "tree_head"] in *)
+let preds = ["list_member"; "tree_member";] in
 let spectable = add_spec predefined_spec_tab "Ins"
     [T.Int, "default"; T.IntList, "i"; T.Int, "a"; T.IntTree, "m";T.IntTree, "nu"]
     [T.Int, "u"]
