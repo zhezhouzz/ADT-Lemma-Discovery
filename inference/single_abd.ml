@@ -240,8 +240,8 @@ let pos_verify_flow ctx vc_env env flow fv old =
       | S.SmtUnsat ->
         (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
         true
-      | S.Timeout ->
-      raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version))
+      | S.Timeout -> false
+      (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
       (* let version = SZ.V1 in
        * let neg_phi = build_neg_phi version in
        * (match S.check ctx neg_phi with
@@ -257,10 +257,12 @@ let pos_verify_flow ctx vc_env env flow fv old =
     if_pos
 
 let pos_verify_update_env ctx vc_env env fv old =
-  let res = List.map (fun flow ->
-      pos_verify_flow ctx vc_env env flow fv old
-    ) vc_env.multi_pre in
-  let if_pos = List.for_all (fun b -> b) res in
+  let if_pos = List.fold_left (fun if_pos flow ->
+      if if_pos then
+        pos_verify_flow ctx vc_env env flow fv old
+      else
+        false
+    ) true vc_env.multi_pre in
   let _ =
     match Hashtbl.find_opt env.fvtab fv, if_pos with
     | Some D.Pos, b ->
@@ -338,8 +340,8 @@ let neg_query ctx vc_env env new_sr =
          * let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in *)
         match clock "z3(neg_query)" (fun _ -> S.check ctx neg_phi) with
         | S.SmtUnsat -> Pass
-        | S.Timeout ->
-          raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version))
+        | S.Timeout -> Pass
+          (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
           (* let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
            * let version = SZ.V1 in
            * let neg_phi = build_neg_phi version in
