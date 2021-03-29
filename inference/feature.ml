@@ -169,7 +169,7 @@ module Feature : Feature = struct
       | None -> []
     in
     let make_pr_features preds dt elems =
-      let _, dt = dt in
+      let dttp, dt = dt in
       let _, elems = List.split elems in
       let aux info =
         let args_set = List.combination_l elems info.P.num_int in
@@ -180,7 +180,9 @@ module Feature : Feature = struct
         in
         List.map (fun args -> Pr (info.P.name, [dt], args)) args_set
       in
-      List.fold_left (fun r info -> r @ (aux info)) []
+      List.fold_left (fun r info ->
+          if T.eq info.P.dttp dttp then r @ (aux info) else r
+        ) []
         (List.map P.find_pred_info_by_name preds)
     in
     let pr_features =

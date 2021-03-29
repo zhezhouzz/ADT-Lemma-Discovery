@@ -86,8 +86,8 @@ let spectable = add_spec predefined_spec_tab "Reverse"
         E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
 let spectable = add_spec predefined_spec_tab "Reverse"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
     (E.And [
@@ -99,16 +99,17 @@ let spectable = add_spec predefined_spec_tab "Reverse"
       ])
 in
 let preds = ["list_member"; "list_order"] in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
-let preds = ["list_once"; "list_order"] in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in *)
+let preds = ["list_once"; "list_order"; "list_member"] in
 let spec_tab = add_spec predefined_spec_tab "Reverse"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"; T.Int, "w"]
     (E.And [
-        E.Implies (And [list_order l3 u v; list_order l3 v w; list_once l3 v],
+        E.Implies (And [list_once l1 v; E.Not (list_member l2 v);
+                        list_order l3 u v; list_order l3 v w],
                    list_order l3 u w);
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 3 in
+    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds bpreds 2 in
 ();;

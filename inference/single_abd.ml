@@ -356,7 +356,8 @@ let neg_query ctx vc_env env new_sr =
         if Hashtbl.length env.fvtab == 0
         then D.T, D.T
         else D.classify_hash env.fset env.fvtab D.is_pos in
-      let learned = body_to_spec env @@ Epr.simplify_ite @@ D.to_epr dt in
+      (* let learned = body_to_spec env @@ Epr.simplify_ite @@ D.to_epr dt in *)
+      let learned = body_to_spec env @@ D.to_epr dt in
       let new_sr' = {new_sr with additional_dt = dt_idx; additional_spec = learned} in
       let _ = counter := !counter + 1 in
       loop new_sr'
@@ -370,6 +371,7 @@ let weaker_safe_loop ctx vc_env env =
       then D.T, D.T
       else D.classify_hash env.fset env.fvtab D.is_pos in
     let learned_body = Epr.simplify_ite @@ D.to_epr dt_spec in
+    (* let learned_body = D.to_epr dt_spec in *)
     let new_spec = body_to_spec env learned_body in
     let new_sr = {env.current with additional_dt = dt_idx; additional_spec = new_spec} in
     (* let _ = Printf.printf "learn_weaker:\n%s\n" (Ast.layout_spec new_spec) in *)

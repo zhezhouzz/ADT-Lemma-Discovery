@@ -660,7 +660,7 @@ let time f =
   fx, delta
 
 type compile_tp = Debug | Opt
-let ctp = Debug
+let ctp = Opt
 
 let clock title f =
   match ctp with
