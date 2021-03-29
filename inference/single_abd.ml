@@ -233,10 +233,12 @@ let pos_verify_flow ctx vc_env env flow fv =
     if_pos
 
 let pos_verify_update_env ctx vc_env env fv =
-  let res = List.map (fun flow ->
-      pos_verify_flow ctx vc_env env flow fv
-    ) vc_env.multi_pre in
-  let if_pos = List.for_all (fun b -> b) res in
+  let if_pos = List.fold_left (fun if_pos flow ->
+      if if_pos then
+        pos_verify_flow ctx vc_env env flow fv
+      else
+        false
+    ) true vc_env.multi_pre in
   let _ =
     match Hashtbl.find_opt env.fvtab fv, if_pos with
     | Some D.Pos, b ->

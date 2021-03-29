@@ -582,11 +582,14 @@ module SpecAbduction = struct
     (* let pre, holel = instantiate_bool pre holel in *)
     let names = List.map (fun (hole, _) -> hole.name) holel in
     let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
+    let pres = List.sort (fun a b ->
+        compare (Ast.conj_length b) (Ast.conj_length a)
+      ) pres in
     let _ = List.iter (fun pre ->
         printf "[pre]\n%s\n" (Ast.vc_layout pre)
       ) pres in
     let _ = Ast.print_spectable spectable in
-    (* let _ = raise @@ InterExn "end" in *)
+    let _ = raise @@ InterExn "end" in
     let env = consistent_solution ctx pres post vars spectable holel preds bpreds startX in
     match env with
     | None -> raise @@ InterExn "search_hyp: quantified variables over bound"

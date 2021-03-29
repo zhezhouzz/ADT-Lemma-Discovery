@@ -24,6 +24,7 @@ module type AstTree = sig
   val make_match: Tp.Tp.tpedvar list -> Tp.Tp.tpedvar list ->
     (let_binding * let_binding) list -> t
   val to_dnf: t -> t list
+  val conj_length: t -> int
   val encode: t -> Yojson.Basic.t
   val decode: Yojson.Basic.t -> t
   val spec_encode: spec -> Yojson.Basic.t
@@ -252,6 +253,10 @@ module AstTree (E: Epr.Epr) : AstTree
       | _ -> raise @@ InterExn (sprintf "to dnf(%s)" (layout a))
     in
     List.map (fun l -> And l) (aux a)
+
+  let conj_length = function
+    | And ps -> List.length ps
+    | _ -> raise @@ InterExn "conj_length::not a conj"
 
   open Yojson.Basic
   let treetp_name = "A"
