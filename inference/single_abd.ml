@@ -161,7 +161,14 @@ let gather_neg_fvec_to_tab_flow ctx env applied_args qvrange model =
             (* let _ = printf "[vec]:%s%s\n" (List.to_string Epr.layout vec)
              *     (boollist_to_string vec') in *)
             match Hashtbl.find_opt env.fvtab vec' with
-            | Some D.Neg -> raise @@ InterExn "never happen single gather"
+            | Some D.Neg ->
+              let _ = printf "additional_dt:\n%s\n" (Ast.layout_spec
+                                                       @@ env.current.additional_spec) in
+              let _ = printf "[fset]:%s\n%s\n" (List.to_string F.layout env.fset)
+                  (boollist_to_string vec') in
+              let _ = printf "add:%b\n" (D.exec_vector_idx env.current.additional_dt vec') in
+              let _ = printf "init:%b\n" (D.exec_vector_idx env.current.init_dt vec') in
+              raise @@ InterExn "never happen single gather"
             | Some D.Pos -> ()
             | Some D.MayNeg ->
               let _ = counter := !counter + 1 in ()
@@ -334,7 +341,7 @@ let neg_query ctx vc_env env new_sr =
         if Hashtbl.length env.fvtab == 0
         then D.T, D.T
         else D.classify_hash env.fset env.fvtab D.is_pos in
-      let learned = body_to_spec env @@ D.to_epr dt in
+      let learned = body_to_spec env @@ Epr.simplify_dt_result @@ D.to_epr dt in
       let new_sr' = {new_sr with additional_dt = dt_idx; additional_spec = learned} in
       let _ = counter := !counter + 1 in
       loop new_sr'
@@ -347,7 +354,7 @@ let weaker_safe_loop ctx vc_env env =
       if Hashtbl.length env.fvtab == 0
       then D.T, D.T
       else D.classify_hash env.fset env.fvtab D.is_pos in
-    let learned_body = D.to_epr dt_spec in
+    let learned_body = Epr.simplify_dt_result @@ D.to_epr dt_spec in
     let new_spec = body_to_spec env learned_body in
     let new_sr = {env.current with additional_dt = dt_idx; additional_spec = new_spec} in
     (* let _ = Printf.printf "learn_weaker:\n%s\n" (Ast.layout_spec new_spec) in *)

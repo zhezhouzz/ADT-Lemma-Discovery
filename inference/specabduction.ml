@@ -257,7 +257,7 @@ module SpecAbduction = struct
       then D.T, D.T
       else D.classify_hash env.fset env.fvtab is_pos in
     let abduciable = D.to_epr dt in
-    let abduciable = Epr.simplify_ite abduciable in
+    let abduciable = Epr.simplify_dt_result abduciable in
     (* let _ = printf "\traw abduciable:\n%s\n" (Epr.pretty_layout_epr abduciable) in *)
     let abduciable = env.qv, abduciable in
     {env with abduciable = abduciable; dt = dtidx}
@@ -540,7 +540,7 @@ module SpecAbduction = struct
     Array.fold_left (fun total_env single_env ->
         let spec, _ = merge_current single_env.Env.current single_env.Env.fset in
         let abduciable = D.to_epr spec in
-        let abduciable = Epr.simplify_ite abduciable in
+        let abduciable = Epr.simplify_dt_result abduciable in
         let spec = single_env.hole.args, (single_env.qv, abduciable) in
         let _ = printf "merged [%s]:\n%s\n"
             single_env.hole.name (Ast.layout_spec spec) in
@@ -589,7 +589,7 @@ module SpecAbduction = struct
         printf "[pre]\n%s\n" (Ast.vc_layout pre)
       ) pres in
     let _ = Ast.print_spectable spectable in
-    let _ = raise @@ InterExn "end" in
+    (* let _ = raise @@ InterExn "end" in *)
     let env = consistent_solution ctx pres post vars spectable holel preds bpreds startX in
     match env with
     | None -> raise @@ InterExn "search_hyp: quantified variables over bound"
@@ -618,6 +618,7 @@ module SpecAbduction = struct
       let single_envs_arr = Array.of_list single_envs in
       let rec aux total_env idx =
         if idx >= Array.length single_envs_arr
+        (* if idx >= (Array.length single_envs_arr - 1) *)
         then total_env
         else
           let single_env = single_envs_arr.(idx) in

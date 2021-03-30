@@ -190,7 +190,7 @@ module Feature : Feature = struct
           featureset @ (make_pr_features preds dt qv)
         ) [] dts
     in
-    bfeatures @ eq_features @ pr_features
+    eq_features @ bfeatures @ pr_features
 
   let make_set vars =
     let variable_split (dts, elems, bs) (tp, name) =

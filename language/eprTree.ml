@@ -24,6 +24,7 @@ module type EprTree = sig
   val decode: Yojson.Basic.t -> t
   val forallformula_encode: forallformula -> Yojson.Basic.t
   val forallformula_decode: Yojson.Basic.t -> forallformula
+  val simplify_dt_result: t -> t
 end
 
 module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
@@ -188,6 +189,70 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
       | Ite (p1, p2, p3) -> Ite (aux p1, aux p2, aux p3)
     in
     aux body
+
+  let simplify_eq body =
+    let eq_subst body x y =
+      let x =
+        match x with
+        | SE.Var (_, name) -> [name]
+        | _ -> raise @@ InterExn "epr simplify_eq"
+      in
+      let y = [y] in
+      subst body x y
+    in
+    let rec aux body =
+      match body with
+      | True | Atom _ | Not _ -> body
+      | Implies (p1, p2) -> Implies (aux p1, aux p2)
+      | And ps -> And (List.map aux ps)
+      | Or ps -> Or (List.map aux ps)
+      | Iff (p1, p2) -> Iff (aux p1, aux p2)
+      | Ite (p1, p2, p3) ->
+        (match p1 with
+         | Atom (SE.Op (_, op, [x;y])) when String.equal op "=="->
+           (* let _ = printf "subst[%s -> %s]\n" (SE.layout x) (SE.layout y) in *)
+           Ite (p1, aux (eq_subst p2 x y), aux p3)
+         | _ -> Ite (p1, aux p2, aux p3)
+        )
+    in
+    aux body
+
+  let prune body =
+    let rec aux pos neg body =
+      match body with
+      | True | Not True -> body
+      | Not _ -> raise @@ InterExn "ast:prune"
+      | Atom se ->
+        if List.exists (fun se' -> SE.eq se se') pos then True
+        else if List.exists (fun se' -> SE.eq se se') neg then Not True
+        else body
+      | Implies (_, _) | And _ | Or _ | Iff (_, _) -> raise @@ InterExn "ast:prune"
+      | Ite (p1, p2, p3) ->
+        (match aux pos neg p1 with
+        | True -> aux pos neg p2
+        | Not True -> aux pos neg p3
+        | Atom p1' ->
+          (match aux (p1' :: pos) neg p2, aux pos (p1' :: neg) p3 with
+           | True, True -> True
+           | Not True, Not True -> Not True
+           | True, Not True -> Atom p1'
+           | Not True, True -> Not (Atom p1')
+           | True, p3' -> Or [Atom p1'; p3']
+           | Not True, p3' -> And [Not (Atom p1'); p3']
+           | p2', True -> Or [Not (Atom p1'); p2';]
+           | p2', Not True -> And [Atom p1'; p2']
+           | p2', p3' -> Ite (Atom p1', p2', p3')
+          )
+        | _ -> raise @@ InterExn "ast:prune"
+        )
+    in
+    aux [] [] body
+
+  let simplify_dt_result body =
+    (* let _ = printf "before:\n%s\n" (pretty_layout_epr body) in *)
+    let result = prune @@ simplify_eq body in
+    (* let _ = printf "end:\n%s\n" (pretty_layout_epr result) in *)
+    result
 
   let substm m body =
     let args, argsvalue =
