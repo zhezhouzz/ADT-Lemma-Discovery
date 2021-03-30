@@ -108,7 +108,8 @@ let pos_query ctx vc_env env =
   in
   let handle_model m =
     let fv = S.get_unknown_fv ctx m env.unknown_fv in
-    (* let _ = Printf.printf "may pos:fv = %s\n" (boollist_to_string fv) in *)
+    (* let _ = Printf.printf "fset = %s\n" (F.layout_set env.fset) in
+     * let _ = Printf.printf "may pos:fv = %s\n" (boollist_to_string fv) in *)
     PosFv fv
   in
   (* let _ = if String.equal env.hole.name "top" then
@@ -223,17 +224,20 @@ let pos_verify_flow ctx vc_env env flow fv =
       | S.SmtUnsat ->
         (* let _ = Printf.printf "real pos[%s]\n" (boollist_to_string fv) in *)
         true
-      | S.Timeout -> false
-      (* raise @@ InterExn (Printf.sprintf "[%s]pos query time out!" (SZ.layout_imp_version version)) *)
+      | S.Timeout ->
+        false
+      (* raise @@ InterExn (Printf.sprintf "[%s]pos verify time out!" (SZ.layout_imp_version version)) *)
       (* let version = SZ.V1 in
        * let neg_phi = build_neg_phi version in
        * (match S.check ctx neg_phi with
        *  | S.SmtUnsat | S.Timeout -> raise (InterExn "verify candidate pos time out!")
        *  | S.SmtSat _ -> false) *)
       | S.SmtSat _ ->
-        (* let _ = if String.equal env.hole.name "top" then
-         *     pos_query_c := (!pos_query_c) + 1
-         *   else () in *)
+        (* let _ = if List.eq (fun x y -> x == y) fv [true;true;true;true;true] then
+         *     let _ = printf "%s\n" (Expr.to_string neg_phi) in
+         *     let _ = printf "%s\n" (Model.to_string m) in
+         *     ()
+         *     else () in *)
         (* let _ = Printf.printf "false pos[%s]\n" (boollist_to_string fv) in *)
         false
     in

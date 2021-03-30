@@ -82,8 +82,8 @@ let spectable_post = set_spec (predefined_spec_tab) "concat"
       ])
 in
 let preds = ["list_member"; "list_head"] in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" bench_name 1) ctx pre post elems spectable_post holel preds bpreds 1 in *)
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%i" bench_name 1) ctx pre post elems spectable_post holel preds bpreds 1 in
 let spectable_post = set_spec (predefined_spec_tab) "concat"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
     [T.Int, "u"; T.Int, "v"]
@@ -95,8 +95,8 @@ let spectable_post = set_spec (predefined_spec_tab) "concat"
 in
 let preds = ["list_member"; "list_head"; "list_order"] in
 (* let preds = ["list_member"; "list_order"] in *)
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds bpreds 2 in
+(* let total_env = SpecAbd.multi_infer
+ *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds bpreds 2 in *)
 let _ = printf "finished\n" in
 ();;
 

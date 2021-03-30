@@ -75,6 +75,11 @@ module SpecAbduction = struct
       | [] -> raise @@ InterExn "never happen in get_inputs"
       | _ -> None, List.rev @@ List.tl @@ List.rev hole.args
 
+  type sample_version = SV1 | SV2
+  let sver = SV2
+
+  let sample_num = 4
+
   let sampling hole imp env num =
     let _, current_epr = env.abduciable in
     let _, inputs = get_inputs hole in
@@ -89,15 +94,20 @@ module SpecAbduction = struct
         | Some output -> Some (input @ output)
         | None -> None
       ) samples in
-    let r = List.map (fun i -> V.I i) default_qv_range in
-    let qvsamples = List.choose_list_list
-        (List.map (fun _ -> r) env.qv) in
-    let s = List.cross samples qvsamples in
-    (* let qvtypes, _ = List.split env.qv in *)
-    (* let qvsamples =
-     *   R.gens ~chooses:default_qv_range ~num:(List.length samples)
-     *     ~tps:qvtypes ~bound: samplebound in *)
-    (* let s = List.combine samples qvsamples in *)
+    let s =
+      match sver with
+      | SV1 ->
+        let r = List.map (fun i -> V.I i) default_qv_range in
+        let qvsamples = List.choose_list_list
+            (List.map (fun _ -> r) env.qv) in
+        List.cross samples qvsamples
+      | SV2 ->
+        let qvtypes, _ = List.split env.qv in
+        let qvsamples =
+          R.gens ~chooses:default_qv_range ~num:(List.length samples)
+            ~tps:qvtypes ~bound: samplebound in
+        List.combine samples qvsamples
+    in
     (* let _ = List.iter (fun (s1,s2) -> printf "{%s},{%s}]\n"
      *                       (List.to_string V.layout s1)
      *                       (List.to_string V.layout s2)) s in *)
@@ -336,8 +346,6 @@ module SpecAbduction = struct
         raise @@ InterExn (Printf.sprintf "[%s]inplace_verify_and_gather_fv time out!" (SZ.layout_imp_version version))
       | S.SmtSat model -> handle_model smt_query model version
 
-  let sample_num = 100
-
   let negcache_to_neg env =
     StrMap.iter (fun _ spec_env ->
         Hashtbl.filter_map_inplace (fun _ label ->
@@ -552,6 +560,128 @@ module SpecAbduction = struct
         {total_env with Env.spectable = new_spectable}
       ) total_env single_envs_arr
 
+  let epr_exec_fv epr fset fv =
+    let equlity_extract m =
+      Hashtbl.fold (fun epr b l ->
+          match epr, b with
+          | Epr.Atom (SE.Op (_, op, [x;y])), true when String.equal op "==" ->
+            (x, y) :: l
+          | _ -> l
+        ) m []
+    in
+    let extend m (x, y) =
+      let x, y =
+        match x with
+        | SE.Var (_, name) -> (name, y)
+        | _ -> raise @@ InterExn "equlity_extract::extend"
+      in
+      let l = Hashtbl.fold (fun epr b l ->
+          match epr with
+          | Epr.Atom e -> (Epr.Atom (SE.subst e [x] [y]), b) :: l
+          | _ -> raise @@ InterExn "equlity_extract::extend"
+        ) m [] in
+      let _ = List.iter (fun (epr, b) ->
+          match Hashtbl.find_opt m epr with
+          | Some _ -> ()
+          | None -> Hashtbl.add m epr b
+        ) l in
+      ()
+    in
+    let m = Hashtbl.create 100 in
+    (* let _ = printf "fset:%s\n" (F.layout_set fset) in *)
+    let fset = List.map (fun fature -> F.to_epr fature) fset in
+    let _ = List.iter (fun (f, b) -> Hashtbl.add m f b) (List.combine fset fv) in
+    let _ = List.iter (fun (x, y) -> extend m (x, y)) (equlity_extract m) in
+    (* let _ = printf "tab\n" in
+     * let _ = Hashtbl.iter (fun epr b ->
+     *     printf "[%s] -> %b\n" (Epr.layout epr) b
+     *   ) m in *)
+    let rec aux body =
+      let open Epr in
+      match body with
+      | True -> true
+      | Atom _ as feature ->
+        (match Hashtbl.find_opt m feature with
+         | None -> raise @@ InterExn (sprintf "spec_exec_fv:%s\n" (pretty_layout_epr feature))
+         | Some b -> b
+        )
+      | Implies (p1, p2) ->
+        if aux p1 then aux p2 else true
+      | Ite (p1, p2, p3) ->
+        if aux p1 then aux p2 else aux p3
+      | Not body -> not (aux body)
+      | And ps -> List.fold_left (fun r body ->
+          if r then aux body else false
+        ) true ps
+      | Or ps -> List.fold_left (fun r body ->
+          if r then true else aux body
+        ) false ps
+      | Iff (p1, p2) -> (aux p1) == (aux p2)
+    in
+    aux epr
+
+  let operate_epr f fset epr1 epr2 =
+    let len = List.length fset in
+    let fv_arr = Array.init len (fun _ -> false) in
+    let rec next idx =
+      if idx >= len then None
+      else if not (fv_arr.(idx)) then (Array.set fv_arr idx true; Some idx)
+      else
+        match next (idx + 1) with
+        | None -> None
+        | Some _ -> (Array.set fv_arr idx false; Some 0)
+    in
+    let size = pow 2 len in
+    let ftab = Hashtbl.create size in
+    let rec aux idx =
+      let fvec = Array.to_list fv_arr in
+      (* let _ = Printf.printf "iter:%s\n" (boollist_to_string fvec) in *)
+      let dt1_b = epr_exec_fv epr1 fset fvec in
+      let dt2_b = epr_exec_fv epr2 fset fvec in
+      let _ = if f dt1_b dt2_b then
+          Hashtbl.add ftab fvec D.Pos
+        else
+          Hashtbl.add ftab fvec D.Neg
+      in
+      match next idx with
+      | None -> ()
+      | Some idx -> aux idx
+    in
+    (aux 0;
+     Epr.simplify_dt_result @@
+     D.to_epr @@
+     fst @@ D.classify_hash fset ftab D.is_pos)
+
+  let merge_spec spec preds bpreds =
+    let (args, (qv, body)) = spec in
+    match body with
+    | Epr.Or [body_init; body_add] ->
+      let fset = F.make_set_from_preds_max preds bpreds
+          args qv in
+      let spec' = (args, (qv,
+              operate_epr (fun e1 e2 -> e1 || e2) fset body_init body_add
+                         )) in
+      spec'
+    | _ -> spec
+
+  let merge_spectable spectable preds bpreds =
+    StrMap.map (fun spec ->
+        merge_spec spec preds bpreds
+      ) spectable
+
+  let merge_max_result resultfilename preds bpreds =
+    let result = Yojson.Basic.from_file (resultfilename) in
+    let result = Ast.spectable_decode result in
+    let _ = printf "before:\n" in
+    let _ = StrMap.iter (fun name spec ->
+        printf "%s\n" (Ast.layout_spec_entry name spec)
+      ) result in
+    let _ = printf "after:\n" in
+    let merged = merge_spectable result preds bpreds in
+    StrMap.iter (fun name spec ->
+        printf "%s\n" (Ast.layout_spec_entry name spec)
+      ) merged
+
   let verify_flow ctx vc flow =
     let build_smt_query version = Ast.to_z3 ctx
         (Ast.Not (Ast.Implies (flow.Env.pre_flow, vc.Env.post)))
@@ -615,6 +745,7 @@ module SpecAbduction = struct
           single_env :: r
         ) env.spec_envs [] in
       let single_envs = sort_singles_by_fset single_envs in
+      let single_envs = List.rev single_envs in
       let single_envs_arr = Array.of_list single_envs in
       let rec aux total_env idx =
         if idx >= Array.length single_envs_arr
