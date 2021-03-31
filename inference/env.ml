@@ -22,8 +22,8 @@ type vc = {
 }
 
 type single_result = {
-  additional_dt: int D.t;
-  additional_spec: Ast.spec;
+  new_dt: int D.t;
+  new_spec: Ast.spec;
   init_dt: int D.t;
   init_spec: Ast.spec;
 }

@@ -494,8 +494,8 @@ module SpecAbduction = struct
     let current =
       {Env.init_spec = spec;
        Env.init_dt = spec_env.dt;
-       Env.additional_spec = spec;
-       Env.additional_dt = spec_env.dt;
+       Env.new_spec = spec;
+       Env.new_dt = spec_env.dt;
        (* Env.additional_spec = hole.args, (spec_env.qv, Epr.True);
         * Env.additional_dt = D.T *)
       } in
@@ -539,134 +539,9 @@ module SpecAbduction = struct
     in
     search_hyp startX
 
-  let merge_current sr fset =
-    let spec, dt = D.merge_dt fset sr.Env.init_dt sr.Env.additional_dt in
-    (* let spec, dt = D.subtract_dt fset sr.Env.additional_dt sr.Env.init_dt in *)
-    spec, dt
-
-  let merge_envs total_env single_envs_arr =
-    Array.fold_left (fun total_env single_env ->
-        let spec, _ = merge_current single_env.Env.current single_env.Env.fset in
-        let abduciable = D.to_epr spec in
-        let abduciable = Epr.simplify_dt_result abduciable in
-        let spec = single_env.hole.args, (single_env.qv, abduciable) in
-        let _ = printf "merged [%s]:\n%s\n"
-            single_env.hole.name (Ast.layout_spec spec) in
-        let new_spectable = StrMap.update single_env.Env.hole.name
-            (fun v -> match v with
-               | None -> raise @@ InterExn "merge_envs"
-               | Some _ -> Some spec)
-            total_env.Env.spectable in
-        {total_env with Env.spectable = new_spectable}
-      ) total_env single_envs_arr
-
-  let epr_exec_fv epr fset fv =
-    let equlity_extract m =
-      Hashtbl.fold (fun epr b l ->
-          match epr, b with
-          | Epr.Atom (SE.Op (_, op, [x;y])), true when String.equal op "==" ->
-            (x, y) :: l
-          | _ -> l
-        ) m []
-    in
-    let extend m (x, y) =
-      let x, y =
-        match x with
-        | SE.Var (_, name) -> (name, y)
-        | _ -> raise @@ InterExn "equlity_extract::extend"
-      in
-      let l = Hashtbl.fold (fun epr b l ->
-          match epr with
-          | Epr.Atom e -> (Epr.Atom (SE.subst e [x] [y]), b) :: l
-          | _ -> raise @@ InterExn "equlity_extract::extend"
-        ) m [] in
-      let _ = List.iter (fun (epr, b) ->
-          match Hashtbl.find_opt m epr with
-          | Some _ -> ()
-          | None -> Hashtbl.add m epr b
-        ) l in
-      ()
-    in
-    let m = Hashtbl.create 100 in
-    (* let _ = printf "fset:%s\n" (F.layout_set fset) in *)
-    let fset = List.map (fun fature -> F.to_epr fature) fset in
-    let _ = List.iter (fun (f, b) -> Hashtbl.add m f b) (List.combine fset fv) in
-    let _ = List.iter (fun (x, y) -> extend m (x, y)) (equlity_extract m) in
-    (* let _ = printf "tab\n" in
-     * let _ = Hashtbl.iter (fun epr b ->
-     *     printf "[%s] -> %b\n" (Epr.layout epr) b
-     *   ) m in *)
-    let rec aux body =
-      let open Epr in
-      match body with
-      | True -> true
-      | Atom _ as feature ->
-        (match Hashtbl.find_opt m feature with
-         | None -> raise @@ InterExn (sprintf "spec_exec_fv:%s\n" (pretty_layout_epr feature))
-         | Some b -> b
-        )
-      | Implies (p1, p2) ->
-        if aux p1 then aux p2 else true
-      | Ite (p1, p2, p3) ->
-        if aux p1 then aux p2 else aux p3
-      | Not body -> not (aux body)
-      | And ps -> List.fold_left (fun r body ->
-          if r then aux body else false
-        ) true ps
-      | Or ps -> List.fold_left (fun r body ->
-          if r then true else aux body
-        ) false ps
-      | Iff (p1, p2) -> (aux p1) == (aux p2)
-    in
-    aux epr
-
-  let operate_epr f fset epr1 epr2 =
-    let len = List.length fset in
-    let fv_arr = Array.init len (fun _ -> false) in
-    let rec next idx =
-      if idx >= len then None
-      else if not (fv_arr.(idx)) then (Array.set fv_arr idx true; Some idx)
-      else
-        match next (idx + 1) with
-        | None -> None
-        | Some _ -> (Array.set fv_arr idx false; Some 0)
-    in
-    let size = pow 2 len in
-    let ftab = Hashtbl.create size in
-    let rec aux idx =
-      let fvec = Array.to_list fv_arr in
-      (* let _ = Printf.printf "iter:%s\n" (boollist_to_string fvec) in *)
-      let dt1_b = epr_exec_fv epr1 fset fvec in
-      let dt2_b = epr_exec_fv epr2 fset fvec in
-      let _ = if f dt1_b dt2_b then
-          Hashtbl.add ftab fvec D.Pos
-        else
-          Hashtbl.add ftab fvec D.Neg
-      in
-      match next idx with
-      | None -> ()
-      | Some idx -> aux idx
-    in
-    (aux 0;
-     Epr.simplify_dt_result @@
-     D.to_epr @@
-     fst @@ D.classify_hash fset ftab D.is_pos)
-
-  let merge_spec spec preds bpreds =
-    let (args, (qv, body)) = spec in
-    match body with
-    | Epr.Or [body_init; body_add] ->
-      let fset = F.make_set_from_preds_max preds bpreds
-          args qv in
-      let spec' = (args, (qv,
-              operate_epr (fun e1 e2 -> e1 || e2) fset body_init body_add
-                         )) in
-      spec'
-    | _ -> spec
-
-  let merge_spectable spectable preds bpreds =
-    StrMap.map (fun spec ->
-        merge_spec spec preds bpreds
+  let merge_spectable spectable _ _ =
+    StrMap.map (fun spec -> spec
+        (* merge_spec spec preds bpreds *)
       ) spectable
 
   let merge_max_result resultfilename preds bpreds =

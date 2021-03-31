@@ -34,19 +34,19 @@ let rm_hole_from_spectab m hole =
 
 let default_constrint = Boolean.mk_true
 
-let get_increamental_body sr =
-  let _, (_, init_body) = sr.init_spec in
-  let _, (_, additional_body) = sr.additional_spec in
-  Epr.Or [init_body; additional_body]
-
-let get_increamental_spec sr =
-  let args, (qv, init_body) = sr.init_spec in
-  let _, (_, additional_body) = sr.additional_spec in
-  args, (qv, Epr.Or [init_body; additional_body])
+(* let get_increamental_body sr =
+ *   let _, (_, init_body) = sr.init_spec in
+ *   let _, (_, additional_body) = sr.additional_spec in
+ *   Epr.Or [init_body; additional_body]
+ * 
+ * let get_increamental_spec sr =
+ *   let args, (qv, init_body) = sr.init_spec in
+ *   let _, (_, additional_body) = sr.additional_spec in
+ *   args, (qv, Epr.Or [init_body; additional_body]) *)
 
 let make_spec_with_unknown env =
   let fv_epr = unknown_fv_fset_to_epr env.fset env.unknown_fv in
-  let body = get_increamental_body env.current in
+  let (_, (_, body)) = env.current.new_spec in
   let spec = env.hole.args,
              (env.qv,
               Epr.And [Epr.Or [body; fv_epr];]) in
@@ -56,7 +56,7 @@ let make_spec_with_fv env fv =
   let fv_epr = Epr.And (List.map (fun (f, b) ->
       if b then F.to_epr f else Epr.Not (F.to_epr f)
     ) (List.combine env.fset fv)) in
-  let body = get_increamental_body env.current in
+  let (_, (_, body)) = env.current.new_spec in
   let spec = env.hole.args,
              (env.qv,
               Epr.And [Epr.Or [body; fv_epr];]) in
@@ -64,9 +64,8 @@ let make_spec_with_fv env fv =
 
 let fv_not_in_curr_constraint env =
   let args_e = List.map (fun v -> Epr.Atom (SE.from_tpedvar v)) env.unknown_fv in
-  let init_body = D.to_epr_idx env.current.init_dt args_e in
-  let additional_body = D.to_epr_idx env.current.additional_dt args_e in
-  Epr.Not (Epr.Or [init_body; additional_body])
+  let body = D.to_epr_idx env.current.new_dt args_e in
+  Epr.Not (body)
 
 let fv_no_repeat env =
   let unknown_fv_e = List.map (fun fv -> Epr.Atom (SE.from_tpedvar fv)) env.unknown_fv in
@@ -163,12 +162,12 @@ let gather_neg_fvec_to_tab_flow ctx env applied_args qvrange model =
              *     (boollist_to_string vec') in *)
             match Hashtbl.find_opt env.fvtab vec' with
             | Some D.Neg ->
-              let _ = printf "additional_dt:\n%s\n" (Ast.layout_spec
-                                                       @@ env.current.additional_spec) in
-              let _ = printf "[fset]:%s\n%s\n" (List.to_string F.layout env.fset)
-                  (boollist_to_string vec') in
-              let _ = printf "add:%b\n" (D.exec_vector_idx env.current.additional_dt vec') in
-              let _ = printf "init:%b\n" (D.exec_vector_idx env.current.init_dt vec') in
+              (* let _ = printf "additional_dt:\n%s\n" (Ast.layout_spec
+               *                                          @@ env.current.additional_spec) in
+               * let _ = printf "[fset]:%s\n%s\n" (List.to_string F.layout env.fset)
+               *     (boollist_to_string vec') in
+               * let _ = printf "add:%b\n" (D.exec_vector_idx env.current.additional_dt vec') in
+               * let _ = printf "init:%b\n" (D.exec_vector_idx env.current.init_dt vec') in *)
               raise @@ InterExn "never happen single gather"
             | Some D.Pos -> ()
             | Some D.MayNeg ->
@@ -296,7 +295,7 @@ let neg_query ctx vc_env env new_sr =
     let new_spectable = StrMap.update env.hole.name
         (fun v -> match v with
            | None -> raise @@ InterExn "never happen multi_apply_constraint"
-           | Some _ -> Some (get_increamental_spec new_sr))
+           | Some _ -> Some (new_sr.new_spec))
         vc_env.spectable in
     let once flow =
       match StrMap.find_opt flow.applied_args_map env.hole.name with
@@ -346,13 +345,15 @@ let neg_query ctx vc_env env new_sr =
         then D.T, D.T
         else D.classify_hash env.fset env.fvtab D.is_pos in
       let learned = body_to_spec env @@ Epr.simplify_dt_result @@ D.to_epr dt in
-      let new_sr' = {new_sr with additional_dt = dt_idx; additional_spec = learned} in
+      let new_sr' = {new_sr with new_dt = dt_idx; new_spec = learned} in
       let _ = counter := !counter + 1 in
       loop new_sr'
   in
   loop new_sr
 
-let weaker_safe_loop ctx vc_env env =
+let learn_weaker ctx env =
+  let _, (_, init_body) = env.current.init_spec in
+  let fset_z3 = List.map (fun f -> Epr.to_z3 ctx @@ F.to_epr f) env.fset in
   let rec loop () =
     let dt_spec, dt_idx =
       if Hashtbl.length env.fvtab == 0
@@ -360,14 +361,36 @@ let weaker_safe_loop ctx vc_env env =
       else D.classify_hash env.fset env.fvtab D.is_pos in
     let learned_body = Epr.simplify_dt_result @@ D.to_epr dt_spec in
     let new_spec = body_to_spec env learned_body in
-    let new_sr = {env.current with additional_dt = dt_idx; additional_spec = new_spec} in
-    (* let _ = Printf.printf "learn_weaker:\n%s\n" (Ast.layout_spec new_spec) in *)
+    let query = Epr.to_z3 ctx @@ Epr.Not (Epr.Implies (init_body, learned_body)) in
+    match S.check ctx query with
+    | S.SmtUnsat ->
+      let new_sr = {env.current with new_dt = dt_idx; new_spec = new_spec} in
+      new_sr
+    | S.Timeout -> raise (InterExn "old pos time out!")
+    | S.SmtSat m ->
+      let fv = List.map (fun feature -> S.get_pred m feature) fset_z3 in
+      (* let _ = Printf.printf "old pos[%s]\n" (boollist_to_string fv) in *)
+      let _ =
+        match Hashtbl.find_opt env.fvtab fv with
+        | Some D.MayNeg -> Hashtbl.replace env.fvtab fv D.Pos
+        | Some label -> raise @@ InterExn
+            (sprintf "learn_weaker(exists %s -> %s)"
+               (boollist_to_string fv) (D.layout_label label))
+        | None -> Hashtbl.add env.fvtab fv D.Pos
+      in
+      loop ()
+  in
+  loop ()
+
+let weaker_safe_loop ctx vc_env env =
+  let rec loop () =
+    let new_sr = learn_weaker ctx env in
     match neg_query ctx vc_env env new_sr with
     | Pass ->
       let new_spectable = StrMap.update env.hole.name
           (fun v -> match v with
              | None -> raise @@ InterExn "never happen multi_apply_constraint"
-             | Some _ -> Some (get_increamental_spec new_sr))
+             | Some _ -> Some (new_sr.new_spec))
           vc_env.spectable in
       {vc_env with spectable = new_spectable;},
       {env with current = new_sr;}
@@ -388,7 +411,7 @@ let update_vc_env vc_env spec_env =
   let new_spectable = StrMap.update spec_env.hole.name
       (fun v -> match v with
          | None -> raise @@ InterExn "refresh_vc_env"
-         | Some _ -> Some (get_increamental_spec spec_env.current))
+         | Some _ -> Some (spec_env.current.new_spec))
       vc_env.spectable in
   {vc_env with spectable = new_spectable}
 

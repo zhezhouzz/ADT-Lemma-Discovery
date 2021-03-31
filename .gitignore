@@ -8,4 +8,5 @@ log.txt
 *.json
 tmp*
 comparision/*
+json/*
 dune-project
