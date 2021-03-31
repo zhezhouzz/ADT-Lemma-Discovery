@@ -76,9 +76,9 @@ module SpecAbduction = struct
       | _ -> None, List.rev @@ List.tl @@ List.rev hole.args
 
   type sample_version = SV1 | SV2
-  let sver = SV2
+  let sver = SV1
 
-  let sample_num = 4
+  let sample_num = 100
 
   let sampling hole imp env num =
     let _, current_epr = env.abduciable in
