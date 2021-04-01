@@ -6,6 +6,7 @@ log.txt
 *.out
 *.txt
 *.json
+*.log
 tmp*
 comparision/*
 dune-project
