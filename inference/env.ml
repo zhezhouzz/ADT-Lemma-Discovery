@@ -276,6 +276,7 @@ let encode_stat stat =
     "num_z3_pos_verify", `Int !(stat.num_z3_pos_verify);
     "num_neg_query", `Int !(stat.num_neg_query);
     "num_z3_neg_query", `Int !(stat.num_z3_neg_query);
+    "num_weakening", `Int !(stat.num_weakening);
     "run_time", `Float !(stat.run_time);
     "end_posfv", `Int !(stat.end_posfv);
     "end_negfv", `Int !(stat.end_negfv);

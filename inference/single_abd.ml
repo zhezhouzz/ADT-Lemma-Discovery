@@ -446,15 +446,19 @@ let infer ctx vc_env env time_bound =
     let env_opt' = match env_opt with
       | AlreadyMaxed env ->
         let _ = Printf.printf "already maxed:\n" in
+        let _ = add_end_stat env stat in
         AlreadyMaxed {env with if_maximal = true}
       | MayAlreadyMaxed env ->
         let _ = Printf.printf "may already maxed:\n" in
+        let _ = add_end_stat env stat in
         MayAlreadyMaxed {env with if_maximal = true}
       | NewMaxed (vc, env) ->
         let _ = Printf.printf "new max spec:\n" in
+        let _ = add_end_stat env stat in
         NewMaxed (vc, {env with if_maximal = true})
       | Weaker (_, _) ->
         let _ = Printf.printf "weaker spec:\n" in
+        let _ = add_end_stat env stat in
         env_opt
     in
     env_opt', stat

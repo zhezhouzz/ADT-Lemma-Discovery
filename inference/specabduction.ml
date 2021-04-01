@@ -743,7 +743,7 @@ module SpecAbduction = struct
         (Env.encode_infer_result (preds, result)) in
     ()
 
-  let time_bound = Some 600.0
+  let time_bound = Some 3600.0
   (* let time_bound = None *)
 
   type mode = Bound | Oracle
