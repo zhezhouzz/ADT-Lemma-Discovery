@@ -57,44 +57,56 @@ let elems = [T.Int, "x"; T.Int, "y";] in
 let holel = [e_hole;
              t_hole
             ] in
-let preds = ["tree_member";] in
-let spectable = set_spec predefined_spec_tab "InsertPre"
-    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
-    (E.True)
-in
-let spectable = set_spec spectable "InsertPost"
-    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
-    (E.And [
-        E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
-      ])
-in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" bench_name 1) ctx pre post elems spectable holel preds 1 in *)
-let preds = ["tree_member";"tree_head"] in
-let spectable = set_spec predefined_spec_tab "InsertPre"
-    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
-    (E.True)
-in
-let spectable = set_spec spectable "InsertPost"
-    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
-    (E.And [
-        E.Implies(And [tree_head tree1 u; int_lt u x], tree_head tree2 u);
-        E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
-      ])
-in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable holel preds 1 in *)
-let spectable = set_spec predefined_spec_tab "InsertPre"
-    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"; T.Int, "v"]
-    (E.Implies(treel tree1 u x, int_lt x u);)
-in
-let spectable = set_spec spectable "InsertPost"
-    [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"; T.Int, "v"]
-    (E.And[
-        E.Implies(treel tree2 u x, int_lt x u);
-        E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
-      ];)
-in
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
+  let preds = ["tree_member";] in
+  let spectable = set_spec predefined_spec_tab "InsertPre"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
+      (E.True)
+  in
+  let spectable = set_spec spectable "InsertPost"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
+      (E.And [
+          E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" bench_name 1) ctx pre post elems spectable holel preds 1 in
+  ()
+else if String.equal which_bench "2" then
+  let preds = ["tree_member";"tree_head"] in
+  let spectable = set_spec predefined_spec_tab "InsertPre"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
+      (E.True)
+  in
+  let spectable = set_spec spectable "InsertPost"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
+      (E.And [
+          E.Implies(And [tree_head tree1 u; int_lt u x], tree_head tree2 u);
+          E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" bench_name 2) ctx pre post elems spectable holel preds 1 in
+  ()
+else if String.equal which_bench "3" then
+  let spectable = set_spec predefined_spec_tab "InsertPre"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"; T.Int, "v"]
+      (E.Implies(treel tree1 u x, int_lt x u);)
+  in
+  let spectable = set_spec spectable "InsertPost"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"; T.Int, "v"]
+      (E.And[
+          E.Implies(treel tree2 u x, int_lt x u);
+          E.Iff (tree_member tree2 u, E.Or [tree_member tree1 u; int_eq u x]);
+        ];)
+  in
+  let preds = ["tree_member";"tree_left"] in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" bench_name 3) ctx pre post elems spectable holel preds 1 in
+  ()
+else raise @@ InterExn "no such bench";;
+
 (* let spectable = set_spec spectable "Insert"
  *     [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
  *     (E.And [
@@ -126,7 +138,3 @@ in
  *       ])
  * in *)
 (* let preds = ["tree_member";"tree_head";"tree_left"] in *)
-let preds = ["tree_member";"tree_left"] in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" bench_name 3) ctx pre post elems spectable holel preds 1 in
-();;
