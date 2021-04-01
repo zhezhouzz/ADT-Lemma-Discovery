@@ -43,7 +43,6 @@ let argl1 = T.IntList, "l1" in
 let argl2 = T.IntList, "l2" in
 let argnu_l = T.IntList, "nu_l" in
 let preds = ["list_member"; "list_head"; "list_order"] in
-let bpreds = ["=="] in
 let s, acc, tl, nu_cons, nu_lazy, nu_reverse, nu =
   map7 list_var ("s", "acc", "tl", "nu_cons", "nu_lazy", "nu_reverse", "nu") in
 let nu_nil, nu_cons2, nu' = map_triple list_var ("nu_nil", "nu_cons2", "nu'") in
@@ -87,7 +86,7 @@ let spectable = add_spec predefined_spec_tab "Reverse"
       ])
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
 let spectable = add_spec predefined_spec_tab "Reverse"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
     (E.And [
@@ -100,7 +99,7 @@ let spectable = add_spec predefined_spec_tab "Reverse"
 in
 let preds = ["list_member"; "list_order"] in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in *)
+ *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in *)
 let preds = ["list_once"; "list_order"; "list_member"] in
 let spec_tab = add_spec predefined_spec_tab "Reverse"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"; T.Int, "w"]
@@ -111,5 +110,5 @@ let spec_tab = add_spec predefined_spec_tab "Reverse"
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds bpreds 2 in
+    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds 1 in
 ();;

@@ -26,6 +26,13 @@ module type Dtree = sig
   val dt_summary: feature t -> feature_set -> (int * int)
   val layout_label: label -> string
   val is_pos: label -> bool
+  val encode: ('a -> Yojson.Basic.t) -> 'a t -> Yojson.Basic.t
+  val decode: (Yojson.Basic.t -> 'a) -> Yojson.Basic.t -> 'a t
+  val label_encode: label -> Yojson.Basic.t
+  val label_decode: Yojson.Basic.t -> label
+  val label_eq: label -> label -> bool
+  val fvtab_eq: (bool list, label) Hashtbl.t -> (bool list, label) Hashtbl.t -> unit
+  val map: int Utils.IntMap.t -> int t -> int t
 end
 
 module Dtree : Dtree = struct
@@ -282,4 +289,72 @@ module Dtree : Dtree = struct
 
   let subtract_dt fset dt1 dt2 =
     two_dt (fun dt1_b dt2_b -> dt1_b && not dt2_b) fset dt1 dt2
+
+  open Yojson.Basic
+  let rec encode (encoder: 'a -> Yojson.Basic.t) tree =
+    match tree with
+    | T -> `Bool true
+    | F -> `Bool false
+    | Leaf a -> `Assoc ["fd", `String "Leaf"; "a", encoder a]
+    | Node (a, l, r) ->
+      `Assoc ["fd", `String "Node";
+              "a", encoder a; "l", encode encoder l; "r", encode encoder r]
+
+  let rec decode decoder json =
+    match json with
+    | `Bool b -> if b then T else F
+    | _ ->
+      let fd = json |> Util.member "fd" |> Util.to_string in
+      if String.equal fd "Leaf" then
+        let a = json |> Util.member "a" |> decoder in
+        Leaf a
+      else if String.equal fd "Node" then
+        let a = json |> Util.member "a" |> decoder in
+        let l = json |> Util.member "l" |> decode decoder in
+        let r = json |> Util.member "r" |> decode decoder in
+        Node (a, l, r)
+      else raise @@ InterExn "Dt decode"
+
+  let label_encode = function
+    | Pos -> `Int 0
+    | MayNeg -> `Int 1
+    | Neg -> `Int 2
+
+  let label_decode = function
+    | `Int 0 -> Pos
+    | `Int 1 -> MayNeg
+    | `Int 2 -> Neg
+    | _ -> raise @@ InterExn "label_decode"
+
+  let label_eq a b =
+    match a, b with
+    | Pos, Pos | Neg, Neg | MayNeg, MayNeg -> true
+    | _ -> false
+
+  let fvtab_eq_ tab tab' =
+    Hashtbl.iter (fun vec label ->
+        match Hashtbl.find_opt tab' vec with
+        | Some label' ->
+          if label_eq label label' then ()
+          else raise @@ InterExn "fvtab_eq_:label"
+        | _ -> raise @@ InterExn "fvtab_eq_:vec not found"
+      ) tab
+
+  let fvtab_eq tab tab' =
+    (fvtab_eq_ tab tab'; fvtab_eq_ tab' tab)
+
+  let map m dt =
+    let rec aux = function
+      | T -> T
+      | F -> F
+      | Leaf i ->
+        (match IntMap.find_opt i m with
+         | None -> raise @@ InterExn "dt map"
+         | Some i' -> Leaf i')
+      | Node (i, l, r) ->
+        (match IntMap.find_opt i m with
+         | None -> raise @@ InterExn "dt map"
+         | Some i' -> Node (i', aux l, aux r))
+    in
+    aux dt
 end

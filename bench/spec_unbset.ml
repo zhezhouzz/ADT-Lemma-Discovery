@@ -16,7 +16,6 @@ open Frontend.Fast.Fast
 ;;
 let bench_name = "unbset" in
 let ctx = init () in
-let bpreds = ["=="] in
 let tree0 = tree_var "tree0" in
 let tree1, tree2, tree3, a1, a2, b1, b2 =
   map7 treei_var ("tree1", "tree2", "tree3", "a1", "a2", "b1", "b2") in
@@ -70,7 +69,7 @@ let spectable = set_spec spectable "InsertPost"
       ])
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" bench_name 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" bench_name 1) ctx pre post elems spectable holel preds 1 in *)
 let preds = ["tree_member";"tree_head"] in
 let spectable = set_spec predefined_spec_tab "InsertPre"
     [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
@@ -84,7 +83,7 @@ let spectable = set_spec spectable "InsertPost"
       ])
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable holel preds 1 in *)
 let spectable = set_spec predefined_spec_tab "InsertPre"
     [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"; T.Int, "v"]
     (E.Implies(treel tree1 u x, int_lt x u);)
@@ -129,5 +128,5 @@ in
 (* let preds = ["tree_member";"tree_head";"tree_left"] in *)
 let preds = ["tree_member";"tree_left"] in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" bench_name 3) ctx pre post elems spectable holel preds bpreds 2 in
+    (sprintf "%s%i" bench_name 3) ctx pre post elems spectable holel preds 1 in
 ();;

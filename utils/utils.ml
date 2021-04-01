@@ -2,6 +2,11 @@ exception TestFailedException of string
 exception InterExn of string
 exception UndefExn of string
 
+let addadd x = (x := !x + 1)
+
+let make_dir name =
+  Core.Unix.mkdir_p name
+
 (* module StrMap = Map.Make(String);; *)
 module IntMap = Map.Make(struct type t = int let compare = compare end);;
 
@@ -14,6 +19,10 @@ module StrMap = struct
   let find_opt m k = find_opt k m
   let to_value_list m = fold (fun _ v l -> v :: l) m []
   let to_key_list m = fold (fun k _ l -> k :: l) m []
+  let from_kv_list l =
+    List.fold_left (fun m (k, v) ->
+        add k v m
+      ) empty l
 end
 
 module Renaming = struct
@@ -67,6 +76,18 @@ module List = struct
       | h :: t -> aux (f r i h) (i + 1) t
     in
     aux default 0 l
+
+  let find_index_opt f l =
+    fold_lefti (fun r i x ->
+        match r with
+        | Some _ -> r
+        | None -> if f x then Some i else None
+      ) None l
+
+  let find_index info f l =
+    match find_index_opt f l with
+    | None -> raise @@ InterExn ("List:: " ^ info)
+    | Some i -> i
 
   let first l =
     match l with
@@ -685,3 +706,8 @@ let decode_field_ treetp_name json =
     let value = json |> member "v" in
     (field, value)
   else raise @@ InterExn (Printf.sprintf "%s::decode wrong type" treetp_name)
+
+let decode_list err decoder json =
+  match json with
+  | `List l -> List.map decoder l
+  | _ -> raise @@ InterExn (Printf.sprintf "decode_list:%s" err)

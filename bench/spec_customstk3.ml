@@ -16,7 +16,6 @@ open Frontend.Fast.Fast
 ;;
 let bench_name = "customstk" in
 let ctx = init () in
-let bpreds = ["=="] in
 let concat_program = function
   | [V.L l1; V.L l2] -> Some [V.L (l1 @ l2)]
   | _ -> raise @@ InterExn "bad prog"
@@ -62,11 +61,11 @@ let pre =
 in
 let post = SpecApply("concat", [s1;s2;nu]) in
 (* let _ = SpecAbd.sampling concat_hole () 10 in *)
-let holel = [is_empty_hole;
-             (* concat_hole; *)
-             top_hole;
-             push_hole;
-             tail_hole] in
+let holel = [
+  push_hole;
+  is_empty_hole;
+  top_hole;
+  tail_hole] in
 (* let _ = Printf.printf "vc:\n%s\n" (Ast.layout vc) in
  * let _ = List.iter (fun hole ->
  *     Printf.printf "?%s(%s)\n" hole.name (List.to_string T.layouttvar hole.args)
@@ -82,8 +81,8 @@ let spectable_post = set_spec (predefined_spec_tab) "concat"
       ])
 in
 let preds = ["list_member"; "list_head"] in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" bench_name 1) ctx pre post elems spectable_post holel preds bpreds 1 in
+let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
+    (sprintf "%s%i" bench_name 1) ctx pre post elems spectable_post holel preds 1 in
 let spectable_post = set_spec (predefined_spec_tab) "concat"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
     [T.Int, "u"; T.Int, "v"]
@@ -96,7 +95,7 @@ in
 let preds = ["list_member"; "list_head"; "list_order"] in
 (* let preds = ["list_member"; "list_order"] in *)
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds bpreds 2 in *)
+ *     (sprintf "%s%i" bench_name 2) ctx pre post elems spectable_post holel preds 2 in *)
 let _ = printf "finished\n" in
 ();;
 

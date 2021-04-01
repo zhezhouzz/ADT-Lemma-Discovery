@@ -15,7 +15,6 @@ open Frontend.Fast.Fast
 ;;
 let testname = "trie" in
 let ctx = init () in
-let bpreds = ["=="] in
 let cons, cons_hole = make_hole_from_info
     {name = "cons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
      prog = function
@@ -111,5 +110,5 @@ let spectable = add_spec predefined_spec_tab "Ins"
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in
 ();;

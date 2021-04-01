@@ -42,7 +42,6 @@ let rev, rev_hole = make_hole_from_info
     } in
 let f, f', r, r', f1 = map5 list_var ("f", "f'","r", "r'", "f1") in
 let nu_empty = bool_var "nu_empty" in
-let bpreds = ["=="] in
 let tail args = SpecApply ("Tail", args) in
 let pre = make_match [T.IntList, "l"; T.IntList, "r"] [T.IntList, "l'"; T.IntList, "r'"]
     [(Some (cons [x;f1;f]), [T.IntList, "l"; T.IntList, "r"]),
@@ -80,7 +79,7 @@ let spectable = add_spec predefined_spec_tab "Tail"
       ])
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
 let preds = ["list_member"; "list_head"; "list_order"] in
 let spectable = add_spec predefined_spec_tab "Tail"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3";T.IntList, "l4"]
@@ -93,5 +92,5 @@ let spectable = add_spec predefined_spec_tab "Tail"
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
+    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
 ();;

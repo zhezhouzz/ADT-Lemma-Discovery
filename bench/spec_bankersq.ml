@@ -61,7 +61,6 @@ let nu_lazy1, nu_reverse, nu_cons, nu_nil, nu_lazy2, f1, r1 =
  * let x, lenf, lenr, lenf1, lenr1 =
  *   map5 int_var ("x", "lenf", "lenr", "lenf1", "lenr1") in
  * let nu_le = bool_var "nu_le" in *)
-let bpreds = ["=="] in
 let snoc args = SpecApply ("Snoc", args) in
 let pre =
   And[
@@ -120,7 +119,7 @@ let spectable = add_spec predefined_spec_tab "Snoc"
           ))
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
 let preds = ["list_member"; "list_order"] in
 let spectable = add_spec spectable "Snoc"
     [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
@@ -131,5 +130,5 @@ let spectable = add_spec spectable "Snoc"
         ))
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
+    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
 ();;

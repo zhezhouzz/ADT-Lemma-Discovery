@@ -120,5 +120,13 @@ module Helper = struct
     SpecApply("is_false", [b])
 
   type hole = {name: string; args: T.tpedvar list}
+  open Yojson.Basic
+  let encode_hole hole =
+    `Assoc ["name", `String hole.name;
+            "args", `List (List.map T.tpedvar_encode hole.args)]
+  let decode_hole json =
+    let open Util in
+    {name = json |> member "name" |> to_string;
+     args = json |> member "args" |> decode_list "decode_hole" T.tpedvar_decode}
 
 end

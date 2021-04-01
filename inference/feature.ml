@@ -15,9 +15,11 @@ module type Feature = sig
   val make_set: (Tp.Tp.t * string) list -> set
   val make_set_from_preds: string list -> string list -> (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
   (* val make_set_from_preds_multidt: string list -> string list -> (Tp.Tp.t * string) list -> set *)
-  val make_set_from_preds_max: string list -> string list -> (Tp.Tp.t * string) list -> (Tp.Tp.t * string) list -> set
+  val make_set_from_preds_max: ?basicpreds:string list -> string list -> (Tp.Tp.t * string) list -> (Tp.Tp.t * string) list -> set
   val make_target: (Tp.Tp.t * string) -> (Tp.Tp.t * string) list -> set
   val subst:string Utils.StrMap.t -> t -> t
+  val encode: t -> Yojson.Basic.t
+  val decode: Yojson.Basic.t -> t
 end
 
 module Feature : Feature = struct
@@ -148,7 +150,7 @@ module Feature : Feature = struct
    *       ) [] dts
    *   ) *)
 
-  let make_set_from_preds_max preds basicpreds args qv =
+  let make_set_from_preds_max ?basicpreds:(basicpreds = ["=="]) preds args qv =
     let bargs, args = List.partition
         (fun (tp, _) -> match tp with
            | T.Bool -> true
@@ -259,4 +261,40 @@ module Feature : Feature = struct
     | Base (op, a, b) -> Base (op, find m a, find m b)
     | Pr (pred, [dt], args) -> Pr (pred, [find m dt], List.map (find m) args)
     | _ -> raise @@ UndefExn "feature:subst"
+
+  open Yojson.Basic
+  let encode = function
+    | Pr (pred, args, args') ->
+      `Assoc ["fd", `String "Pr";
+              "pred", `String pred;
+              "args", `List (List.map (fun x -> `String x) args);
+              "args'", `List (List.map (fun x -> `String x) args');
+             ]
+    | Base (pred, a, b) ->
+      `Assoc ["fd", `String "Base";
+              "pred", `String pred;
+              "a", `String a;
+              "b", `String b;
+             ]
+    | Bo a ->
+      `Assoc ["fd", `String "Bo";
+              "a", `String a;
+             ]
+  let decode json =
+    let open Util in
+    let fd = json |> member "fd" |> to_string in
+    if String.equal fd "Pr" then
+      let pred = json |> member "pred" |> to_string in
+      let args = json |> member "args" |> decode_list "decode feature" to_string in
+      let args' = json |> member "args'" |> decode_list "decode feature" to_string in
+      Pr (pred, args, args')
+    else if String.equal fd "Base" then
+      let pred = json |> member "pred" |> to_string in
+      let a = json |> member "a" |> to_string in
+      let b = json |> member "b" |> to_string in
+      Base (pred, a, b)
+    else if String.equal fd "Bo" then
+      let a = json |> member "a" |> to_string in
+      Bo a
+    else raise @@ InterExn "feature decode"
 end

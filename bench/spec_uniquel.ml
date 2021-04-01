@@ -20,7 +20,6 @@ let x, x1, nu_nil, nu_set_add, nu =
 let a, a1 =
   map_double int_var ("a", "a1") in
 let nu_eq, nu_empty = map_double bool_var ("nu_eq", "nu_empty") in
-let bpreds = ["=="] in
 let cons, cons_hole = make_hole_from_info
     {name = "cons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
      prog = function
@@ -84,7 +83,7 @@ let spectable = add_spec predefined_spec_tab "SetAdd"
       ])
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
 let preds = ["list_member"; "list_head"; "list_once"] in
 let spectable = add_spec spectable "SetAdd"
     [T.Int, "x"; T.IntList, "l1";T.IntList, "l2"]
@@ -95,5 +94,5 @@ let spectable = add_spec spectable "SetAdd"
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in
+    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in
 ();;

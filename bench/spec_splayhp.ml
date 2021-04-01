@@ -15,7 +15,6 @@ open Frontend.Fast.Fast
 ;;
 let testname = "splayhp" in
 let ctx = init () in
-let bpreds = ["=="] in
 let tr, a1, a2, b1, b2, te = map6 tree_var ("tr", "a1", "a2", "b1", "b2", "te") in
 let a, b = map_double tree_var ("a", "b") in
 let tr1, tr2, tr3, tr4 = map4 tree_var ("tr1", "tr2", "tr3", "tr4") in
@@ -112,7 +111,7 @@ let spectable = set_spec spectable "PartitionPost"
 in
 let preds = ["tree_member";] in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
 let spectable = set_spec predefined_spec_tab "PartitionPre"
     [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
     (E.And [
@@ -130,7 +129,7 @@ let spectable = set_spec spectable "PartitionPost"
 in
 let preds = ["tree_member"; "tree_left"; "tree_right"] in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in *)
+ *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in *)
 let spectable = set_spec predefined_spec_tab "PartitionPre"
     [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
     (E.And [
@@ -148,7 +147,7 @@ let spectable = set_spec spectable "PartitionPost"
     )
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds bpreds 2 in
+    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds 1 in
 (* let spectable = set_spec spectable "t"
  *     [T.IntTree, "tree0";T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"]
  *     [T.Int, "u";T.Int, "v";]

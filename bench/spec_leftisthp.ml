@@ -16,7 +16,6 @@ open Frontend.Fast.Fast
 ;;
 let testname = "leftisthp" in
 let ctx = init () in
-let bpreds = ["=="] in
 let tree0 = treei_var "tree0" in
 let tree1, tree2, tree3, a1, a2, b1, b2 =
   map7 treei_var ("tree1", "tree2", "tree3", "a1", "a2", "b1", "b2") in
@@ -114,7 +113,7 @@ let spectable = add_spec spectable "MergePost"
 
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds bpreds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
 (* let spectable = add_spec predefined_spec_tab "MergePre"
  *     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
  *     [T.Int, "u"; T.Int, "v"]
@@ -188,5 +187,5 @@ in
 (* let preds = ["treei_member";"treei_left";"treei_right"] in *)
 let preds = ["treei_member";"treei_ancestor"] in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds bpreds 2 in
+    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
 ();;
