@@ -95,11 +95,11 @@ else if String.equal which_bench "2" then
 else if String.equal which_bench "3" then
   let preds = ["list_once"; "list_order"; "list_member"] in
   let spectable = add_spec predefined_spec_tab "Reverse"
-      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"; T.Int, "w"]
+      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
       (E.And [
-          E.Implies (And [list_once l1 v; E.Not (list_member l2 v);
-                          list_order l3 u v; list_order l3 v w],
-                     list_order l3 u w);
+          E.Implies (And [list_once l1 u; list_once l2 v; list_order l1 u v;
+                          Not (list_member l2 u); Not (list_member l1 v);],
+                     And[list_order l3 u v; Not (list_order l3 v u)]);
         ])
   in
   let total_env = SpecAbd.multi_infer
