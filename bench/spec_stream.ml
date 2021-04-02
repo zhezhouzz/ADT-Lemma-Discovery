@@ -64,51 +64,45 @@ let pre =
 in
 let post = reverse [acc;s;nu'] in
 let elems = [T.Int, "hd"] in
-(* let vc =
- *   Ast.Ite (is_empty [nu_is_empty; s;],
- *            Implies (liblazy [acc; nu_lazy],
- *                     reverse [acc; s; nu_lazy]
- *                    ),
- *            Implies (And [cons [hd; tl; s];
- *                          cons [hd; acc; nu_cons];
- *                          liblazy [nu_cons; nu_lazy];
- *                          reverse [nu_lazy; tl; nu_reverse];
- *                          libforce [nu_reverse; nu]],
- *                     reverse [acc; s; nu])
- *           )
- * in *)
-let holel = [libnil_hole; libcons_hole; liblazy_hole; libforce_hole;] in
-let preds = ["list_member";] in
-let spectable = add_spec predefined_spec_tab "Reverse"
-    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
-    (E.And [
-        E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
-      ])
-in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
-let spectable = add_spec predefined_spec_tab "Reverse"
-    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
-    (E.And [
-        E.Implies (E.Or [list_order l1 u v;
-                         list_order l2 v u;
-                         E.And [list_member l2 u; list_member l1 v]],
-                   list_order l3 u v);
-        E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
-      ])
-in
-let preds = ["list_member"; "list_order"] in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in *)
-let preds = ["list_once"; "list_order"; "list_member"] in
-let spec_tab = add_spec predefined_spec_tab "Reverse"
-    [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"; T.Int, "w"]
-    (E.And [
-        E.Implies (And [list_once l1 v; E.Not (list_member l2 v);
-                        list_order l3 u v; list_order l3 v w],
-                   list_order l3 u w);
-      ])
-in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds 1 in
-();;
+let holel = [libnil_hole; liblazy_hole; libforce_hole; libcons_hole;] in
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
+  let preds = ["list_member";] in
+  let spectable = add_spec predefined_spec_tab "Reverse"
+      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
+      (E.And [
+          E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" testname which_bench) ctx pre post elems spectable holel preds 1 in
+  ()
+else if String.equal which_bench "2" then
+  let preds = ["list_member"; "list_order"] in
+  let spectable = add_spec predefined_spec_tab "Reverse"
+      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
+      (E.And [
+          E.Implies (E.Or [list_order l1 u v;
+                           list_order l2 v u;
+                           E.And [list_member l2 u; list_member l1 v]],
+                     list_order l3 u v);
+          E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" testname which_bench) ctx pre post elems spectable holel preds 1 in
+  ()
+else if String.equal which_bench "3" then
+  let preds = ["list_once"; "list_order"; "list_member"] in
+  let spectable = add_spec predefined_spec_tab "Reverse"
+      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"; T.Int, "w"]
+      (E.And [
+          E.Implies (And [list_once l1 v; E.Not (list_member l2 v);
+                          list_order l3 u v; list_order l3 v w],
+                     list_order l3 u w);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds 1 in
+  ()
+else raise @@ InterExn "no such bench";;
