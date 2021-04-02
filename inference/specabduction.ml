@@ -698,7 +698,7 @@ module SpecAbduction = struct
         merge_spec spec preds
       ) spectable
 
-  let merge_max_result resultfilename =
+  let merge_max_result ctx resultfilename =
     let result = Yojson.Basic.from_file (resultfilename) in
     let (preds, result) = Env.decode_infer_result result in
     let _ = printf "before:\n" in
@@ -708,7 +708,13 @@ module SpecAbduction = struct
     let _ = printf "after:\n" in
     let merged = merge_spectable result preds in
     StrMap.iter (fun name spec ->
-        printf "%s\n" (Ast.layout_spec_entry name spec)
+        let _ = printf "%s\n" (Ast.layout_spec_entry name spec) in
+        let (_, (_, body)) = spec in
+        let body_z3 = Epr.to_z3 ctx body in
+        let _ = printf "\n%s\n" (Expr.to_string body_z3) in
+        let body_z3' = Expr.simplify body_z3 None in
+        let _ = printf "\n%s\n" (Expr.to_string body_z3') in
+        ()
       ) merged
 
   let verify_flow ctx vc flow =
