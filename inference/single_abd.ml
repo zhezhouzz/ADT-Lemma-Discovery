@@ -403,14 +403,49 @@ type pos_loop_result =
   | MayNoWeaker
   | NewWeaker of spec_env
 
-let infer ctx vc_env env time_bound =
+let start_time = ref (Sys.time ())
+
+let update_stat stat delta_time =
+  let _ = addadd stat.num_weakening in
+  let weaken_run_time = delta_time -. !(stat.run_time) in
+  let rec aux weaken_run_time l =
+    let rest = stat.interval -. !(stat.interval_past) in
+    if weaken_run_time > rest
+    then
+      let _ = stat.interval_past := 0.0 in
+      aux (weaken_run_time -. rest) (0 :: l)
+    else
+      let _ = stat.interval_past := !(stat.interval_past) +. weaken_run_time in
+      match l with
+      | [] -> raise @@ InterExn "never happen single update_stat"
+      | h :: t -> (h + 1) :: t
+  in
+  let _ = stat.num_weakening_every_interval :=
+      (aux weaken_run_time !(stat.num_weakening_every_interval)) in
+  let _ = stat.run_time := delta_time in
+  ()
+
+let record_interval = 3600.0
+let last_record = ref 0.0
+
+let record_stat benchname fname stat delta_time =
+  if delta_time > !last_record +. record_interval
+  then
+    let _ = last_record := delta_time in
+    let _ = save_stat benchname
+        (sprintf "%s%i" fname (int_of_float !last_record)) None stat
+    in
+    ()
+  else ()
+
+let infer ctx benchname vc_env env time_bound =
   let stat = stat_init env in
+  let _ = start_time := Sys.time () in
   if env.if_maximal then AlreadyMaxed env, stat else
     let _ = Printf.printf "single infer: %s\n" (env.hole.name) in
     let _ = Printf.printf "env.fset: %s\n" (F.layout_set env.fset) in
     let _ = summary_fv_num env in
     let max_loop_counter = ref 0 in
-    let start_time = Sys.time () in
     let rec max_loop vc_env env =
       let rec find_pos env =
         match clock "pos_query" (fun _ -> pos_query ctx vc_env env stat) with
@@ -433,10 +468,10 @@ let infer ctx vc_env env time_bound =
           clock "weaker_safe_loop"
             (fun _ -> weaker_safe_loop ctx vc_env env stat) in
         (* let _ = Printf.printf "new current:\n%s\n" (Ast.layout_spec env.current) in *)
-        let _ = addadd stat.num_weakening in
         let end_time = Sys.time () in
-        let delta_time = end_time -. start_time in
-        let _ = stat.run_time := delta_time in
+        let delta_time = end_time -. !start_time in
+        let _ = update_stat stat delta_time in
+        let _ = record_stat benchname env.hole.name stat delta_time in
         match time_bound with
         | None -> max_loop vc_env env
         | Some time_bound ->

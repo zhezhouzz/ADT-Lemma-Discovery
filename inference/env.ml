@@ -224,13 +224,17 @@ type stat = {
   num_neg_query: int ref;
   num_z3_neg_query: int ref;
   num_weakening: int ref;
+  interval: float;
+  interval_past: float ref;
+  (* a reverse list *)
+  num_weakening_every_interval: (int list) ref;
   run_time: float ref;
   end_posfv: int ref;
   end_negfv: int ref;
   end_mayfv: int ref;
 }
 
-let stat_init env =
+let stat_init ?interval:(interval = 300.0) env =
   let (p,n,m) = Hashtbl.fold (fun _ label (p,n,m) ->
       match label with
       | D.Pos -> (p+1,n,m)
@@ -247,6 +251,9 @@ let stat_init env =
    num_neg_query = ref 0;
    num_z3_neg_query = ref 0;
    num_weakening = ref 0;
+   interval = interval;
+   interval_past = ref 0.0;
+   num_weakening_every_interval = ref [0];
    run_time = ref 0.0;
    end_posfv = ref 0;
    end_negfv = ref 0;
@@ -277,6 +284,10 @@ let encode_stat stat =
     "num_neg_query", `Int !(stat.num_neg_query);
     "num_z3_neg_query", `Int !(stat.num_z3_neg_query);
     "num_weakening", `Int !(stat.num_weakening);
+    "interval", `Float stat.interval;
+    "interval_past", `Float !(stat.interval_past);
+    "num_weakening_every_interval", `List (List.map (fun x -> `Int x)
+                                             !(stat.num_weakening_every_interval));
     "run_time", `Float !(stat.run_time);
     "end_posfv", `Int !(stat.end_posfv);
     "end_negfv", `Int !(stat.end_negfv);

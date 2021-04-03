@@ -769,7 +769,7 @@ module SpecAbduction = struct
           | Bound -> time_bound
         in
         let (single_result, stat), delta_time =
-          time (fun _ -> Single_abd.infer ctx total_env single_env time_bound) in
+          time (fun _ -> Single_abd.infer ctx benchname total_env single_env time_bound) in
         let _ = printf "time: single: %s: %fs\n" single_env.Env.hole.name delta_time in
         match single_result with
         | Env.AlreadyMaxed single_env' ->
