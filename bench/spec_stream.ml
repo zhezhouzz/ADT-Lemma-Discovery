@@ -101,6 +101,7 @@ else if String.equal which_bench "3" then
           E.Implies (And [list_once l1 u; list_once l2 v; list_order l1 u v;
                           Not (list_member l2 u); Not (list_member l1 v);],
                      And[list_order l3 u v; Not (list_order l3 v u)]);
+          E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
         ])
   in
   let total_env = SpecAbd.multi_infer
