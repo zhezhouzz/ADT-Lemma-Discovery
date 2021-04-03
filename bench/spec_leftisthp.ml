@@ -28,12 +28,12 @@ let e, e_hole = make_hole_from_info
        | [] -> Some [V.TI LabeledTree.Leaf]
        | _ -> raise @@ InterExn "bad prog"
     } in
-(* let t, t_hole = make_hole_from_info
- *     {name = "t"; intps = [T.Int; T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
- *      prog = function
- *        | [V.I r; V.I x; V.TI a; V.TI b] -> Some [V.TI (LabeledTree.Node(r,x,a,b))]
- *        | _ -> raise @@ InterExn "bad prog"
- *     } in *)
+let t, t_hole = make_hole_from_info
+    {name = "t"; intps = [T.Int; T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
+     prog = function
+       | [V.I r; V.I x; V.TI a; V.TI b] -> Some [V.TI (LabeledTree.Node(r,x,a,b))]
+       | _ -> raise @@ InterExn "bad prog"
+    } in
 let maket, maket_hole = make_hole_from_info
     {name = "maket"; intps = [T.Int; T.IntTreeI; T.IntTreeI]; outtps = [T.IntTreeI];
      prog = function
@@ -62,7 +62,7 @@ let pre =
       [T.IntTreeI, "te"; T.IntTreeI, "tree2";]),
      (None,
       [(T.IntTree, "tree2");]);
-     (Some (And [maket [x;a1;b1;tree1]; maket [y;a2;b2;tree2]]),
+     (Some (And [t [rank1;x;a1;b1;tree1]; t [rank1;y;a2;b2;tree2]]),
       [T.IntTreeI, "tree1"; T.IntTreeI, "tree2";]),
      (Some(
          Ite(le [x;y;nu_le;],
@@ -76,74 +76,49 @@ let pre =
 in
 let post = merge [tree1;tree2;tree3] in
 let elems = [T.Int, "x"; T.Int, "y"] in
-(* let vc =
- *   Ast.Ite(e [nu_e2; tree2;],
- *           merge [tree1; tree2; tree1],
- *           Ite(e [nu_e1; tree1],
- *               merge [tree1; tree2; tree2],
- *               Implies (And [t [rank1;x;a1;b1;tree1]; t [rank2;y;a2;b2;tree2]],
- *                        Ite(le [nu_le;x;y],
- *                            Implies(And[
- *                                merge [b1;tree2;tmp1]; makeT [x;a2;tmp1;nu]],
- *                                    merge [tree1; tree2; nu]
- *                              ),
- *                            Implies(And[
- *                                merge [tree1;b2;tmp1]; makeT [y;a2;tmp1;nu]],
- *                                    merge [tree1; tree2; nu]
- *                              ))
- *                           )
- *                       )
- *          )
- *     in *)
 let holel = [e_hole;
-             (* t_hole; *)
-             maket_hole
+             maket_hole;
+             t_hole;
             ] in
-let preds = ["treei_member";] in
-let spectable = add_spec predefined_spec_tab "MergePre"
-    [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
-    []
-    (E.True) in
-let spectable = add_spec spectable "MergePost"
-    [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
-    [T.Int, "u"]
-    (E.And [
-        (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
-      ])
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
+  let preds = ["treei_member";] in
+  let spectable = add_spec predefined_spec_tab "MergePre"
+      [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
+      []
+      (E.True) in
+  let spectable = add_spec spectable "MergePost"
+      [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
+      [T.Int, "u"]
+      (E.And [
+          (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in
+  ()
+else if String.equal which_bench "2" then
+  let spectable = add_spec predefined_spec_tab "MergePre"
+      [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
+      [T.Int, "u"; T.Int, "v"]
+      (And [
+          Implies (treei_ancestor tree1 u v, int_le u v);
+          Implies (treei_ancestor tree2 u v, int_le u v);
+        ]) in
+  let spectable = add_spec spectable "MergePost"
+      [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
+      [T.Int, "u"; T.Int, "v"]
+      (E.And [
+          Implies (treei_ancestor tree3 u v, int_le u v);
+          (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
+        ])
+  in
+  let preds = ["treei_member";"treei_ancestor"] in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
+  ()
+else raise @@ InterExn "no such bench";;
 
-in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
-(* let spectable = add_spec predefined_spec_tab "MergePre"
- *     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
- *     [T.Int, "u"; T.Int, "v"]
- *     (And [
- *         Implies (Or[treeil tree1 u v; treeir tree1 u v], int_le u v);
- *         Implies (Or[treeil tree2 u v; treeir tree2 u v], int_le u v);
- *       ]) in
- * let spectable = add_spec spectable "MergePost"
- *     [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
- *     [T.Int, "u"; T.Int, "v"]
- *     (E.And [
- *         Implies (Or[treeil tree3 u v; treeir tree3 u v], int_le u v);
- *         (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
- *       ])
- * in *)
-let spectable = add_spec predefined_spec_tab "MergePre"
-    [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
-    [T.Int, "u"; T.Int, "v"]
-    (And [
-        Implies (treei_ancestor tree1 u v, int_le u v);
-        Implies (treei_ancestor tree2 u v, int_le u v);
-      ]) in
-let spectable = add_spec spectable "MergePost"
-    [T.IntTreeI, "tree1";T.IntTreeI, "tree2";T.IntTreeI, "tree3"]
-    [T.Int, "u"; T.Int, "v"]
-    (E.And [
-        Implies (treei_ancestor tree3 u v, int_le u v);
-        (E.Iff (treei_member tree3 u, E.Or [treei_member tree1 u; treei_member tree2 u]));
-      ])
-in
 (* let spectable = set_spec spectable "t"
  *     [T.Int, "rank"; T.Int, "x"; T.IntTree, "tree0"; T.IntTree, "tree1";T.IntTree, "tree2"]
  *     [T.Int, "u";T.Int, "v";]
@@ -184,8 +159,3 @@ in
  *           ]);
  *       ])
  * in *)
-(* let preds = ["treei_member";"treei_left";"treei_right"] in *)
-let preds = ["treei_member";"treei_ancestor"] in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
-();;
