@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "splayhp" in
+let bench_name = "splayhp" in
 let ctx = init () in
 let tr, a1, a2, b1, b2, te = map6 tree_var ("tr", "a1", "a2", "b1", "b2", "te") in
 let a, b = map_double tree_var ("a", "b") in
@@ -40,7 +40,7 @@ let branch1 =
   Ast.make_match [T.IntTree, "b"] [T.IntTree, "tree2"; T.IntTree, "tree3"]
     [
       (Some (e [nu_e]), [(T.IntTree, "nu_e")]),
-       (None, [(T.IntTree, "tr"); (T.IntTree, "nu_e")]);
+      (None, [(T.IntTree, "tr"); (T.IntTree, "nu_e")]);
       ((Some (t [b1; y; b2; b]), [(T.IntTree, "b")]),
        (Some
           (Ite(le [y; pivot;nu_le2;],
@@ -68,86 +68,96 @@ let branch2 =
       (Some (e [nu_e]), [(T.IntTree, "nu_e")]),
       (None, [(T.IntTree, "nu_e"); (T.IntTree, "tr")]);
       (Some (t [a1; y; a2; a]), [T.IntTree, "a";]),
-       (Some
-          (Ite(le [y; pivot;nu_le3;],
-               And[partition [pivot; a2; small; big];
-                   t [a1; y; small; tr1];
-                   t [big; x; b; tr2];
-                   poly_eq [tr1; tree2];
-                   poly_eq [tr2; tree3];
-                  ],
-               And[partition [pivot; a1; small; big];
-                   t [a2; x; b; tr1];
-                   t [big; y; tr1; tr2];
-                   poly_eq [small; tree2];
-                   poly_eq [tr2; tree3];
-                  ]
-              )),
-        [T.IntTree, "tree2"; T.IntTree, "tree3"]
-       )
+      (Some
+         (Ite(le [y; pivot;nu_le3;],
+              And[partition [pivot; a2; small; big];
+                  t [a1; y; small; tr1];
+                  t [big; x; b; tr2];
+                  poly_eq [tr1; tree2];
+                  poly_eq [tr2; tree3];
+                 ],
+              And[partition [pivot; a1; small; big];
+                  t [a2; x; b; tr1];
+                  t [big; y; tr1; tr2];
+                  poly_eq [small; tree2];
+                  poly_eq [tr2; tree3];
+                 ]
+             )),
+       [T.IntTree, "tree2"; T.IntTree, "tree3"]
+      )
     ]
 in
 let pre =
   Ast.make_match [T.IntTree, "tr"] [T.IntTree, "tree2"; T.IntTree, "tree3"]
     [
       (Some (e [nu_e]), [T.IntTree, "nu_e"]),
-       (None, [T.IntTree, "nu_e";T.IntTree, "nu_e"]);
+      (None, [T.IntTree, "nu_e";T.IntTree, "nu_e"]);
       (Some (t [a; x; b; tr]), [T.IntTree, "tr"]),
       (Some (Ite(le [x; pivot;nu_le1;], branch1, branch2)),
        [T.IntTree, "tree2"; T.IntTree, "tree3"])
-       ]
+    ]
 in
 let post = partition [pivot; tr; tree2; tree3] in
 let elems = [T.Int, "pivot"; T.Int, "x"; T.Int, "y";] in
 let holel = [e_hole;
              t_hole
             ] in
-let spectable = set_spec predefined_spec_tab "PartitionPre"
-    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
-    (E.True) in
-let spectable = set_spec spectable "PartitionPost"
-    [T.Int, "x"; T.IntTree, "tree1";T.IntTree, "tree2";T.IntTree, "tree3"] [T.Int, "u";]
-    (E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u]))
-in
-let preds = ["tree_member";] in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
-let spectable = set_spec predefined_spec_tab "PartitionPre"
-    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
-    (E.And [
-        E.Implies (E.And [treel tr1 u v], int_ge u v);
-        E.Implies (E.And [treer tr1 u v], int_le u v);
-      ]) in
-let spectable = set_spec spectable "PartitionPost"
-    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u";]
-    (
-      E.And [
-        E.Implies (E.And [tree_member tr2 u], int_le u x);
-        E.Implies (E.And [tree_member tr3 u], int_ge u x);
-      ]
-    )
-in
-let preds = ["tree_member"; "tree_left"; "tree_right"] in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in *)
-let spectable = set_spec predefined_spec_tab "PartitionPre"
-    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
-    (E.And [
-        E.Implies (E.And [treel tr1 u v], int_ge u v);
-        E.Implies (E.And [treer tr1 u v], int_le u v);
-      ]) in
-let spectable = set_spec spectable "PartitionPost"
-    [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u";]
-    (
-      E.And [
-        E.Implies (E.And [tree_member tr2 u], int_le u x);
-        E.Implies (E.And [tree_member tr3 u], int_ge u x);
-        (E.Iff (tree_member tr1 u, E.Or [tree_member tr2 u; tree_member tr3 u]))
-      ]
-    )
-in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds 1 in
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
+  let spectable = set_spec predefined_spec_tab "PartitionPre"
+      [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
+      (E.True) in
+  let spectable = set_spec spectable "PartitionPost"
+      [T.Int, "x"; T.IntTree, "tree1";T.IntTree, "tree2";T.IntTree, "tree3"] [T.Int, "u";]
+      (E.Iff (tree_member tree1 u, E.Or [tree_member tree2 u; tree_member tree3 u]))
+  in
+  let preds = ["tree_member";] in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench) ctx pre post elems spectable holel preds 1 in
+  ()
+else if String.equal which_bench "2" then
+  let spectable = set_spec predefined_spec_tab "PartitionPre"
+      [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
+      (E.And [
+          E.Implies (E.And [treel tr1 u v], int_ge u v);
+          E.Implies (E.And [treer tr1 u v], int_le u v);
+        ]) in
+  let spectable = set_spec spectable "PartitionPost"
+      [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u";]
+      (
+        E.And [
+          E.Implies (E.And [tree_member tr2 u], int_le u x);
+          E.Implies (E.And [tree_member tr3 u], int_ge u x);
+        ]
+      )
+  in
+  let preds = ["tree_member"; "tree_left"; "tree_right"] in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench) ctx pre post elems spectable holel preds 1 in
+  ()
+else if String.equal which_bench "3" then
+  let spectable = set_spec predefined_spec_tab "PartitionPre"
+      [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u"; T.Int, "v"]
+      (E.And [
+          E.Implies (E.And [treel tr1 u v], int_ge u v);
+          E.Implies (E.And [treer tr1 u v], int_le u v);
+        ]) in
+  let spectable = set_spec spectable "PartitionPost"
+      [T.Int, "x"; T.IntTree, "tr1";T.IntTree, "tr2";T.IntTree, "tr3"] [T.Int, "u";]
+      (
+        E.And [
+          E.Implies (E.And [tree_member tr2 u], int_le u x);
+          E.Implies (E.And [tree_member tr3 u], int_ge u x);
+          (E.Iff (tree_member tr1 u, E.Or [tree_member tr2 u; tree_member tr3 u]))
+        ]
+      )
+  in
+  let preds = ["tree_member"; "tree_left"; "tree_right"] in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench) ctx pre post elems spectable holel preds 1 in
+  ()
+else raise @@ InterExn "no such bench"
+;;
 (* let spectable = set_spec spectable "t"
  *     [T.IntTree, "tree0";T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"]
  *     [T.Int, "u";T.Int, "v";]
@@ -171,4 +181,3 @@ let total_env = SpecAbd.multi_infer
  *          *   ]); *\)
  *       ])
  * in *)
-();;
