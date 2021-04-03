@@ -93,6 +93,7 @@ else if String.equal which_bench "2" then
       (sprintf "%s%s" testname which_bench) ctx pre post elems spectable holel preds 1 in
   ()
 else if String.equal which_bench "3" then
+  let holel = [libnil_hole; libcons_hole; liblazy_hole; libforce_hole;] in
   let preds = ["list_once"; "list_order"; "list_member"] in
   let spectable = add_spec predefined_spec_tab "Reverse"
       [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
