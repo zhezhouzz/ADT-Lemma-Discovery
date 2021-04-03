@@ -370,3 +370,15 @@ let decode_infer_result json =
   let preds = json |> member "preds" |> decode_list "decode_infer_result" to_string in
   let spectable = json |> member "spectable" |> Ast.spectable_decode in
   (preds, spectable)
+
+let encode_single_infer_result (preds, sr) =
+  `Assoc [
+    "preds", `List (List.map (fun x -> `String x) preds);
+    "sr", encode_sr sr;
+  ]
+
+let decode_single_infer_result json =
+  let open Util in
+  let preds = json |> member "preds" |> decode_list "decode_single_infer_result" to_string in
+  let sr = json |> member "sr" |> decode_sr in
+  (preds, sr)

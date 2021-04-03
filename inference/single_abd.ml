@@ -428,12 +428,14 @@ let update_stat stat delta_time =
 let record_interval = 3600.0
 let last_record = ref 0.0
 
-let record_stat benchname fname stat delta_time =
+let record_stat benchname vc env stat delta_time time_bound =
   if delta_time > !last_record +. record_interval
   then
     let _ = last_record := delta_time in
-    let _ = save_stat benchname
-        (sprintf "%s%i" fname (int_of_float !last_record)) None stat
+    let filename = (sprintf "%s%i" env.hole.name (int_of_float !last_record)) in
+    let _ = save_stat benchname filename time_bound stat in
+    let _ = Yojson.Basic.to_file (sprintf "%s%s_tmp_sr.json" benchname filename)
+        (Env.encode_single_infer_result (vc.preds, env.current))
     in
     ()
   else ()
@@ -471,9 +473,11 @@ let infer ctx benchname vc_env env time_bound =
         let end_time = Sys.time () in
         let delta_time = end_time -. !start_time in
         let _ = update_stat stat delta_time in
-        let _ = record_stat benchname env.hole.name stat delta_time in
+        (* let _ = record_stat benchname env.hole.name stat delta_time time_bound in *)
         match time_bound with
-        | None -> max_loop vc_env env
+        | None ->
+          let _ = record_stat benchname vc_env env stat delta_time time_bound in
+          max_loop vc_env env
         | Some time_bound ->
           if delta_time > time_bound then Weaker (vc_env, env) else max_loop vc_env env
     in
