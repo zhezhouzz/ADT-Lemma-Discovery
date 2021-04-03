@@ -32,6 +32,7 @@ module type AstTree = sig
   val spectable_eq: spec Utils.StrMap.t -> spec Utils.StrMap.t -> bool
   val spectable_encode: spec Utils.StrMap.t -> Yojson.Basic.t
   val spectable_decode: Yojson.Basic.t -> spec Utils.StrMap.t
+  val spec_num_atom: spec -> int
 end
 
 module AstTree (E: Epr.Epr) : AstTree
@@ -354,4 +355,6 @@ module AstTree (E: Epr.Epr) : AstTree
 
   let spectable_eq t1 t2 =
     (spectable_eq_succ t1 t2) (* && (spectable_eq_succ t2 t1) *)
+
+  let spec_num_atom (_, (_, body)) = E.num_atom body
 end

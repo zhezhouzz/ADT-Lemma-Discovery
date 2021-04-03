@@ -708,12 +708,13 @@ module SpecAbduction = struct
     let _ = printf "after:\n" in
     let merged = merge_spectable result preds in
     StrMap.iter (fun name spec ->
-        let _ = printf "%s\n" (Ast.layout_spec_entry name spec) in
-        let (_, (_, body)) = spec in
-        let body_z3 = Epr.to_z3 ctx body in
-        let _ = printf "\n%s\n" (Expr.to_string body_z3) in
-        let body_z3' = Expr.simplify body_z3 None in
-        let _ = printf "\n%s\n" (Expr.to_string body_z3') in
+        let _ = printf "[size:%i]%s\n" (Ast.spec_num_atom spec)
+            (Ast.layout_spec_entry name spec) in
+        (* let (_, (_, body)) = spec in
+         * let body_z3 = Epr.to_z3 ctx body in
+         * let _ = printf "\n%s\n" (Expr.to_string body_z3) in
+         * let body_z3' = Expr.simplify body_z3 None in
+         * let _ = printf "\n%s\n" (Expr.to_string body_z3') in *)
         ()
       ) merged
 

@@ -25,6 +25,7 @@ module type EprTree = sig
   val forallformula_encode: forallformula -> Yojson.Basic.t
   val forallformula_decode: Yojson.Basic.t -> forallformula
   val simplify_dt_result: t -> t
+  val num_atom: t -> int
 end
 
 module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
@@ -282,4 +283,17 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     let _, fv1str = List.split fv1 in
     let _, fv2str = List.split fv2 in
     (List.for_all2 String.equal fv1str fv2str) && (eq body1 body2)
+
+  let num_atom a =
+    let rec aux = function
+      | True -> 1
+      | Atom _ -> 1
+      | Implies (p1, p2) -> (aux p1) + (aux p2)
+      | And ps -> List.fold_left (fun sum p -> (aux p) + sum) 0 ps
+      | Or ps -> List.fold_left (fun sum p -> (aux p) + sum) 0 ps
+      | Not p -> aux p
+      | Iff (p1, p2) -> (aux p1) + (aux p2)
+      | Ite (p1, p2, p3) ->(aux p1) + (aux p2) + (aux p3)
+    in
+    aux a
 end
