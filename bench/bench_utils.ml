@@ -95,7 +95,7 @@ let printf_assertion spec_tab names =
 let init () =
   let _ = Random.init 0 in
   let ctx =
-    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in
+    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "19999")] in
   ctx
 
 (* let spec_tab_add spec_tab {name;intps;outtps;prog} =
