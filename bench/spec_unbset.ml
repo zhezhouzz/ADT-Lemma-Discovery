@@ -92,7 +92,7 @@ if String.equal which_bench "1" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" bench_name 1) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let preds = ["tree_member";"tree_head"] in
@@ -108,7 +108,7 @@ else if String.equal which_bench "2" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" bench_name 2) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "3" then
   let spectable = set_spec predefined_spec_tab "InsertPre"
@@ -124,7 +124,7 @@ else if String.equal which_bench "3" then
   in
   let preds = ["tree_member";"tree_left"] in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" bench_name 3) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "4" then
   let preds = ["tree_member";] in
@@ -139,7 +139,7 @@ else if String.equal which_bench "4" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" bench_name 1) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench";;
 

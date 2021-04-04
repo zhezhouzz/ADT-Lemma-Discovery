@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname =  "bankersq" in
+let bench_name =  "bankersq" in
 let ctx = init () in
 let cons, cons_hole = make_hole_from_info
     {name = "BankersqCons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
@@ -129,26 +129,32 @@ let holel = [
   libforce_hole;
   concat_hole;
   reverse_hole;] in
-let preds = ["list_member";] in
-let spectable = add_spec predefined_spec_tab "Snoc"
-    [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
-     T.Int, "lenf'";T.IntList, "f'";T.Int, "lenr'";T.IntList, "r'"]
-    [T.Int,"u"]
-    (E.Iff(Or[list_member f u; list_member r u; int_eq u x],
-           Or[list_member f' u; list_member r' u]
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
+  let preds = ["list_member";] in
+  let spectable = add_spec predefined_spec_tab "Snoc"
+      [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
+       T.Int, "lenf'";T.IntList, "f'";T.Int, "lenr'";T.IntList, "r'"]
+      [T.Int,"u"]
+      (E.Iff(Or[list_member f u; list_member r u; int_eq u x],
+             Or[list_member f' u; list_member r' u]
+            ))
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+  ()
+else if String.equal which_bench "2" then
+  let preds = ["list_member"; "list_order"] in
+  let spectable = add_spec predefined_spec_tab "Snoc"
+      [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
+       T.Int, "lenf'";T.IntList, "f'";T.Int, "lenr'";T.IntList, "r'"]
+      [T.Int,"u"]
+      (Iff(Or[list_member f u; list_member r u],
+           Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
           ))
-in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in *)
-let preds = ["list_member"; "list_order"] in
-let spectable = add_spec spectable "Snoc"
-    [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
-     T.Int, "lenf'";T.IntList, "f'";T.Int, "lenr'";T.IntList, "r'"]
-    [T.Int,"u"]
-    (Iff(Or[list_member f u; list_member r u],
-         Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
-        ))
-in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
-();;
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+  ()
+else raise @@ InterExn "no such bench"
+;;

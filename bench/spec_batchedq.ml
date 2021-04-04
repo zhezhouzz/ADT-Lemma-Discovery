@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "batchedq" in
+let bench_name = "batchedq" in
 let ctx = init () in
 let cons, cons_hole = make_hole_from_info
     {name = "ListCons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
@@ -75,6 +75,8 @@ let holel = [
   cons_hole;
   rev_hole;
   nil_hole] in
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
 let preds = ["list_member"; "list_head";] in
 let spectable = add_spec predefined_spec_tab "Tail"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3";T.IntList, "l4"]
@@ -84,8 +86,10 @@ let spectable = add_spec predefined_spec_tab "Tail"
                E.Or [list_member l1 u; list_member l2 u]);
       ])
 in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in *)
+let total_env = SpecAbd.multi_infer
+    (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+()
+else if String.equal which_bench "2" then
 let preds = ["list_member"; "list_head"; "list_order"] in
 let spectable = add_spec predefined_spec_tab "Tail"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3";T.IntList, "l4"]
@@ -98,5 +102,5 @@ let spectable = add_spec predefined_spec_tab "Tail"
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
+    (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
 ();;

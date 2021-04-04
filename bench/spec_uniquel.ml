@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "uniquel" in
+let bench_name = "uniquel" in
 let ctx = init () in
 let x, x1, nu_nil, nu_set_add, nu =
   map5 list_var ("x","x1","nu_nil", "nu_set_add", "nu") in
@@ -87,7 +87,7 @@ if String.equal which_bench "1" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let preds = ["list_member"; "list_head"; "list_once"] in
@@ -100,6 +100,6 @@ else if String.equal which_bench "2" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench";;

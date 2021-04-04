@@ -14,7 +14,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "leftisthp" in
+let bench_name = "leftisthp" in
 let ctx = init () in
 let tree0 = treei_var "tree0" in
 let tree1, tree2, tree3, a1, a2, b1, b2 =
@@ -121,7 +121,7 @@ if String.equal which_bench "1" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let spectable = add_spec predefined_spec_tab "MergePre"
@@ -141,7 +141,7 @@ else if String.equal which_bench "2" then
   in
   let preds = ["treei_member";"treei_ancestor"] in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench";;
 

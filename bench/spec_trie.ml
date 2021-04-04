@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "trie" in
+let bench_name = "trie" in
 let ctx = init () in
 let cons, cons_hole = make_hole_from_info
     {name = "cons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
@@ -132,15 +132,17 @@ let holel =
    cons_hole;
    e_hole;
    t_hole] in
-(* let preds = ["list_member"; "list_head"; "tree_member"; "tree_head"] in *)
-let preds = ["list_member"; "tree_member";] in
-let spectable = add_spec predefined_spec_tab "Ins"
-    [T.Int, "default"; T.IntList, "i"; T.Int, "a"; T.IntTree, "m";T.IntTree, "nu"]
-    [T.Int, "u"]
-    (E.And [
-        E.Implies (tree_member nu u, Or [tree_member m u; int_eq u default; int_eq u a]);
-      ])
-in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in
-();;
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
+  let preds = ["list_member"; "tree_member";] in
+  let spectable = add_spec predefined_spec_tab "Ins"
+      [T.Int, "default"; T.IntList, "i"; T.Int, "a"; T.IntTree, "m";T.IntTree, "nu"]
+      [T.Int, "u"]
+      (E.And [
+          E.Implies (tree_member nu u, Or [tree_member m u; int_eq u default; int_eq u a]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+  ()
+else raise @@ InterExn "no such bench";;

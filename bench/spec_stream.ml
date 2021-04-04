@@ -13,7 +13,7 @@ open Language.Helper
 open Bench_utils
 open Frontend.Fast.Fast
 ;;
-let testname = "stream" in
+let bench_name = "stream" in
 let ctx = init () in
 let libcons, libcons_hole = make_hole_from_info
     {name = "Cons"; intps = [T.Int; T.IntList]; outtps = [T.IntList];
@@ -84,7 +84,7 @@ if String.equal which_bench "1" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" testname which_bench) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let preds = ["list_member"; "list_order"] in
@@ -99,7 +99,7 @@ else if String.equal which_bench "2" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" testname which_bench) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "3" then
   let holel = [libnil_hole; libcons_hole; liblazy_hole; libforce_hole;] in
@@ -114,6 +114,6 @@ else if String.equal which_bench "3" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 3) ctx mii pre spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench";;
