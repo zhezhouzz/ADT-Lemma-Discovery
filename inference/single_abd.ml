@@ -333,8 +333,8 @@ let neg_query ctx vc_env env new_sr stat =
         let _ = addadd stat.num_z3_neg_query in
         match S.check ctx neg_phi with
         | S.SmtUnsat -> Pass
-        | S.Timeout ->
-          raise @@ InterExn (Printf.sprintf "[%s]neg query time out!" (SZ.layout_imp_version version))
+        | S.Timeout -> Pass
+          (* raise @@ InterExn (Printf.sprintf "[%s]neg query time out!" (SZ.layout_imp_version version)) *)
         (* let _ = Printf.printf "neg_query:%s\n" (Expr.to_string neg_phi) in
          * let version = SZ.V1 in
          * let neg_phi = build_neg_phi version in
