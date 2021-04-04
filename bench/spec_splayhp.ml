@@ -97,6 +97,47 @@ let pre =
        [T.IntTree, "tree2"; T.IntTree, "tree3"])
     ]
 in
+let client_code pivot (tr: int Tree.t) =
+  let open Tree in
+  let rec partition pivot : int Tree.t -> (int Tree.t) * (int Tree.t) = function
+    | Leaf -> Leaf, Leaf
+    | Node (x, a, b) as tr ->
+      if x <= pivot then
+        match b with
+        | Leaf -> tr, Leaf
+        | Node (y, b1, b2) ->
+          if y <= pivot then
+            let small, big = partition pivot b2 in
+            Node (y, Node (x, a, b1), small), big
+          else
+            let small, big = partition pivot b1 in
+            Node (x, a, small), Node (y, big, b2)
+      else
+        match a with
+        | Leaf -> Leaf, tr
+        | Node (y, a1, a2) ->
+          if y <= pivot then
+            let small, big = partition pivot a2 in
+            Node (y, a1, small), Node (x, big, b)
+          else
+            let small, big = partition pivot a1 in
+            small, Node (y, big, Node (x, a2, b))
+  in
+  partition pivot tr
+in
+let mii =
+  let open SpecAbd in
+  {upost = partition [pivot; tr; tree2; tree3];
+   uvars = [T.Int, "pivot"; T.Int, "x"; T.Int, "y";];
+   uinputs = [T.Int, "pivot"; T.IntTree, "tr"];
+   uoutputs = [T.IntTree, "tree2"; T.IntTree, "tree3"];
+   uprog = function
+     | [V.I pivot; V.T tr] ->
+       let (tree2, tree3) = client_code pivot tr in
+       Some [V.T tree2; V.T tree3]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let post = partition [pivot; tr; tree2; tree3] in
 let elems = [T.Int, "pivot"; T.Int, "x"; T.Int, "y";] in
 let holel = [e_hole;
@@ -113,7 +154,7 @@ if String.equal which_bench "1" then
   in
   let preds = ["tree_member";] in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let spectable = set_spec predefined_spec_tab "PartitionPre"
@@ -133,7 +174,7 @@ else if String.equal which_bench "2" then
   in
   let preds = ["tree_member"; "tree_left"; "tree_right"] in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "3" then
   let spectable = set_spec predefined_spec_tab "PartitionPre"
@@ -154,7 +195,7 @@ else if String.equal which_bench "3" then
   in
   let preds = ["tree_member"; "tree_left"; "tree_right"] in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench"
 ;;

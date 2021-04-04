@@ -59,8 +59,17 @@ let pre =
                ]
           )
 in
-let post = SpecApply("concat", [s1;s2;nu]) in
-let elems = [T.Int, "nu_top"] in
+let mii =
+  let open SpecAbd in
+  {upost = SpecApply("concat", [s1;s2;nu]);
+   uvars = [T.Int, "nu_top"];
+   uinputs = [T.IntList, "s1"; T.IntList, "s2"];
+   uoutputs = [T.IntList, "nu"];
+   uprog = function
+     | [V.L s1; V.L s2] -> Some [V.L (s1 @ s2)]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let which_bench = Array.get Sys.argv 1 in
 if String.equal which_bench "1" then
   let holel = [
@@ -79,7 +88,7 @@ if String.equal which_bench "1" then
   let preds = ["list_member"; "list_head"] in
   let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
       (sprintf "%s%s" bench_name which_bench)
-      ctx pre post elems spectable_post holel preds 1 in
+      ctx mii pre spectable_post holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let holel = [
@@ -98,7 +107,7 @@ else if String.equal which_bench "2" then
   let preds = ["list_member"; "list_head"] in
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench)
-      ctx pre post elems spectable_post holel preds 1 in
+      ctx mii pre spectable_post holel preds 1 in
   ()
 else if String.equal which_bench "3" then
   let spectable_post = set_spec (predefined_spec_tab) "concat"
@@ -119,7 +128,26 @@ else if String.equal which_bench "3" then
   let preds = ["list_member"; "list_head"; "list_order"] in
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench)
-      ctx pre post elems spectable_post holel preds 1 in
+      ctx mii pre spectable_post holel preds 1 in
+  ()
+else if String.equal which_bench "4" then
+  let spectable_post = set_spec (predefined_spec_tab) "concat"
+      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
+      [T.Int, "u"; T.Int, "v"]
+      (E.And [
+          E.Implies(list_member l3 u, And [list_member l1 u; list_member l2 u]);
+        ])
+  in
+  let holel = [
+    is_empty_hole;
+    top_hole;
+    tail_hole;
+    push_hole;
+  ] in
+  let preds = ["list_member";] in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench)
+      ctx mii pre spectable_post holel preds 1 in
   ()
 else raise @@ InterExn "no such bench"
 ;;

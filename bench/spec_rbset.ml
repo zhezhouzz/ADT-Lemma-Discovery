@@ -87,35 +87,39 @@ let pre =
        [(T.IntTree, "tmp4");]);
     ]
 in
-(* let vcs =
- *   let precond = And [black [r1]; red [r2]; e [booltrue;te;];] in
- *   let bodys =
- *     [
- *             Implies(And [t [r2;a;x;b;tmp1]; t [r2;tmp1;y;c;tree1];
- *                          t [r1;a;x;b;tmp2]; t [r1;c;z;d;tmp3]; t[r2;tmp2;y;tmp3;tmp4];],
- *                     balance [r1;tree1;z;d;tmp4]);
- *             Implies(And [t [r2;b;y;c;tmp1]; t[r2;te;x;tmp1;tree1];
- *                          t [r1;te;x;b;tmp2]; t [r1;c;z;d;tmp3]; t [r2;tmp2;y;tmp3;tmp4];],
- *                     balance[r1;tree1;z;d;tmp4]);
- *             Implies(And [t [r2;te;x;te;tree1];
- *                          t [r2;tree1;z;d;tmp4];],
- *                     balance[r1;tree1;z;d;tmp4]);
- *             Implies(And [t [r2;b;y;c;tmp1]; t [r2;tmp1;z;d;tree2];
- *                          t [r1;te;x;b;tmp2]; t [r1;c;z;d;tmp3]; t[r2;tmp2;y;tmp3;tmp4];],
- *                     balance[r1;te;x;tree2;tmp4]);
- *             Implies(And [t [r2;c;z;d;tmp1]; t [r2;te;y;tmp1;tree2];
- *                          t [r1;te;x;te;tmp2]; t [r1;c;z;d;tmp3]; t [r2;tmp2;y;tmp3;tmp4];],
- *                     balance[r1;te;x;tree2;tmp4]);
- *             Implies(And [t [r2;te;x;te;tmp4];],
- *                     balance[r1;te;x;te;tmp4]);
- *             Implies(And [t [r1;b;x;d;tmp4];],
- *                     balance[r1;b;x;d;tmp4]);
- *           ]
- *   in
- *   List.map (fun body -> Implies(precond, body)) bodys
- * in *)
-let post = balance [r;tree1;x;tree2;tree3] in
-let elems = [T.Int, "x"; T.Int, "y"] in
+let client_code r tree1 x tree2 =
+  let open LabeledTree in
+  let balance = function
+    | false, Node (true, y, Node (true, x, a, b), c), z, d ->
+      Node (true, y, Node (false, x, a, b), Node (false, z, c, d))
+    | false, Node (true, x, Leaf, Node (true, y, b, c)), z, d ->
+      Node (true, y, Node (false, x, Leaf, b), Node (false, z, c, d))
+    | false, Node (true, x, Leaf, Leaf), z, d ->
+      Node (true, z, Node (true, x, Leaf, Leaf), d)
+    | false, Leaf, x, Node (true, z, Node (true, y, b, c), d) ->
+      Node (true, y, Node (false, x, Leaf, b), Node (false, z, c, d))
+    | false, Leaf, x, Node (true, y, Leaf, Node (true, z, c, d)) ->
+      Node (true, y, Node (false, x, Leaf, Leaf), Node (false, z, c, d))
+    | false, Leaf, x, Node (true, y, Leaf, Leaf) ->
+      Node (true, x, Leaf, Node (true, y, Leaf, Leaf))
+    | false, Leaf, x, Leaf -> Node (true, x, Leaf, Leaf)
+    | true, b, x, d -> Node (true, x, b, d)
+    | a, b, c, d -> Node (a, c, b, d)
+  in
+  balance (r, tree1, x, tree2)
+in
+let mii =
+  let open SpecAbd in
+  {upost =  balance [r;tree1;x;tree2;tree3];
+   uvars = [T.Int, "x"; T.Int, "y"];
+   uinputs = [T.Bool, "r"; T.IntTreeB, "tree1"; T.Int, "x"; T.IntTreeB, "tree2";];
+   uoutputs = [T.IntTreeB, "tree3";];
+   uprog = function
+     | [V.B r; V.TB tree1; V.I x; V.TB tree2] ->
+       Some [V.TB (client_code r tree1 x tree2)]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let holel = [
   e_hole;
   t_hole
@@ -135,7 +139,7 @@ let spectable = add_spec spectable "BalancePost"
 in
 let preds = ["treeb_member";] in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in
+    (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in
 let spectable = add_spec predefined_spec_tab "BalancePre"
     [T.Bool, "r1"; T.IntTreeB, "tree1"; T.Int, "x"; T.IntTreeB, "tree2";T.IntTreeB, "tree3"]
     [T.Int, "u"; T.Int, "v"]
@@ -187,5 +191,5 @@ in
  * in *)
 let preds = ["treeb_member"; "treeb_left"; "treeb_right"; "treeb_parallel"] in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in *)
+ *     (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in *)
 ();;

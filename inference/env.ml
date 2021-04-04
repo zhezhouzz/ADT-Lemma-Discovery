@@ -61,7 +61,10 @@ type vc = {
   multi_pre: flow list;
   post: Ast.t;
   spectable: Ast.spec StrMap.t;
-  vars: T.tpedvar list
+  vars: T.tpedvar list;
+  inputs: T.tpedvar list;
+  outputs: T.tpedvar list;
+  prog: V.t list -> (V.t list) option;
 }
 
 let encode_vc vc =
@@ -70,12 +73,16 @@ let encode_vc vc =
   let post_j = Ast.encode vc.post in
   let spectable_j = Ast.spectable_encode vc.spectable in
   let vars_j = `List (List.map T.tpedvar_encode vc.vars) in
+  let inputs_j = `List (List.map T.tpedvar_encode vc.inputs) in
+  let outputs_j = `List (List.map T.tpedvar_encode vc.outputs) in
   `Assoc [
     "preds", preds_j;
     "multi_pre", multi_pre_j;
     "post", post_j;
     "spectable", spectable_j;
-    "vars", vars_j
+    "vars", vars_j;
+    "inputs", inputs_j;
+    "outputs", outputs_j;
   ]
 
 let decode_vc json =
@@ -85,7 +92,10 @@ let decode_vc json =
                (decode_list "decode_vc" decode_flow);
    post = json |> member "post" |> Ast.decode;
    spectable = json |> member "spectable" |> Ast.spectable_decode;
-   vars = json |> member "vars" |> (decode_list "decode_vc" T.tpedvar_decode)
+   vars = json |> member "vars" |> (decode_list "decode_vc" T.tpedvar_decode);
+   inputs = json |> member "inputs" |> (decode_list "decode_vc" T.tpedvar_decode);
+   outputs = json |> member "outputs" |> (decode_list "decode_vc" T.tpedvar_decode);
+   prog = fun _ -> None;
   }
 
 type single_result = {

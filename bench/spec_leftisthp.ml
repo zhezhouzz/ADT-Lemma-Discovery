@@ -74,8 +74,34 @@ let pre =
       [(T.IntTreeI, "tree3");]);
     ]
 in
-let post = merge [tree1;tree2;tree3] in
-let elems = [T.Int, "x"; T.Int, "y"] in
+let client_code tree1 tree2 =
+  let open LabeledTree in
+  let rank = function Leaf -> 0 | Node (r,_,_,_) -> r in
+  let makeT x a b =
+    if rank a >= rank b then Node (rank b + 1, x, a, b)
+    else Node (rank a + 1, x, b, a)
+  in
+  let rec merge tree1 tree2 =
+    match tree1, tree2 with
+    | tree1, Leaf -> tree1
+    | Leaf, tree2 -> tree2
+    | Node (rank1, x, a1, b1), Node (rank2, y, a2, b2) ->
+      if x <= y then makeT x a1 (merge b1 tree2)
+      else makeT y a2 (merge tree1 b2)
+  in
+  merge tree1 tree2
+in
+let mii =
+  let open SpecAbd in
+  {upost = merge [tree1;tree2;tree3];
+   uvars = [T.Int, "x"; T.Int, "y"];
+   uinputs = [T.IntTreeI, "tree1"; T.IntTreeI, "tree2";];
+   uoutputs = [T.IntTreeI, "tree3";];
+   uprog = function
+     | [V.TI tree1; V.TI tree2] -> Some [V.TI (client_code tree1 tree2)]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let holel = [e_hole;
              maket_hole;
              t_hole;
@@ -95,7 +121,7 @@ if String.equal which_bench "1" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let spectable = add_spec predefined_spec_tab "MergePre"
@@ -115,7 +141,7 @@ else if String.equal which_bench "2" then
   in
   let preds = ["treei_member";"treei_ancestor"] in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench";;
 

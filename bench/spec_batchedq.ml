@@ -54,16 +54,22 @@ let pre = make_match [T.IntList, "l"; T.IntList, "r"] [T.IntList, "l'"; T.IntLis
      )
     ]
 in
-let elems = [] in
-let post = tail [f;r;f';r'] in
-(* let vc =
- *   Implies(cons [x;f;l1],
- *           Ite(is_empty [nu_empty;f],
- *               Implies(rev [r;nu_rev], tail [l1;r;nu_rev;f]),
- *               tail [l1;r;f;r]
- *              )
- *          )
- *     in *)
+let mii =
+  let open SpecAbd in
+  {upost = tail [f;r;f';r'];
+   uvars = [];
+   uinputs = [T.IntList, "f"; T.IntList, "r";];
+   uoutputs = [T.IntList, "f'"; T.IntList, "r'";];
+   uprog = function
+     | [V.L f; V.L r;] ->
+       (match f, r with
+        | [], _ -> None
+        | _ :: f, r ->
+          if List.is_empty f
+          then Some [V.L (List.rev r); V.L f] else Some [V.L f; V.L r])
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let holel = [
   is_empty_hole;
   cons_hole;
@@ -79,7 +85,7 @@ let spectable = add_spec predefined_spec_tab "Tail"
       ])
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in *)
 let preds = ["list_member"; "list_head"; "list_order"] in
 let spectable = add_spec predefined_spec_tab "Tail"
     [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3";T.IntList, "l4"]
@@ -92,5 +98,5 @@ let spectable = add_spec predefined_spec_tab "Tail"
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
+    (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
 ();;

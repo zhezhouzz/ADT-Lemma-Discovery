@@ -93,8 +93,40 @@ let pre =
      (Some brancht, [(T.IntTree, "nu");]);
     ]
 in
-let elems = [T.Int, "default";T.Int, "a";T.Int, "z";T.Int, "y"] in
-let post = ins [default;i;a;m;nu] in
+let client_code default i a m =
+  let open Tree in
+  let rec ins default i a m =
+    match m with
+    | Leaf ->
+      (match i with
+       | [] -> Node(a, Leaf, Leaf)
+       | z :: i' ->
+         if z > 0
+         then Node(default, ins default i' a Leaf, Leaf)
+         else Node(default, Leaf, ins default i' a Leaf)
+      )
+    | Node(y, l, r) ->
+      (match i with
+       | [] -> Node(a, l, r)
+       | z :: i' ->
+         if z > 0
+         then Node(y, ins default i' a l, r)
+         else Node(y, l, ins default i' a r)
+      )
+  in
+  ins default i a m
+in
+let mii =
+  let open SpecAbd in
+  {upost = ins [default;i;a;m;nu];
+   uvars = [T.Int, "default";T.Int, "a";T.Int, "z";T.Int, "y"];
+   uinputs = [T.Int, "default"; T.IntList, "i"; T.Int, "a"; T.IntTree, "m"];
+   uoutputs = [T.IntTree, "nu'"];
+   uprog = function
+     | [V.I default; V.L i; V.I a; V.T m;] -> Some [V.T (client_code default i a m)]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let holel =
   [nil_hole;
    cons_hole;
@@ -110,5 +142,5 @@ let spectable = add_spec predefined_spec_tab "Ins"
       ])
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in
+    (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in
 ();;

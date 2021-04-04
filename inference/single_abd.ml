@@ -501,4 +501,3 @@ let infer ctx benchname vc_env env time_bound =
         env_opt
     in
     env_opt', stat
-

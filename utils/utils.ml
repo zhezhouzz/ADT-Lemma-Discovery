@@ -19,6 +19,7 @@ module StrMap = struct
   let find_opt m k = find_opt k m
   let to_value_list m = fold (fun _ v l -> v :: l) m []
   let to_key_list m = fold (fun k _ l -> k :: l) m []
+  let to_kv_list m = fold (fun k v l -> (k,v) :: l) m []
   let from_kv_list l =
     List.fold_left (fun m (k, v) ->
         add k v m
@@ -40,6 +41,11 @@ end
 
 module List = struct
   include List
+
+  let is_empty = function
+    | [] -> true
+    | _ -> false
+
   let eq compare l1 l2 =
     let rec aux = function
       | ([], []) -> true

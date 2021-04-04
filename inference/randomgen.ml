@@ -118,17 +118,22 @@ module Randomgen = struct
     | T.IntTreeB -> List.map (fun l -> V.TB l) @@ randomgen_labeled_treeb chooses num bound
     | T.Bool -> [V.B true; V.B false]
 
+  let choose_gen chooses bound tp =
+    match tp with
+    | T.Int -> QCheck.Gen.map (fun x -> V.I x) (int_gen chooses)
+    | T.IntList -> QCheck.Gen.map (fun x -> V.L x) (list_gen chooses bound)
+    | T.IntTree -> QCheck.Gen.map (fun x -> V.T x) (tree_gen chooses bound)
+    | T.IntTreeI -> QCheck.Gen.map (fun x -> V.TI x) (treei_gen chooses bound)
+    | T.IntTreeB -> QCheck.Gen.map (fun x -> V.TB x) (treeb_gen chooses bound)
+    | T.Bool -> QCheck.Gen.map (fun x -> V.B x) bool_gen
+
   let gens ~chooses ~num ~tps ~bound =
-    let gens = List.map (fun tp ->
-        match tp with
-        | T.Int -> QCheck.Gen.map (fun x -> V.I x) (int_gen chooses)
-        | T.IntList -> QCheck.Gen.map (fun x -> V.L x) (list_gen chooses bound)
-        | T.IntTree -> QCheck.Gen.map (fun x -> V.T x) (tree_gen chooses bound)
-        | T.IntTreeI -> QCheck.Gen.map (fun x -> V.TI x) (treei_gen chooses bound)
-        | T.IntTreeB -> QCheck.Gen.map (fun x -> V.TB x) (treeb_gen chooses bound)
-        | T.Bool -> QCheck.Gen.map (fun x -> V.B x) bool_gen
-      ) tps in
+    let gens = List.map (choose_gen chooses bound) tps in
     let gen = QCheck.Gen.(flatten_l gens) in
+    QCheck.Gen.generate ~rand:(Random.State.make [|Random.int 100|]) ~n:num gen
+
+  let gen_one ~chooses ~num ~tp ~bound =
+    let gen = choose_gen chooses bound tp in
     QCheck.Gen.generate ~rand:(Random.State.make [|Random.int 100|]) ~n:num gen
 
   let gen_tpvars ~tpvars ~num ~fv_num ~bound =

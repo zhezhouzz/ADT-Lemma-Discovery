@@ -88,10 +88,10 @@ module Epr (E: EprTree.EprTree): Epr = struct
       let env = List.fold_left (fun m (name, value) ->
           StrMap.add name (V.I value) m
         ) env us in
-      let _ = Printf.printf "assign free variables: %s\n"
-          (List.fold_left (fun str (name, v) ->
-               Printf.sprintf "%s%s=%i;" str name v)
-          "" us) in
+      (* let _ = Printf.printf "assign free variables: %s\n"
+       *     (List.fold_left (fun str (name, v) ->
+       *          Printf.sprintf "%s%s=%i;" str name v)
+       *     "" us) in *)
       if exec e env then
         match next ids with
         | None -> true

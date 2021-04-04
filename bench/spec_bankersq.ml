@@ -80,8 +80,28 @@ let pre =
            )
   ]
 in
-let elems = [T.Int, "x";] in
-let post = snoc [lenf;f;lenr;r;x;lenf';f';lenr';r'] in
+let client_code lenf f lenr r x =
+  let snoc (lenf, f, lenr, r) x =
+    let lenr = lenr + 1 in
+    let r = x :: r in
+    if lenr <= lenf then (lenf, f, lenr, r)
+    else (lenf + lenr, f @ (List.rev r), 0, [])
+  in
+  snoc (lenf, f, lenr, r) x
+in
+let mii =
+  let open SpecAbd in
+  {upost = snoc [lenf;f;lenr;r;x;lenf';f';lenr';r'];
+   uvars = [T.Int, "x";];
+   uinputs = [T.Int, "lenf"; T.IntList, "f";T.Int, "lenr"; T.IntList, "r"; T.Int, "x"];
+   uoutputs = [T.Int, "lenf'"; T.IntList, "f'";T.Int, "lenr'"; T.IntList, "r'"];
+   uprog = function
+     | [V.I lenf; V.L f; V.I lenr; V.L r; V.I x;] ->
+       let (lenf', f', lenr', r') = client_code lenf f lenr r x in
+       Some [V.I lenf'; V.L f'; V.I lenr'; V.L r';]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 (* let vc =
  *   Implies(And[
  *       intadd [lenr;const1;lenr1];
@@ -119,7 +139,7 @@ let spectable = add_spec predefined_spec_tab "Snoc"
           ))
 in
 (* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
+ *     (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in *)
 let preds = ["list_member"; "list_order"] in
 let spectable = add_spec spectable "Snoc"
     [T.Int, "lenf";T.IntList, "f";T.Int, "lenr";T.IntList, "r"; T.Int, "x";
@@ -130,5 +150,5 @@ let spectable = add_spec spectable "Snoc"
         ))
 in
 let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 2) ctx pre post elems spectable holel preds 1 in
+    (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
 ();;

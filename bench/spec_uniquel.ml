@@ -53,46 +53,53 @@ let pre =
       [(T.IntList, "nu");]);
     ]
 in
-let post = set_add [a;x;nu] in
-let elems = [T.Int, "a"; T.Int, "a1"] in
-(* let vc =
- *   Ast.Ite (is_empty [nu_empty; x],
- *            Implies (cons [a;x;nu],
- *                     set_add [a;x;nu]
- *                    ),
- *            Implies (cons [a1;x1;x],
- *                     Ite(inteq [nu_eq;a;a1;],
- *                         Implies(cons [a1;x1;nu], set_add [a;x;nu]),
- *                         Implies(And[
- *                             set_add [a;x1;nu_set_add];
- *                             cons [a1;nu_set_add;nu]
- *                           ], set_add [a;x;nu])
- *                        )
- *                    )
- *           )
- * in *)
+let client_code a x =
+  let rec set_add a x =
+    match x with
+    | [] -> [a]
+    | a1 :: x1 ->
+      if a == a1 then a1 :: x1 else a1 :: (set_add a x1)
+  in
+  set_add a x
+in
+let mii =
+  let open SpecAbd in
+  {upost = set_add [a;x;nu];
+   uvars = [T.Int, "a"; T.Int, "a1"];
+   uinputs = [T.Int, "a"; T.IntList, "x";];
+   uoutputs = [T.IntList, "nu"];
+   uprog = function
+     | [V.I a; V.L x;] -> Some [V.L (client_code a x)]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let holel =
   [nil_hole;
    cons_hole;] in
-let preds = ["list_member"; "list_head"; "list_once"] in
-let spectable = add_spec predefined_spec_tab "SetAdd"
-    [T.Int, "x"; T.IntList, "l1";T.IntList, "l2"]
-    [T.Int, "u";]
-    (E.And [
-        E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
-      ])
-in
-(* let total_env = SpecAbd.multi_infer
- *     (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in *)
-let preds = ["list_member"; "list_head"; "list_once"] in
-let spectable = add_spec spectable "SetAdd"
-    [T.Int, "x"; T.IntList, "l1";T.IntList, "l2"]
-    [T.Int, "u";]
-    (E.And [
-        E.Implies (list_once l1 u, list_once l2 u);
-        E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
-      ])
-in
-let total_env = SpecAbd.multi_infer
-    (sprintf "%s%i" testname 1) ctx pre post elems spectable holel preds 1 in
-();;
+let which_bench = Array.get Sys.argv 1 in
+if String.equal which_bench "1" then
+  let preds = ["list_member"; "list_head"; "list_once"] in
+  let spectable = add_spec predefined_spec_tab "SetAdd"
+      [T.Int, "x"; T.IntList, "l1";T.IntList, "l2"]
+      [T.Int, "u";]
+      (E.And [
+          E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" testname 1) ctx mii pre spectable holel preds 1 in
+  ()
+else if String.equal which_bench "2" then
+  let preds = ["list_member"; "list_head"; "list_once"] in
+  let spectable = add_spec predefined_spec_tab "SetAdd"
+      [T.Int, "x"; T.IntList, "l1";T.IntList, "l2"]
+      [T.Int, "u";]
+      (E.And [
+          E.Implies (list_once l1 u, list_once l2 u);
+          E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" testname 2) ctx mii pre spectable holel preds 1 in
+  ()
+else raise @@ InterExn "no such bench";;

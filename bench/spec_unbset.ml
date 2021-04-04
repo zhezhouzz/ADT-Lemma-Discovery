@@ -52,8 +52,29 @@ let pre =
        [(T.IntTree, "nu")]
       );
     ] in
-let post = insert [x; tree3; nu] in
-let elems = [T.Int, "x"; T.Int, "y";] in
+let client_code x tree3 =
+  let open Tree in
+  let rec insert x tree3 =
+    match tree3 with
+    | Leaf -> Node (x, Leaf, Leaf)
+    | Node (y, tree1, tree2) ->
+      if x < y then Node (y, insert x tree1, tree2)
+      else if y < x then Node (y, tree1, insert x tree2)
+      else Node (y, tree1, tree2)
+  in
+  insert x tree3
+in
+let mii =
+  let open SpecAbd in
+  {upost = insert [x; tree3; nu];
+   uvars = [T.Int, "x"; T.Int, "y";];
+   uinputs = [T.Int, "x"; T.IntTree, "tree3"];
+   uoutputs = [T.IntTree, "nu"];
+   uprog = function
+     | [V.I x; V.T tree3] -> Some [V.T (client_code x tree3)]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let holel = [e_hole;
              t_hole
             ] in
@@ -71,7 +92,7 @@ if String.equal which_bench "1" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" bench_name 1) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%i" bench_name 1) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let preds = ["tree_member";"tree_head"] in
@@ -87,7 +108,7 @@ else if String.equal which_bench "2" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" bench_name 2) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%i" bench_name 2) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "3" then
   let spectable = set_spec predefined_spec_tab "InsertPre"
@@ -103,7 +124,22 @@ else if String.equal which_bench "3" then
   in
   let preds = ["tree_member";"tree_left"] in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" bench_name 3) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%i" bench_name 3) ctx mii pre spectable holel preds 1 in
+  ()
+else if String.equal which_bench "4" then
+  let preds = ["tree_member";] in
+  let spectable = set_spec predefined_spec_tab "InsertPre"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] []
+      (E.True)
+  in
+  let spectable = set_spec spectable "InsertPost"
+      [T.Int, "x";T.IntTree, "tree1";T.IntTree, "tree2"] [T.Int, "u"]
+      (E.And [
+          E.Iff (tree_member tree2 u, E.And [tree_member tree1 u; int_eq u x]);
+        ])
+  in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%i" bench_name 1) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench";;
 

@@ -62,8 +62,17 @@ let pre =
     liblazy [nu;nu']
   ]
 in
-let post = reverse [acc;s;nu'] in
-let elems = [T.Int, "hd"] in
+let mii =
+  let open SpecAbd in
+  {upost = reverse [acc;s;nu'];
+   uvars = [T.Int, "hd"];
+   uinputs = [T.IntList, "acc"; T.IntList, "s";];
+   uoutputs = [T.IntList, "nu'"];
+   uprog = function
+     | [V.L acc; V.L s;] -> Some [V.L (acc @ (List.rev s))]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
 let holel = [libnil_hole; liblazy_hole; libforce_hole; libcons_hole;] in
 let which_bench = Array.get Sys.argv 1 in
 if String.equal which_bench "1" then
@@ -75,7 +84,7 @@ if String.equal which_bench "1" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" testname which_bench) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%s" testname which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "2" then
   let preds = ["list_member"; "list_order"] in
@@ -90,7 +99,7 @@ else if String.equal which_bench "2" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" testname which_bench) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%s" testname which_bench) ctx mii pre spectable holel preds 1 in
   ()
 else if String.equal which_bench "3" then
   let holel = [libnil_hole; libcons_hole; liblazy_hole; libforce_hole;] in
@@ -105,6 +114,6 @@ else if String.equal which_bench "3" then
         ])
   in
   let total_env = SpecAbd.multi_infer
-      (sprintf "%s%i" testname 3) ctx pre post elems spectable holel preds 1 in
+      (sprintf "%s%i" testname 3) ctx mii pre spectable holel preds 1 in
   ()
 else raise @@ InterExn "no such bench";;
