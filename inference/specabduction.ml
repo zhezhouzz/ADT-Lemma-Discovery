@@ -375,8 +375,9 @@ module SpecAbduction = struct
               StrMap.add name v m
             ) m (List.combine vc.outputs outputs) in
           (* let _ = StrMap.iter (fun name v ->
-           *     printf "%s -> %s" name (V.layout v)
-           *   ) m in *)
+           *     printf "%s -> %s; " name (V.layout v)
+           *   ) m in
+           * let _ = printf "\n" in *)
           if Ast.exec vc.post vc.spectable m
           then None
           else Some m
@@ -571,6 +572,7 @@ module SpecAbduction = struct
   let consistent_solution ctx benchname mii pres spectable holel preds startX =
     let cstat = Env.init_consistent_stat () in
     let rec search_hyp numX =
+      (* let _ = if numX > 1 then raise @@ InterExn "consistent_solution" else () in *)
       let env = init_env mii pres spectable preds numX holel in
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"

@@ -149,5 +149,24 @@ else if String.equal which_bench "4" then
       (sprintf "%s%s" bench_name which_bench)
       ctx mii pre spectable_post holel preds 1 in
   ()
+else if String.equal which_bench "5" then
+  let spectable_post = set_spec (predefined_spec_tab) "concat"
+      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
+      [T.Int, "u"; T.Int, "v"]
+      (E.And [
+          E.Implies(list_member l1 u, list_member l3 u);
+        ])
+  in
+  let holel = [
+    is_empty_hole;
+    top_hole;
+    tail_hole;
+    push_hole;
+  ] in
+  let preds = ["list_member";] in
+  let total_env = SpecAbd.multi_infer
+      (sprintf "%s%s" bench_name which_bench)
+      ctx mii pre spectable_post holel preds 1 in
+  ()
 else raise @@ InterExn "no such bench"
 ;;
