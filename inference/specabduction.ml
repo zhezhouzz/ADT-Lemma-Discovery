@@ -569,10 +569,15 @@ module SpecAbduction = struct
     | CRCex of (V.t StrMap.t) list
     | CRFinalEnv of multi_spec_env
 
+  let max_qv = 4
+
   let consistent_solution ctx benchname mii pres spectable holel preds startX =
     let cstat = Env.init_consistent_stat () in
     let rec search_hyp numX =
-      (* let _ = if numX > 1 then raise @@ InterExn "consistent_solution" else () in *)
+      let _ = if numX >= max_qv then
+          let _ = Env.save_consistent_stat benchname cstat in
+          raise @@ InterExn "consistent_solution"
+        else () in
       let env = init_env mii pres spectable preds numX holel in
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"
