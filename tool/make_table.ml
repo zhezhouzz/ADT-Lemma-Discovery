@@ -179,12 +179,12 @@ if String.equal commandline "consistent" then
   ()
 else if String.equal commandline "single" then
   let info = [
-    (* "bankersq", "BankersqCons", [1;2]; "batchedq", "ListCons", [1;2]; *)
+    "bankersq", "BankersqCons", [1;2]; "batchedq", "ListCons", [1;2];
     "customstk", "push", [1;3];
-    (* "leftisthp", "t", [1;2];
-     * "splayhp", "t", [1;2;3]; "stream", "Cons", [1;2;3];
-     * "rbset", "t", [1;2]; "trie", "triet", [1];
-     * "unbset", "t", [1;2;3]; "uniquel", "cons", [1;2]; *)
+    "leftisthp", "t", [1;2];
+    "splayhp", "t", [1;2;3]; "stream", "Cons", [1;2;3];
+    "rbset", "t", [1;2]; "trie", "triet", [1];
+    "unbset", "t", [1;2;3]; "uniquel", "cons", [1;2];
   ] in
   let make_lines info =
     let table = List.fold_left (fun ts (benchname, funcname, nums) ->
