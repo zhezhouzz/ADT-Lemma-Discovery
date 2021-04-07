@@ -66,10 +66,30 @@ module Epr (E: EprTree.EprTree): Epr = struct
     | None -> 0 :: us
     | Some m -> (m + 1) :: us
 
+  let get_ints env =
+    let c = StrMap.fold (fun _ v c ->
+        match v with
+        | V.I i -> i :: c
+        | V.B _ -> c
+        | V.L il -> il @ c
+        | V.T tr -> (Tree.flatten tr) @ c
+        | V.TI tr -> (LabeledTree.flatten tr) @ c
+        | V.TB tr -> (LabeledTree.flatten tr) @ c
+        | V.NotADt -> c
+      ) env [] in
+    match List.remove_duplicates_eq c with
+    | [] -> [0]
+    | _ as c ->
+      (match IntList.max_opt c with
+       | None -> raise @@ InterExn "get_ints"
+       | Some m -> (m + 1) :: c
+      )
+
   let forallformula_exec (fv, e) env =
     let _, fv = List.split fv in
-    let us = forallu e env in
+    (* let us = forallu e env in *)
     (* let _ = Printf.printf "%s\n" (intlist_to_string us) in *)
+    let us = get_ints env in
     let len = List.length us in
     let ids = List.init (List.length fv) (fun _ -> 0) in
     let rec next = function

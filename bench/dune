@@ -5,7 +5,7 @@
 (tests
  (names
  serialization
- spec_customstk3
+ spec_customstk
  spec_splayhp
  spec_leftisthp
  spec_unbset

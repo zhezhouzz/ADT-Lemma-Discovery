@@ -76,10 +76,21 @@ module SpecAbduction = struct
       | _ -> None, List.rev @@ List.tl @@ List.rev hole.args
 
   type sample_version = SV1 of int | SV2 of int
-  let sver = ref (SV1 100)
+  let sver = ref (SV2 200)
 
   let handle_snum snum =
     match snum with None -> () | Some i -> sver := SV2 i
+
+  let count_tested_sample env hole samples =
+    let c = List.fold_left (fun c args_value ->
+        let m = List.fold_left (fun m ((_, name), v) ->
+            StrMap.add name v m
+          ) StrMap.empty (List.combine hole.args args_value) in
+        if Epr.forallformula_exec env.abduciable m
+        then c
+        else c + 1
+      ) 0 samples in
+    c
 
   let sampling hole imp env =
     let _, current_epr = env.abduciable in
@@ -96,6 +107,7 @@ module SpecAbduction = struct
         | Some output -> Some (input @ output)
         | None -> None
       ) samples in
+    let c = count_tested_sample env hole samples in
     let s =
       match !sver with
       | SV1 _ ->
@@ -162,7 +174,7 @@ module SpecAbduction = struct
           Hashtbl.add env.fvtab fv MultiPos
       ) fvs in
     let _ = printf "sampling [%s] len(fvs) = %i\n" hole.name (!counter) in
-    List.length fvs
+    c, List.length fvs
 
   let gather_neg_fvec_to_tab ctx hole env applied_args qvrange model query =
     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
@@ -356,9 +368,17 @@ module SpecAbduction = struct
           let samples = R.gen_one ~chooses:qvrange ~num:50
               ~tp:tp ~bound:samplebound in
           let makem v = StrMap.add name v StrMap.empty in
+          (* let _ = List.iter (fun v ->
+           *     printf "raw: %s;\n" (V.layout v)
+           *   ) samples in
+           * let _ = printf "\n" in *)
           let samples = List.filter_map (fun v ->
               if Epr.exec c (makem v) then Some v else None
             ) samples in
+          (* let _ = List.iter (fun v ->
+           *     printf "instance: %s;\n" (V.layout v)
+           *   ) samples in
+           * let _ = printf "\n" in *)
           samples
       ) vc.inputs in
     let inputs_instances = List.choose_list_list @@
@@ -482,17 +502,21 @@ module SpecAbduction = struct
     let rec pos_refine_loop env =
       let _ = addadd cstat_once.Env.num_pos_refine in
       let total_pos_num = ref 0 in
+      let total_sample_pos_num = ref 0 in
       let spec_envs' = StrMap.mapi (fun specname spec_env ->
           let hole = StrMap.find "pos_refine_loop" env.holes specname in
           let imp = StrMap.find "pos_refine_loop" env.imps specname in
-          let pos_num = sampling hole imp spec_env in
+          let pos_sample_num, pos_num = sampling hole imp spec_env in
           let _ = total_pos_num := !total_pos_num + pos_num in
+          let _ = total_sample_pos_num := !total_sample_pos_num + pos_sample_num in
           let spec_env = learn_in_spec_env spec_env in
           spec_env
         ) env.spec_envs
       in
       let _ = cstat_once.Env.num_fv_of_samples :=
           !total_pos_num + !(cstat_once.Env.num_fv_of_samples) in
+      let _ = cstat_once.Env.num_pos_sample_violate_spec :=
+          !total_sample_pos_num + !(cstat_once.Env.num_pos_sample_violate_spec) in
       if !total_pos_num > 0
       then
         let env = {env with spec_envs = spec_envs'} in
@@ -690,12 +714,14 @@ module SpecAbduction = struct
     in
     let size = pow 2 len in
     let ftab = Hashtbl.create size in
+    let pos_counter = ref 0 in
     let rec aux idx =
       let fvec = Array.to_list fv_arr in
       (* let _ = Printf.printf "iter:%s\n" (boollist_to_string fvec) in *)
       let dt1_b = epr_exec_fv epr1 fset fvec in
       let dt2_b = epr_exec_fv epr2 fset fvec in
       let _ = if f dt1_b dt2_b then
+          let _ = pos_counter := !pos_counter + 1 in
           Hashtbl.add ftab fvec D.Pos
         else
           Hashtbl.add ftab fvec D.Neg
@@ -704,25 +730,29 @@ module SpecAbduction = struct
       | None -> ()
       | Some idx -> aux idx
     in
-    (aux 0;
-     Epr.simplify_dt_result @@
-     D.to_epr @@
-     fst @@ D.classify_hash fset ftab D.is_pos)
+    let _ = aux 0 in
+    let result = Epr.simplify_dt_result @@
+      D.to_epr @@
+      fst @@ D.classify_hash fset ftab D.is_pos in
+    !pos_counter, result
 
   let merge_spec spec preds =
     let (args, (qv, body)) = spec in
-    match body with
-    | Epr.Or [body_init; body_add] ->
+    let handle body_init body_add =
       let fset = F.make_set_from_preds_max preds args qv in
-      let spec' = (args, (qv,
-              operate_epr (fun e1 e2 -> e1 || e2) fset body_init body_add
-                         )) in
-      spec'
-    | _ -> spec
+      let c, body = operate_epr (fun e1 e2 -> e1 || e2) fset body_init body_add in
+      let spec' = (args, (qv, body)) in
+      c, spec'
+    in
+    match body with
+    | Epr.Or [body_init; body_add] -> handle body_init body_add
+    | _ as body_init ->
+      let c, _ = handle body_init (Epr.Not Epr.True) in
+      c, spec
 
   let merge_spectable spectable preds =
     StrMap.map (fun spec ->
-        merge_spec spec preds
+        snd @@ merge_spec spec preds
       ) spectable
 
   let merge_max_result ctx resultfilename =
@@ -869,7 +899,7 @@ module SpecAbduction = struct
             name (List.length env.fset) (pow 2 (List.length env.fset))
         ) env.spec_envs in
       let _ = save_result (benchname ^ "_consistent.json") preds names env.vc in
-      (* let _ = raise @@ InterExn "end" in *)
+      let _ = raise @@ InterExn "end" in
       let single_envs = List.map (fun specname ->
           let target_hole = StrMap.find "multi_infer" env.holes specname in
           let spec_env = StrMap.find "multi_infer" env.spec_envs specname in

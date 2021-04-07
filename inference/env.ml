@@ -315,6 +315,7 @@ let save_stat benchname fname time_bound stat =
 type consistent_stat_once = {
   num_qv: int;
   num_pos_refine: int ref;
+  num_pos_sample_violate_spec: int ref;
   num_fv_of_samples: int ref;
   num_cex: int ref;
   num_fv_of_cex: int ref;
@@ -324,6 +325,7 @@ type consistent_stat_once = {
 let init_consistent_stat_once num_qv =
   {num_qv = num_qv;
    num_pos_refine = ref 0;
+   num_pos_sample_violate_spec = ref 0;
    num_fv_of_samples = ref 0;
    num_cex = ref 0;
    num_fv_of_cex = ref 0;
@@ -346,6 +348,7 @@ let encode_consistent_stat_once stat =
   `Assoc [
     "num_qv", `Int (stat.num_qv);
     "num_pos_refine", `Int !(stat.num_pos_refine);
+    "num_pos_sample_violate_spec", `Int !(stat.num_pos_sample_violate_spec);
     "num_fv_of_samples", `Int !(stat.num_fv_of_samples);
     "num_cex", `Int !(stat.num_cex);
     "num_fv_of_cex", `Int !(stat.num_fv_of_cex);

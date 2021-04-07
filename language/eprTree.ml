@@ -296,4 +296,25 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
       | Ite (p1, p2, p3) ->(aux p1) + (aux p2) + (aux p3)
     in
     aux a
+
+  (* let is_lit = function
+   *   | Not (Atom _) | Atom _ -> true
+   *   | _ -> false
+   * 
+   * let to_clauses (qv, body) =
+   *   let rec aux prefix = function
+   *     | True | Not True -> raise @@ InterExn "never happen in to_clauses"
+   *     | Not (Atom _) as p -> prefix, p
+   *     | Atom _ as p -> prefix, p
+   *     | Not _ -> raise @@ InterExn "never happen in to_clauses"
+   *     | Implies (_, _) -> raise @@ InterExn "never happen in to_clauses"
+   *     | And ps ->
+   *       if List.for_all is_lit ps then 
+   *       else raise @@ InterExn "never happen in to_clauses"
+   *     | Or ps -> List.fold_left (fun sum p -> (aux p) + sum) 0 ps
+   *     | Not p -> aux p
+   *     | Iff (p1, p2) -> (aux p1) + (aux p2)
+   *     | Ite (p1, p2, p3) ->(aux p1) + (aux p2) + (aux p3)
+   *   in
+   *   aux a *)
 end

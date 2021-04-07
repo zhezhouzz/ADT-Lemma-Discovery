@@ -1,0 +1,4 @@
+(executable
+ (name make_table)
+ (libraries ounit2 solver inference frontend)
+ )
