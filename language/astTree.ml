@@ -33,6 +33,7 @@ module type AstTree = sig
   val spectable_encode: spec Utils.StrMap.t -> Yojson.Basic.t
   val spectable_decode: Yojson.Basic.t -> spec Utils.StrMap.t
   val spec_num_atom: spec -> int
+  val count_apps: t -> string list -> int
 end
 
 module AstTree (E: Epr.Epr) : AstTree
@@ -258,6 +259,22 @@ module AstTree (E: Epr.Epr) : AstTree
   let conj_length = function
     | And ps -> List.length ps
     | _ -> raise @@ InterExn "conj_length::not a conj"
+
+  let count_apps a names =
+    let c = ref 0 in
+    let rec aux a =
+      match a with
+      | SpecApply (name, _) ->
+        if List.exists (fun name' -> String.equal name name') names
+        then c := !c + 1
+        else ()
+      | Or _ -> raise @@ InterExn "pre count_apps"
+      | And ps -> List.iter (fun p -> aux p) ps
+      | Implies (_, _) -> ()
+      | _ -> raise @@ InterExn "pre count_apps"
+    in
+    let _ = aux a in
+    !c
 
   open Yojson.Basic
   let treetp_name = "A"

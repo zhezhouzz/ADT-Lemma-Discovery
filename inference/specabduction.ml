@@ -879,8 +879,10 @@ module SpecAbduction = struct
     let _ = List.iter (fun pre ->
         printf "[pre]\n%s\n" (Ast.vc_layout pre)
       ) pres in
-    let _ = Ast.print_spectable spectable in
-    (* let _ = raise @@ InterExn "end" in *)
+    (* let _ = Ast.print_spectable spectable in *)
+    let c = List.fold_left (fun c pre -> c + (Ast.count_apps pre names)) 0 pres in
+    let _ = printf "#R:\n%i\n" c in
+    let _ = raise @@ InterExn "end" in
     let env = consistent_solution ctx benchname
         mii pres spectable holel preds startX in
     match env with

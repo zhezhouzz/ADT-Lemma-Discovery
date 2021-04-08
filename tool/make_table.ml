@@ -18,8 +18,8 @@ type table = {
 let write_table table =
   let line t =
     let str =
-      sprintf "%s & $%i$ & ($%i$, $%i$) & $%i$ & $%i$ & $%i$ & $%i$ & $%.2f$"
-        t.name t.num_r t.num_qv t.num_pred t.num_cex t.num_cex_fv t.num_pos t.num_pos_fv t.time in
+      sprintf "%s & $%i$ & ($%i$, $%i$) & $%i$ & $%.2f$"
+        t.name t.num_r t.num_qv t.num_pred t.num_cex t.time in
     match t.size with
     | None -> sprintf "%s & none" str
     | Some s -> sprintf "%s & %i" str s in
