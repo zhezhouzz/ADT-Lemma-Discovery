@@ -126,6 +126,7 @@ let holel = [
   t_hole
 ] in
 let which_bench = Array.get Sys.argv 1 in
+let if_diff = try Some (Array.get Sys.argv 2) with _ -> None in
 if String.equal which_bench "1" then
   let spectable = add_spec predefined_spec_tab "BalancePre"
       [T.Bool, "r1"; T.IntTreeB, "tree1"; T.Int, "x"; T.IntTreeB, "tree2";T.IntTreeB, "tree3"]
@@ -141,6 +142,12 @@ if String.equal which_bench "1" then
         ])
   in
   let preds = ["treeb_member";] in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
@@ -169,6 +176,12 @@ else if String.equal which_bench "2" then
         ])
   in
   let preds = ["treeb_member"; "treeb_left"; "treeb_right"; "treeb_parallel"] in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()

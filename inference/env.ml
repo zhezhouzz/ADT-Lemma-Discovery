@@ -380,6 +380,7 @@ let encode_infer_result (preds, spectable) =
 
 let decode_infer_result json =
   let open Util in
+  (* let _ = Printf.printf "%s\n" (pretty_to_string (json |> member "preds")) in *)
   let preds = json |> member "preds" |> decode_list "decode_infer_result" to_string in
   let spectable = json |> member "spectable" |> Ast.spectable_decode in
   (preds, spectable)

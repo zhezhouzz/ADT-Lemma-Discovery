@@ -11,6 +11,7 @@ module type Epr = sig
   val neg_forallf: forallformula -> Tp.Tp.tpedvar list * forallformula
   val related_dt: t -> string list -> string list
   val desugar: t -> t
+  val to_horns: t -> t list
   val to_nnf: t -> t
   val simplify_ite: t -> t
   val forallformula_simplify_ite: forallformula -> forallformula
@@ -39,32 +40,32 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | Iff (e1, e2) -> (aux e1) == (aux e2)
     in
     aux e
-  let extract_dt e env =
-    let concat l =
-      let la, lb = List.split l in
-      (List.concat la, List.concat lb)
-    in
-    let rec aux = function
-      | True -> [], []
-      | Atom b -> SE.extract_dt b
-      | Implies (p1, p2) -> concat @@ List.map aux [p1;p2]
-      | And ps -> concat @@ List.map aux ps
-      | Or ps -> concat @@ List.map aux ps
-      | Not p -> aux p
-      | Iff (p1, p2) -> concat @@ List.map aux [p1;p2]
-      | Ite (p1, p2, p3) -> concat @@ List.map aux [p1;p2;p3]
-    in
-    let dts, names = aux e in
-    let names = List.remove_duplicates String.equal names in
-    dts @ (List.map (StrMap.find "extract_dt" env) names)
+  (* let extract_dt e env =
+   *   let concat l =
+   *     let la, lb = List.split l in
+   *     (List.concat la, List.concat lb)
+   *   in
+   *   let rec aux = function
+   *     | True -> [], []
+   *     | Atom b -> SE.extract_dt b
+   *     | Implies (p1, p2) -> concat @@ List.map aux [p1;p2]
+   *     | And ps -> concat @@ List.map aux ps
+   *     | Or ps -> concat @@ List.map aux ps
+   *     | Not p -> aux p
+   *     | Iff (p1, p2) -> concat @@ List.map aux [p1;p2]
+   *     | Ite (p1, p2, p3) -> concat @@ List.map aux [p1;p2;p3]
+   *   in
+   *   let dts, names = aux e in
+   *   let names = List.remove_duplicates String.equal names in
+   *   dts @ (List.map (StrMap.find "extract_dt" env) names) *)
 
-  let forallu e env =
-    let dts = extract_dt e env in
-    let us = List.concat @@ List.map V.flatten_forall dts in
-    let us = List.remove_duplicates (fun x y -> x == y) us in
-    match IntList.max_opt us with
-    | None -> 0 :: us
-    | Some m -> (m + 1) :: us
+  (* let forallu e env =
+   *   let dts = extract_dt e env in
+   *   let us = List.concat @@ List.map V.flatten_forall dts in
+   *   let us = List.remove_duplicates (fun x y -> x == y) us in
+   *   match IntList.max_opt us with
+   *   | None -> 0 :: us
+   *   | Some m -> (m + 1) :: us *)
 
   let get_ints env =
     let c = StrMap.fold (fun _ v c ->
@@ -181,6 +182,56 @@ module Epr (E: EprTree.EprTree): Epr = struct
       | _ -> raise @@ InterExn "undesugar"
     in
     aux (desugar a)
+
+  let to_horns a =
+    let neg a =
+      match a with
+      | Atom _ | True -> Not a
+      | Not True -> True
+      | Not (Atom b) -> Atom b
+      | _ -> raise @@ InterExn "to_horns:neg"
+    in
+    let rec disj ps =
+      let rec aux ps =
+        match ps with
+        | [] -> raise @@ InterExn "to_horns:disj"
+        | [Atom b] -> [[], Atom b]
+        | [Not (Atom b)] -> [[], Not (Atom b)]
+        | [And ps] -> conj ps
+        | [Or ps] -> aux ps
+        | [Ite (p1, p2, p3)] -> iteaux (Ite (p1, p2, p3))
+        | [_] -> raise @@ InterExn (Printf.sprintf "to_horns:disj(%s)"
+                                    (List.to_string layout ps))
+        | h :: tl ->
+          List.map (fun (pre, post) -> (neg h) :: pre, post) (aux tl)
+      in
+      aux ps
+    and conj ps =
+      let aux p =
+        match p with
+        | Atom b -> [[], Atom b]
+        | Not (Atom b) -> [[], Not (Atom b)]
+        | And ps -> conj ps
+        | Or ps -> disj ps
+        | Ite (_, _, _) -> iteaux p
+        | _ -> raise @@ InterExn (Printf.sprintf "to_horns:conj(%s)"
+                                    (List.to_string layout ps))
+      in
+      List.flatten (List.map aux ps)
+    and iteaux a =
+      match a with
+      | Atom _ | True | Not (True) | Not (Atom _) -> [[], a]
+      | And ps -> conj ps
+      | Or ps -> disj ps
+      | Iff (_, _) -> [[], a]
+      | Implies (_, _) -> [[], a]
+      | Ite (p1, p2, p3) ->
+        let p2s = List.map (fun (hd, tl) -> hd @ [p1], tl) (iteaux p2) in
+        let p3s = List.map (fun (hd, tl) -> hd @ [neg p1], tl) (iteaux p3) in
+        p2s @ p3s
+      | _ -> raise @@ InterExn "to_horns"
+    in
+    List.map (fun (hd, tl) -> Implies (And hd, tl)) (iteaux a)
 
   let simplify_ite a =
     let desugar_ite (p1, p2, p3) =

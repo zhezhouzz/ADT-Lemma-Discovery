@@ -1,6 +1,8 @@
 module SpecAbd = Inference.SpecAbduction;;
 module Env = Inference.Env;;
 module Ast = Language.SpecAst;;
+module Epr = Ast.E;;
+module T = Tp.Tp;;
 open Printf;;
 open Utils;;
 type table = {
@@ -96,13 +98,16 @@ let make_single_table benchname num funcname =
   let statjson = from_file statfile in
   let (preds, result) = Env.decode_infer_result (from_file resultfile) in
   let bound_spec = StrMap.find "make_single_table" result funcname in
+  let c = fst (SpecAbd.merge_spec bound_spec preds) in
+  let _ = Printf.printf "%s %i %i\n" benchname num c in
+  (* let _ = raise @@ InterExn "end" in *)
   let num_oracle_fv, size_oracle = try
       let spectable = snd @@ Env.decode_infer_result @@ from_file oraclefile in
       let spec = StrMap.find "make_single_table" spectable funcname in
       let num_oracle_fv, _ = SpecAbd.merge_spec spec preds in
       Some num_oracle_fv, Some (Ast.spec_num_atom spec)
     with
-    | _ -> None, None
+    | _ -> Some (fst (SpecAbd.merge_spec bound_spec preds)), None
   in
   let bound_time = statjson |> member "run_time" |> to_float in
   let num_weaken = statjson |> member "num_weakening" |> to_int in
@@ -154,6 +159,57 @@ let write_single_table table =
   match str with
   | None -> " \\"
   | Some str -> str
+
+let tpname = "nat"
+
+let tpedvar_to_coqstr (tp, name) =
+  let tp_coqstr =
+    match tp with
+    | T.Int -> tpname
+    | T.Bool -> "bool"
+    | T.IntList -> sprintf "list %s" tpname
+    | T.IntTree | T.IntTreeI | T.IntTreeB -> sprintf "tree %s" tpname
+  in
+  sprintf "(%s:%s) " name tp_coqstr
+
+type coqresult =
+  | Consistent
+  | BoundMaximal
+  | OracleMaximal
+
+let layout_coqresult = function
+  | Consistent -> "consistent"
+  | BoundMaximal -> "bound"
+  | OracleMaximal -> "oracle"
+
+let spec_to_coq_string benchname num funcname tacticname mode subtasknum spec =
+  let (args, (qv, body)) = spec in
+  (* let eq_str = sprintf "(eq: %s -> %s -> Prop)" tpname tpname in *)
+  let make_args =
+    List.fold_left (fun str x -> str ^ (tpedvar_to_coqstr x)) "" (args @ qv) in
+  let spec_label = sprintf "%s_spec %s" tacticname
+      (List.fold_left (fun str (_, name) -> sprintf "%s %s" str name) "" args) in
+  let prefix = sprintf "Lemma %s%i%s_%s%i %s: (%s) -> %s."
+      benchname num (layout_coqresult mode) funcname
+      subtasknum make_args spec_label (Epr.layoutcoq body) in
+  (* let _ = printf "qv: %i\n" (List.length qv) in *)
+  let proof =
+    if List.length qv > 1
+    then sprintf "Proof. solve_%s; try (assert (u_0 = u_1); subst; eauto). Qed." tacticname
+    else sprintf "Proof. solve_%s. Qed." tacticname
+  in
+  sprintf "%s\n%s\n" prefix proof
+
+let save_coq_file benchname num funcname tacticname mode spec =
+  let args, (qv, body) = spec in
+  let horns = List.map (fun body -> args, (qv, body)) (Epr.to_horns body) in
+  let oc = open_out (sprintf "coq/Verify%s%i%s%s.v"
+                       benchname num (layout_coqresult mode) funcname) in
+  let _ = fprintf oc "Require Import ListAux.\n" in
+  let _ = List.iteri (fun idx horn ->
+      fprintf oc "%s\n" (spec_to_coq_string benchname num funcname tacticname mode idx horn)
+    ) horns in
+  close_out oc
 ;;
 (* let ctx =
  *   Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "9999")] in *)
@@ -179,12 +235,16 @@ if String.equal commandline "consistent" then
   ()
 else if String.equal commandline "single" then
   let info = [
-    "bankersq", "BankersqCons", [1;2]; "batchedq", "ListCons", [1;2];
-    "customstk", "push", [1;3];
-    "leftisthp", "t", [1;2];
-    "splayhp", "t", [1;2;3]; "stream", "Cons", [1;2;3];
-    "rbset", "t", [1;2]; "trie", "triet", [1];
-    "unbset", "t", [1;2;3]; "uniquel", "cons", [1;2];
+    (* "bankersq", "BankersqCons", [1;2]; "batchedq", "ListCons", [1;2];
+     * "customstk", "push", [1;3];
+     * "leftisthp", "t", [1;2]; *)
+    (* "splayhp", "t", [1;2;3]; *)
+    (* "stream", "Cons", [1;2;3]; *)
+    (* "rbset", "t", [1;2]; *)
+    (* "trie", "triet", [1];
+     * "unbset", "t", [1;2;3]; "uniquel", "cons", [1;2]; *)
+    "splayhp", "t", [2;3];
+    "rbset", "t", [2];
   ] in
   let make_lines info =
     let table = List.fold_left (fun ts (benchname, funcname, nums) ->
@@ -196,6 +256,49 @@ else if String.equal commandline "single" then
     ()
   in
   let _ = make_lines info in
+  ()
+else if String.equal commandline "coq" then
+  let info_consistent = [
+    "bankersq", "BankersqCons", "push", [1;2];
+    "batchedq", "ListCons", "push", [1;2];
+    "customstk", "push", "push", [1;3];
+    (* "leftisthp", "t", [1;2];
+     * "splayhp", "t", [1;2;3]; *)
+    "stream", "Cons", "push", [1;2;3];
+    (* "rbset", "t", [1;2]; "trie", "triet", [1];
+     * "unbset", "t", [1;2;3]; *)
+    "uniquel", "cons", "push", [1;2];
+  ] in
+  let info_bound = [
+    "customstk", "push", "push", [1];
+    "stream", "Cons", "push", [3];
+  ] in
+  let open Yojson.Basic in
+  let solve mode info =
+    List.iter (fun (benchname, funcname, tacticname, nums) ->
+        List.iter (fun num ->
+            let resultfile =
+              match mode with
+              | Consistent ->
+                sprintf "_remote_result/_%s%i/_consistent.json" benchname num
+              | BoundMaximal ->
+                sprintf "_remote_result/_%s%i/_bound_maximal.json" benchname num
+              | OracleMaximal ->
+                sprintf "_remote_result/_%s%i/_oracle_maximal.json" benchname num
+            in
+            let (preds, result) = Env.decode_infer_result (from_file resultfile) in
+            let spec = StrMap.find "coq" result funcname in
+            let spec = match mode with
+              | Consistent -> spec
+              | _ -> snd @@ SpecAbd.merge_spec spec preds in
+            let _ = save_coq_file benchname num funcname tacticname mode spec in
+            ()
+          )
+          nums
+      ) info
+  in
+  let _ = solve Consistent info_consistent in
+  let _ = solve BoundMaximal info_bound in
   ()
 else raise @@ InterExn "wrong arguments"
 ;;

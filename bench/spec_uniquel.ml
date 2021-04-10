@@ -77,6 +77,7 @@ let holel =
   [nil_hole;
    cons_hole;] in
 let which_bench = Array.get Sys.argv 1 in
+let if_diff = try Some (Array.get Sys.argv 2) with _ -> None in
 if String.equal which_bench "1" then
   let preds = ["list_member"; "list_head"; "list_once"] in
   let spectable = add_spec predefined_spec_tab "SetAdd"
@@ -86,6 +87,12 @@ if String.equal which_bench "1" then
           E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
         ])
   in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
@@ -99,7 +106,32 @@ else if String.equal which_bench "2" then
           E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
         ])
   in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
+else if String.equal which_bench "3" then
+  let preds = ["list_member"; "list_head"; "list_once"] in
+  let spectable = add_spec predefined_spec_tab "SetAdd"
+      [T.Int, "x"; T.IntList, "l1";T.IntList, "l2"]
+      [T.Int, "u";]
+      (E.And [
+          E.Implies (list_member l1 u, list_once l2 u);
+          E.Iff(list_member l2 u, E.Or [int_eq u x; list_member l1 u]);
+        ])
+  in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+    ()
 else raise @@ InterExn "no such bench";;

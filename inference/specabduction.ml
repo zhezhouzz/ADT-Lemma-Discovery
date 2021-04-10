@@ -717,7 +717,8 @@ module SpecAbduction = struct
     let pos_counter = ref 0 in
     let rec aux idx =
       let fvec = Array.to_list fv_arr in
-      (* let _ = Printf.printf "iter:%s\n" (boollist_to_string fvec) in *)
+      (* let _ = Printf.printf "[%i]iter:%s\n" size (boollist_to_string fvec) in *)
+      (* let _ = if !pos_counter > 100 then raise @@ InterExn "end" else () in *)
       let dt1_b = epr_exec_fv epr1 fset fvec in
       let dt2_b = epr_exec_fv epr2 fset fvec in
       let _ = if f dt1_b dt2_b then
@@ -755,7 +756,7 @@ module SpecAbduction = struct
         snd @@ merge_spec spec preds
       ) spectable
 
-  let merge_max_result ctx resultfilename =
+  let merge_max_result _ resultfilename =
     let result = Yojson.Basic.from_file (resultfilename) in
     let (preds, result) = Env.decode_infer_result result in
     let _ = printf "before:\n" in
@@ -866,6 +867,76 @@ module SpecAbduction = struct
     let result = spectable_filter_result names total_env.Env.spectable in
     Result result
 
+  let find_weakened_model benchname ctx mii pre spectable =
+    let bound_prefix = "bm_" in
+    let union_table if_prefix result spectable =
+      StrMap.fold (fun k v m ->
+          let k = if if_prefix then bound_prefix^k else k in
+          match StrMap.find_opt m k with
+          | None -> StrMap.add k v m
+          | Some _ -> raise @@ InterExn "union_table"
+        ) result spectable in
+    let make_constraint names = function
+      | Ast.And ps ->
+        let ps' = List.filter_map (fun p ->
+            match p with
+            | Ast.SpecApply (name', args) ->
+              if List.exists (String.equal name') names
+              then Some (Ast.SpecApply (bound_prefix ^ name', args))
+              else None
+            | Ast.Implies (_, _) -> None
+            | _ -> raise @@ InterExn "never happen in make_constraint"
+          ) ps in
+        Ast.And ((Ast.Not (Ast.And ps')) :: ps)
+      | _ -> raise @@ InterExn "never happen in make_constraint"
+    in
+    let consistent_file = sprintf "_remote_result/_%s/_consistent.json" benchname in
+    let bound_file = sprintf "_remote_result/_%s/_bound_maximal.json" benchname in
+    let consistent_result = try Some (Yojson.Basic.from_file consistent_file) with
+      | _ -> None in
+    let bound_result = try Some (Yojson.Basic.from_file bound_file) with
+      | _ -> None in
+    match consistent_result with
+    | None -> printf "%s: cex\n" benchname
+    | Some r ->
+      (* let _ = printf "%s\n" consistent_file in *)
+      let _, consistent_spectable = Env.decode_infer_result r in
+      match bound_result with
+      | None -> printf "%s: never happen\n" benchname
+      | Some r ->
+        (* let _ = printf "%s\n" bound_file in *)
+        let _, bound_spectable = Env.decode_infer_result r in
+        let names = StrMap.to_key_list bound_spectable in
+        let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
+        let pres' = List.map (fun pre -> make_constraint names pre) pres in
+        (* let _ = List.iter (fun pre ->
+         *     printf "%s\n" (Ast.vc_layout pre)
+         *   ) pres' in
+         * let _ = StrMap.iter (fun name spec ->
+         *     printf "%s\n" (Ast.layout_spec_entry name spec)
+         *   ) (union_table true consistent_spectable
+         *        (union_table false bound_spectable spectable)) in *)
+        let build_smt_query version =
+          Ast.to_z3 ctx
+            (Ast.And [Ast.Or pres'; mii.upost])
+            (union_table true consistent_spectable
+               (union_table false bound_spectable spectable))
+            version mii.uvars
+          (* Ast.to_z3 ctx
+           *   (Ast.And [Ast.Or pres; mii.upost])
+           *   ((union_table false bound_spectable spectable))
+           *   version mii.uvars *)
+        in
+        let version = S.Z3aux.V2 in
+        let smt_query = build_smt_query version in
+        (* let _ = printf "%s\n" (Expr.to_string smt_query) in *)
+        let r, delta_time = time (fun _ -> S.check ctx smt_query) in
+        match r with
+        | S.SmtUnsat | S.Timeout -> printf "%s: maxed\n" benchname
+        | S.SmtSat _ ->
+          printf "%s: %f\n" benchname delta_time
+
+
   let multi_infer ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
       benchname ctx mii pre spectable holel preds startX =
     let benchname = "_" ^ benchname ^ "/" in
@@ -882,7 +953,7 @@ module SpecAbduction = struct
     (* let _ = Ast.print_spectable spectable in *)
     let c = List.fold_left (fun c pre -> c + (Ast.count_apps pre names)) 0 pres in
     let _ = printf "#R:\n%i\n" c in
-    let _ = raise @@ InterExn "end" in
+    (* let _ = raise @@ InterExn "end" in *)
     let env = consistent_solution ctx benchname
         mii pres spectable holel preds startX in
     match env with

@@ -34,7 +34,8 @@ module SimpleExpr (B: SimpleExprTree.SimpleExprTree): SimpleExpr = struct
   let exec expr env =
     let rec aux = function
       | Literal (_, lit) -> L.exec lit
-      | Var (_, name) -> StrMap.find "SimpleExpr::exec" env name
+      | Var (_, name) ->
+        StrMap.find (Printf.sprintf "SimpleExpr::exec::find %s" name) env name
       | Op (_, op, args) ->
         let args = List.map aux args in
         (match non_dt_op op args with

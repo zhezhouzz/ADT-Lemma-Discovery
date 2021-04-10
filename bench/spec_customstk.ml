@@ -71,6 +71,7 @@ let mii =
   }
 in
 let which_bench = Array.get Sys.argv 1 in
+let if_diff = try Some (Array.get Sys.argv 2) with _ -> None in
 if String.equal which_bench "1" then
   let holel = [
     push_hole;
@@ -86,10 +87,16 @@ if String.equal which_bench "1" then
         ])
   in
   let preds = ["list_member"; "list_head"] in
-  let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
-      (sprintf "%s%s" bench_name which_bench)
-      ctx mii pre spectable_post holel preds 1 in
-  ()
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
+        (sprintf "%s%s" bench_name which_bench)
+        ctx mii pre spectable_post holel preds 1 in
+    ()
 else if String.equal which_bench "2" then
   let spectable_post = set_spec (predefined_spec_tab) "concat"
       [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
@@ -105,10 +112,16 @@ else if String.equal which_bench "2" then
     push_hole;
   ] in
   let preds = ["list_member";] in
-  let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench)
-      ctx mii pre spectable_post holel preds 1 in
-  ()
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench)
+        ctx mii pre spectable_post holel preds 1 in
+    ()
 else if String.equal which_bench "3" then
   let spectable_post = set_spec (predefined_spec_tab) "concat"
       [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
@@ -126,10 +139,16 @@ else if String.equal which_bench "3" then
     push_hole;
   ] in
   let preds = ["list_member"; "list_head"; "list_order"] in
-  let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench)
-      ctx mii pre spectable_post holel preds 1 in
-  ()
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench)
+        ctx mii pre spectable_post holel preds 1 in
+    ()
 else if String.equal which_bench "4" then
   let spectable_post = set_spec (predefined_spec_tab) "concat"
       [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
@@ -145,9 +164,15 @@ else if String.equal which_bench "4" then
     push_hole;
   ] in
   let preds = ["list_member";] in
-  let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench)
-      ctx mii pre spectable_post holel preds 1 in
-  ()
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench)
+        ctx mii pre spectable_post holel preds 1 in
+    ()
 else raise @@ InterExn "no such bench"
 ;;

@@ -121,7 +121,7 @@ let mii =
   {upost = ins [default;i;a;m;nu];
    uvars = [T.Int, "default";T.Int, "a";T.Int, "z";T.Int, "y"];
    uinputs = [T.Int, "default"; T.IntList, "i"; T.Int, "a"; T.IntTree, "m"];
-   uoutputs = [T.IntTree, "nu'"];
+   uoutputs = [T.IntTree, "nu"];
    uprog = function
      | [V.I default; V.L i; V.I a; V.T m;] -> Some [V.T (client_code default i a m)]
      | _ -> raise @@ InterExn "bad prog"
@@ -133,6 +133,7 @@ let holel =
    e_hole;
    t_hole] in
 let which_bench = Array.get Sys.argv 1 in
+let if_diff = try Some (Array.get Sys.argv 2) with _ -> None in
 if String.equal which_bench "1" then
   let preds = ["list_member"; "tree_member";] in
   let spectable = add_spec predefined_spec_tab "Ins"
@@ -142,7 +143,31 @@ if String.equal which_bench "1" then
           E.Implies (tree_member nu u, Or [tree_member m u; int_eq u default; int_eq u a]);
         ])
   in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
+else if String.equal which_bench "2" then
+  let preds = ["list_member"; "tree_member";] in
+  let spectable = add_spec predefined_spec_tab "Ins"
+      [T.Int, "default"; T.IntList, "i"; T.Int, "a"; T.IntTree, "m";T.IntTree, "nu"]
+      [T.Int, "u"]
+      (E.And [
+          E.Implies (Or [tree_member m u; int_eq u default; int_eq u a], tree_member nu u);
+        ])
+  in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+    ()
 else raise @@ InterExn "no such bench";;

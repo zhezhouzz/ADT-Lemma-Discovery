@@ -12,6 +12,7 @@ module type EprTree = sig
   type free_variable = Tp.Tp.tpedvar
   type forallformula = free_variable list * t
   val layout: t -> string
+  val layoutcoq: t -> string
   val layout_forallformula: forallformula -> string
   val pretty_layout_forallformula: forallformula -> string
   val pretty_layout_epr: t -> string
@@ -99,12 +100,6 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
       (qv, body)
     else raise e
 
-  (* let sym_and = "/\\"
-   * let sym_or = "\\/"
-   * let sym_not = "~"
-   * let sym_implies = "=>"
-   * let sym_iff = "<=>" *)
-
   let sym_and = "&&"
   let sym_or = "||"
   let sym_not = "!"
@@ -121,6 +116,24 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     | Iff (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_iff (layout p2)
     | Ite (p1, p2, p3) ->
       sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
+
+  let layoutcoq a =
+    let sym_and = "/\\" in
+    let sym_or = "\\/" in
+    let sym_not = "not" in
+    let sym_implies = "->" in
+    let sym_iff = "<->" in
+    let rec layout = function
+      | True -> "True"
+      | Atom bexpr -> sprintf "%s" (SE.layoutcoq bexpr)
+      | Implies (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_implies (layout p2)
+      | And ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_and "true")
+      | Or ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_or "false")
+      | Not p -> sprintf "(%s %s)" sym_not (layout p)
+      | Iff (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_iff (layout p2)
+      | Ite (_, _, _) -> raise @@ InterExn "never happen in layoutcoq"
+    in
+    layout a
 
   let pretty_layout indent e =
     let mk_indent indent = String.init indent (fun _ -> ' ') in

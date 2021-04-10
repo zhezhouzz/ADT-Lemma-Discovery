@@ -75,6 +75,7 @@ let mii =
 in
 let holel = [libnil_hole; liblazy_hole; libforce_hole; libcons_hole;] in
 let which_bench = Array.get Sys.argv 1 in
+let if_diff = try Some (Array.get Sys.argv 2) with _ -> None in
 if String.equal which_bench "1" then
   let preds = ["list_member";] in
   let spectable = add_spec predefined_spec_tab "Reverse"
@@ -83,6 +84,12 @@ if String.equal which_bench "1" then
           E.Implies (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
         ])
   in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
@@ -98,6 +105,12 @@ else if String.equal which_bench "2" then
           E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
         ])
   in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
@@ -113,7 +126,34 @@ else if String.equal which_bench "3" then
           E.Iff (list_member l3 u, E.Or [list_member l1 u; list_member l2 u]);
         ])
   in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
   let total_env = SpecAbd.multi_infer
       (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
   ()
+else if String.equal which_bench "4" then
+  let preds = ["list_member"; "list_order"] in
+  let spectable = add_spec predefined_spec_tab "Reverse"
+      [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"] [T.Int, "u";T.Int, "v"]
+      (E.And [
+          E.Implies (E.Or [list_order l1 u v;
+                           list_order l2 v u;
+                           E.And [list_member l2 u; list_member l1 v]],
+                     list_order l3 u v);
+          E.Iff (list_member l3 u, list_member l2 u);
+        ])
+  in
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+    ()
 else raise @@ InterExn "no such bench";;

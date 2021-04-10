@@ -130,6 +130,7 @@ let holel = [
   concat_hole;
   reverse_hole;] in
 let which_bench = Array.get Sys.argv 1 in
+let if_diff = try Some (Array.get Sys.argv 2) with _ -> None in
 if String.equal which_bench "1" then
   let preds = ["list_member";] in
   let spectable = add_spec predefined_spec_tab "Snoc"
@@ -140,9 +141,15 @@ if String.equal which_bench "1" then
              Or[list_member f' u; list_member r' u]
             ))
   in
-  let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
-  ()
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+    ()
 else if String.equal which_bench "2" then
   let preds = ["list_member"; "list_order"] in
   let spectable = add_spec predefined_spec_tab "Snoc"
@@ -153,8 +160,14 @@ else if String.equal which_bench "2" then
            Or[And[list_member f' u; list_member r' x]; list_order r' x u; list_order f' u x]
           ))
   in
-  let total_env = SpecAbd.multi_infer
-      (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
-  ()
+  match if_diff with
+  | Some _ ->
+    let _ = SpecAbd.find_weakened_model
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    ()
+  | None ->
+    let total_env = SpecAbd.multi_infer
+        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable holel preds 1 in
+    ()
 else raise @@ InterExn "no such bench"
 ;;
