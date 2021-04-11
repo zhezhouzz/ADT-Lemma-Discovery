@@ -307,8 +307,10 @@ else if String.equal commandline "merge" then
   let info_bound = [
     "customstk", 1;
     "stream", 3;
+    "leftisthp", 1;
     "leftisthp", 2;
-    "leftisthp", 3;
+    "splayhp", 2;
+    "splayhp", 3;
     "rbset", 2;
     (* "stream", 1; *)
     (* "leftisthp", "maket", "t", [1];
