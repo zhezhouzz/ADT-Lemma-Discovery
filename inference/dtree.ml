@@ -33,6 +33,7 @@ module type Dtree = sig
   val label_eq: label -> label -> bool
   val fvtab_eq: (bool list, label) Hashtbl.t -> (bool list, label) Hashtbl.t -> unit
   val map: int Utils.IntMap.t -> int t -> int t
+  val count: int -> int t -> int
 end
 
 module Dtree : Dtree = struct
@@ -357,4 +358,22 @@ module Dtree : Dtree = struct
          | Some i' -> Node (i', aux l, aux r))
     in
     aux dt
+
+  let count size dt =
+    let rec pow a = function
+      | 0 -> 1
+      | 1 -> a
+      | n ->
+        let b = pow a (n / 2) in
+        b * b * (if n mod 2 = 0 then 1 else a) in
+    let rec aux prefix = function
+      | T -> pow 2 (size - (List.length prefix))
+      | F -> 0
+      | Leaf _ -> raise @@ InterExn "never happen"
+      | Node (x, l, r) ->
+        if List.exists (fun y -> y == x) prefix
+        then raise @@ InterExn "never happen"
+        else (aux (x :: prefix) l) + (aux (x :: prefix) r)
+    in
+    aux [] dt
 end

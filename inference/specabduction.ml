@@ -751,7 +751,123 @@ module SpecAbduction = struct
       let c, _ = handle body_init (Epr.Not Epr.True) in
       c, spec
 
-  let merge_spectable spectable preds =
+  let smt_merge_epr ctx preds args init addition =
+    let init_qv, init_body = init in
+    let addition_qv, addition_body = addition in
+    (* let _ = printf "%s\n" (Epr.pretty_layout_forallformula init) in *)
+    (* let _ = printf "%s\n" (Epr.pretty_layout_forallformula addition) in *)
+    let fset = F.make_set_from_preds_max preds args addition_qv in
+    (* let _ = printf "%s\n" (F.layout_set fset) in *)
+    let fvtab = Hashtbl.create 10000 in
+    (* let unknown_fv = List.init (List.length fset) (fun i -> T.Int, sprintf "fv!%i" i) in *)
+    let fset_z3 = List.map (fun v -> Epr.to_z3 ctx @@ F.to_epr v) fset in
+    let learn fvtab =
+      (* let _ = Hashtbl.iter (fun vec label ->
+       *     printf "[%s]%s\n" (boollist_to_string vec) (D.layout_label label)
+       *   ) fvtab in *)
+      let dt, dtidx =
+        if Hashtbl.length fvtab == 0
+        then D.T, D.T
+        else D.classify_hash fset fvtab D.is_pos in
+      let abduciable = D.to_epr dt in
+      dt, dtidx, abduciable
+    in
+    let raw_init_body =
+      match init_qv with
+      | [] -> raise @@ InterExn "pos_gather"
+      | [u] ->
+      Epr.And (List.map (fun u' ->
+        Epr.subst init_body [snd u] [SE.from_tpedvar u']
+          ) addition_qv)
+      | [_;_] -> init_body
+      | _ -> raise @@ InterExn "pos_gather"
+    in
+    let gather posq fvtab =
+      let (_, _, result) = learn fvtab in
+      let q =
+          (if posq
+           then
+             Epr.And [Epr.Or [raw_init_body; addition_body];
+                      Epr.Not result;]
+           else
+             Epr.And [Epr.Not (Epr.Or [raw_init_body; addition_body]);
+                      result;]
+          )
+      in
+      (* let _ = printf "%b:\n%s\n" posq (Epr.pretty_layout_epr q) in *)
+      let q = Epr.to_z3 ctx q in
+      (* let _ = printf "%b:\n%s\n" posq (Expr.to_string q) in *)
+      match S.check ctx q with
+      | S.SmtUnsat ->
+        (* let _ = printf "%b: unsat\n" posq in *)
+        None
+      | S.Timeout -> raise @@ InterExn "smt_merge_spec: timeout"
+      | S.SmtSat m ->
+        (* let _ = printf "%s\n" (Model.to_string m) in *)
+        let fv = List.map (fun p -> S.get_pred m p) fset_z3 in
+        Some fv
+    in
+    let neg_loop fvtab =
+      let rec aux fvtab =
+        match gather false fvtab with
+        | Some fv ->
+          let _ = Hashtbl.add fvtab fv D.Neg in
+          let _ = aux fvtab in
+          false, fvtab
+        | None -> true, fvtab
+      in
+      aux fvtab
+    in
+    let pos_loop fvtab =
+      let rec aux fvtab =
+        match gather true fvtab with
+        | Some fv ->
+          let _ = Hashtbl.add fvtab fv D.Pos in
+          let _ = aux fvtab in
+          false, fvtab
+        | None -> true, fvtab
+      in
+      aux fvtab
+    in
+    let rec aux fvtab =
+      let if_already_pos, fvtab = neg_loop fvtab in
+      let if_already_neg, fvtab = pos_loop fvtab in
+      if if_already_pos && if_already_neg
+      then fvtab
+      else aux fvtab
+    in
+    let (_, dtidx, result) = learn (aux fvtab) in
+    let c = D.count (List.length fset) dtidx in
+    let p, n = Hashtbl.fold (fun _ label (p, n) ->
+        match label with
+        | D.Pos -> (p + 1, n)
+        | _ -> (p, n + 1)
+      ) fvtab (0, 0) in
+    let _ = printf "p:%i n:%i\n" p n in
+    c, (addition_qv, result)
+
+  let smt_merge_spectable ctx consistentfilename resultfilename output =
+    let (_, consistentresult) = Env.decode_infer_result
+      @@ Yojson.Basic.from_file (consistentfilename) in
+    let (preds, result) = Env.decode_infer_result
+      @@ Yojson.Basic.from_file (resultfilename) in
+    let cm = Hashtbl.create 10 in
+    let m = StrMap.mapi (fun name (args, spec) ->
+        match spec with
+        | qv, Epr.Or [_; addition] ->
+          let (_, init) = StrMap.find "smt_merge_spectable" consistentresult name in
+          let c, result' = smt_merge_epr ctx preds args init (qv, addition) in
+          let _ = Hashtbl.add cm name c in
+          args, result'
+        | _ -> raise @@ InterExn "smt_merge_spectable"
+      ) result in
+    let _ = Hashtbl.iter (fun name c ->
+        printf "%s.#fev+: %i\n" name c
+      ) cm
+    in
+    Yojson.Basic.to_file output (Env.encode_infer_result (preds, m))
+
+    let merge_spectable spectable preds =
     StrMap.map (fun spec ->
         snd @@ merge_spec spec preds
       ) spectable

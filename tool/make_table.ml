@@ -205,7 +205,7 @@ let save_coq_file benchname num funcname tacticname mode spec =
   let horns = List.map (fun body -> args, (qv, body)) (Epr.to_horns body) in
   let oc = open_out (sprintf "coq/Verify%s%i%s%s.v"
                        benchname num (layout_coqresult mode) funcname) in
-  let _ = fprintf oc "Require Import ListAux.\n" in
+  let _ = fprintf oc "Require Import ListAux.\nRequire Import TreeAux.\n" in
   let _ = List.iteri (fun idx horn ->
       fprintf oc "%s\n" (spec_to_coq_string benchname num funcname tacticname mode idx horn)
     ) horns in
@@ -259,19 +259,22 @@ else if String.equal commandline "single" then
   ()
 else if String.equal commandline "coq" then
   let info_consistent = [
-    "bankersq", "BankersqCons", "push", [1;2];
-    "batchedq", "ListCons", "push", [1;2];
-    "customstk", "push", "push", [1;3];
-    (* "leftisthp", "t", [1;2];
-     * "splayhp", "t", [1;2;3]; *)
-    "stream", "Cons", "push", [1;2;3];
-    (* "rbset", "t", [1;2]; "trie", "triet", [1];
-     * "unbset", "t", [1;2;3]; *)
-    "uniquel", "cons", "push", [1;2];
+    (* "bankersq", "BankersqCons", "push", [1;2];
+     * "batchedq", "ListCons", "push", [1;2];
+     * "customstk", "push", "push", [1;3];
+     * "stream", "Cons", "push", [1;2;3];
+     * "uniquel", "cons", "push", [1;2]; *)
+    (* "leftisthp", "t", "t", [2]; *)
+    (* "unbset", "t", "t", [1;2;3]; *)
+    (* "splayhp", "t", "t", [1]; *)
+    "rbset", "t", "t", [1;2];
+    (* "rbset", "t", [1;2]; "trie", "triet", [1]; *)
   ] in
   let info_bound = [
-    "customstk", "push", "push", [1];
-    "stream", "Cons", "push", [3];
+    (* "customstk", "push", "push", [1];
+     * "stream", "Cons", "push", [3]; *)
+    "leftisthp", "maket", "t", [1];
+    "splayhp", "t", "t", [2;3];
   ] in
   let open Yojson.Basic in
   let solve mode info =
@@ -297,8 +300,31 @@ else if String.equal commandline "coq" then
           nums
       ) info
   in
-  let _ = solve Consistent info_consistent in
+  (* let _ = solve Consistent info_consistent in *)
   let _ = solve BoundMaximal info_bound in
+  ()
+else if String.equal commandline "merge" then
+  let info_bound = [
+    "customstk", 1;
+    "stream", 3;
+    (* "leftisthp", 2;
+     * "leftisthp", 3;
+     * "rbset", 2; *)
+    (* "stream", 1; *)
+    (* "leftisthp", "maket", "t", [1];
+     * "splayhp", "t", "t", [2;3]; *)
+  ] in
+  let merge (benchname, num) =
+    let ctx =
+      Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "19999")] in
+    let resultfilename = sprintf "_remote_result/_%s%i/_bound_maximal.json"
+        benchname num in
+    let consistentfilename = sprintf "_remote_result/_%s%i/_consistent.json" benchname num in
+    let output = sprintf "_remote_result/_%s%i/_bound_maximal_merged.json" benchname num in
+    let _ = Printf.printf "%s %i\n" benchname num in
+    let _ = SpecAbd.smt_merge_spectable ctx consistentfilename resultfilename output in
+    () in
+  let _ = List.iter (fun info -> merge info) info_bound in
   ()
 else raise @@ InterExn "wrong arguments"
 ;;
