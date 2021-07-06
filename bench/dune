@@ -17,5 +17,5 @@
  spec_batchedq
  show
  )
- (libraries ounit2 solver inference frontend)
+ (libraries ounit2 solver inference frontend translate)
 )

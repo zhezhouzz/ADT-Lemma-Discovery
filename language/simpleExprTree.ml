@@ -9,6 +9,7 @@ module type SimpleExprTree = sig
     | Op of tp * op * t list
 
   val layout: t -> string
+  val layoutt: t -> string
   val layoutcoq: t -> string
   val subst: t -> string list -> t list -> t
   val eq: t -> t -> bool
@@ -66,6 +67,13 @@ module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
     | Literal (_, x) -> L.layout x
     | Var (_, name) -> name
     | Op (_, op, args) -> layout_op op (List.map layout args)
+
+  let rec layoutt = function
+    | Literal (_, x) -> L.layout x
+    | Var (tp, name) -> T.layouttvar (tp, name)
+    | Op (tp, op, args) ->
+      Printf.sprintf "%s:%s"
+      (layout_op op (List.map layout args)) (T.layout tp)
 
   let rec layoutcoq = function
     | Literal (_, x) -> L.layout x

@@ -867,10 +867,27 @@ module SpecAbduction = struct
     in
     Yojson.Basic.to_file output (Env.encode_infer_result (preds, m))
 
-    let merge_spectable spectable preds =
+  let merge_spectable spectable preds =
     StrMap.map (fun spec ->
         snd @@ merge_spec spec preds
       ) spectable
+
+  let try_tmp tmpfile =
+    let envs = Env.decode_weakening @@ Yojson.Basic.from_file tmpfile in
+    let t_env = List.find "try_tmp" (fun env -> String.equal env.Env.hole.name "t") envs in
+    let p, n = Hashtbl.fold (fun _ label (p, n) ->
+        match label with
+        | D.Pos -> (p + 1, n)
+        | _ -> (p, n + 1)
+      ) t_env.Env.fvtab (0, 0) in
+    let _ = printf "p:%i n:%i\n" p n in
+    let _, dtidx =
+      if Hashtbl.length t_env.fvtab == 0
+          then D.T, D.T
+          else D.classify_hash t_env.fset t_env.fvtab D.is_pos in
+    let c = D.count (List.length t_env.fset) dtidx in
+    let _ = printf "count: %i\n" c in
+    ()
 
   let merge_max_result _ resultfilename =
     let result = Yojson.Basic.from_file (resultfilename) in
@@ -1052,6 +1069,45 @@ module SpecAbduction = struct
         | S.SmtSat _ ->
           printf "%s: %f\n" benchname delta_time
 
+  let result benchname assertions spectable holel preds =
+    let names = List.map (fun (hole, _) -> hole.name) holel in
+    let program = "program:\n\n" in
+    let library_functions = sprintf "F:\n%s\n" (StrList.to_string names) in
+    let preds = sprintf "P:\n%s\n" (StrList.to_string preds) in
+    let assertion =
+      match assertions with
+      | [a] ->
+        sprintf "assertion:\n%s\n"
+          (Ast.layout_spec
+             (StrMap.find "result" spectable a))
+      | [prea; posta] ->
+        sprintf "assertion:\n%s\n=>\n%s\n"
+          (Ast.layout_spec
+             (StrMap.find "result" spectable prea))
+          (Ast.layout_spec
+             (StrMap.find "result" spectable posta))
+      | _ -> raise @@ InterExn "never happen in result"
+    in
+    let resultfilename = sprintf "_remote_result/_%s/_bound_maximal.json"
+        benchname in
+    let result_to_file outc =
+      try
+        StrMap.iter (fun name spec ->
+            fprintf outc "%s\n" (Ast.layout_spec_entry name spec)
+          )
+          (snd @@
+           Env.decode_infer_result (Yojson.Basic.from_file resultfilename))
+      with
+      | _ -> fprintf outc "cex\n"
+    in
+    let outfile = sprintf "_final_result/_%s.text" benchname in
+    let outc = open_out outfile in
+    let _ = fprintf outc "%s\n%s\n%s\n%s\nresult:\n"
+        program library_functions preds
+        assertion in
+    let _ = result_to_file outc in
+    let _ = close_out outc in
+    ()
 
   let multi_infer ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
       benchname ctx mii pre spectable holel preds startX =
@@ -1088,7 +1144,7 @@ module SpecAbduction = struct
             name (List.length env.fset) (pow 2 (List.length env.fset))
         ) env.spec_envs in
       let _ = save_result (benchname ^ "_consistent.json") preds names env.vc in
-      let _ = raise @@ InterExn "end" in
+      (* let _ = raise @@ InterExn "end" in *)
       let single_envs = List.map (fun specname ->
           let target_hole = StrMap.find "multi_infer" env.holes specname in
           let spec_env = StrMap.find "multi_infer" env.spec_envs specname in

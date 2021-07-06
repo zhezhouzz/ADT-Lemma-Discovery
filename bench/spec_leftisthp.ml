@@ -123,8 +123,11 @@ if String.equal which_bench "1" then
   in
   match if_diff with
   | Some _ ->
-    let _ = SpecAbd.find_weakened_model
-        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    (* let _ = SpecAbd.find_weakened_model
+     *     (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in *)
+    let _ = SpecAbd.result
+        (sprintf "%s%s" bench_name which_bench)
+        ["MergePre"; "MergePost"] spectable holel preds in
     ()
   | None ->
     let total_env = SpecAbd.multi_infer
@@ -149,8 +152,11 @@ else if String.equal which_bench "2" then
   let preds = ["treei_member";"treei_ancestor"] in
   match if_diff with
   | Some _ ->
-    let _ = SpecAbd.find_weakened_model
-        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in
+    (* let _ = SpecAbd.find_weakened_model
+     *     (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable in *)
+    let _ = SpecAbd.result
+        (sprintf "%s%s" bench_name which_bench)
+        ["MergePre"; "MergePost"] spectable holel preds in
     ()
   | None ->
     let total_env = SpecAbd.multi_infer

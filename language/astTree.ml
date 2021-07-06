@@ -34,6 +34,7 @@ module type AstTree = sig
   val spectable_decode: Yojson.Basic.t -> spec Utils.StrMap.t
   val spec_num_atom: spec -> int
   val count_apps: t -> string list -> int
+  val get_uvars: t -> Tp.Tp.tpedvar list
 end
 
 module AstTree (E: Epr.Epr) : AstTree
@@ -65,7 +66,7 @@ module AstTree (E: Epr.Epr) : AstTree
     | Ite (p1, p2, p3) ->
       sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
     | SpecApply (specname, args) ->
-      sprintf "%s(%s)" specname (List.to_string E.SE.layout args)
+      sprintf "%s(%s)" specname (List.to_string E.SE.layoutt args)
 
   let neg_spec name ast =
     let rec aux = function
@@ -244,6 +245,28 @@ module AstTree (E: Epr.Epr) : AstTree
           res
     in
     aux t []
+
+  let get_uvars t =
+    let rec aux t res =
+      match t with
+      | ForAll _ -> raise @@ InterExn "bad in get_app_args"
+      | Implies (p1, p2) -> aux p2 (aux p1 res)
+      | And ps -> List.fold_left (fun r p -> aux p r) res ps
+      | Or ps -> List.fold_left (fun r p -> aux p r) res ps
+      | Not p -> aux p res
+      | Iff (p1, p2) -> aux p2 (aux p1 res)
+      | Ite (p1, p2, p3) -> aux p3 (aux p2 (aux p1 res))
+      | SpecApply (_, args) ->
+        (List.map (fun se ->
+            match se with
+            | E.SE.Var (tp, name) -> (tp, name)
+            | _ -> raise @@ InterExn "get_uvars"
+          ) args) @ res
+    in
+    List.filter (fun (tp, _) -> match tp with
+        | T.Int -> true
+        | _ -> false) @@
+    List.remove_duplicates T.tpedvar_eq @@ aux t []
 
   let to_dnf a =
     let rec aux a =

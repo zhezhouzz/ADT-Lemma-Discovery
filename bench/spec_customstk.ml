@@ -12,8 +12,24 @@ module T = Tp.Tp
 module V = Pred.Value
 open Language.Helper
 open Bench_utils
-open Frontend.Fast.Fast
 ;;
+let sourcefile = "/Users/zhezhou/workspace/research/ADT-Spec-Inference/data/bench_customstack.ml"
+let assertionfile1 = "/Users/zhezhou/workspace/research/ADT-Spec-Inference/data/bench_customstack_assertion.ml"
+let tool_name = "ocamlc"
+let ppf = Format.err_formatter
+
+let parse sourcefile =
+  let structure = Pparse.parse_implementation ~tool_name Format.err_formatter sourcefile in
+  (* let _ = Printast.structure 0 Format.std_formatter structure in *)
+  structure
+;;
+
+let _ = Printf.printf "zz:%s\n" (Sys.getcwd ()) in
+let source = parse sourcefile in
+let assertion1 = parse assertionfile1 in
+(* let _ = printf "vc:=\n%s\n" (Ast.layout vc) in *)
+(* let _ = StrMap.iter (fun name spec -> printf "%s\n" (Ast.layout_spec_entry name spec)) spectab in *)
+(* let _ = raise @@ InterExn "end" in *)
 let bench_name = "customstk" in
 let ctx = init () in
 let concat_program = function
@@ -23,7 +39,7 @@ in
 let concat, concat_hole =
   make_hole "concat" [T.IntList; T.IntList; T.IntList] concat_program in
 let is_empty, is_empty_hole = make_hole_from_info
-    {name = "is_empty"; intps = [T.IntList;T.Bool;]; outtps = [];
+    {name = "Stack.is_empty"; intps = [T.IntList;T.Bool;]; outtps = [];
      prog = function
        | [V.L []] -> Some [V.B true]
        | [V.L _] -> Some [V.B false]
@@ -33,18 +49,18 @@ let top_program = function
   | [V.L (h :: _)] -> Some [V.I h]
   | _ -> raise @@ InterExn "bad prog"
 in
-let top, top_hole = make_hole "top" [T.IntList; T.Int] top_program in
+let top, top_hole = make_hole "Stack.top" [T.IntList; T.Int] top_program in
 let tail_program = function
   | [V.L []] -> None
   | [V.L (_ :: t)] -> Some [V.L t]
   | _ -> raise @@ InterExn "bad prog"
 in
-let tail, tail_hole = make_hole "tail" [T.IntList; T.IntList] tail_program in
+let tail, tail_hole = make_hole "Stack.tail" [T.IntList; T.IntList] tail_program in
 let push_program = function
   | [V.I x; V.L l] -> Some [V.L (x :: l)]
   | _ -> raise @@ InterExn "bad prog"
 in
-let push, push_hole = make_hole "push" [T.Int; T.IntList; T.IntList] push_program in
+let push, push_hole = make_hole "Stack.push" [T.Int; T.IntList; T.IntList] push_program in
 let s1, s2, nu_tail, nu_concat, nu_push, nu =
   map6 list_var ("s1", "s2", "nu_tail", "nu_concat", "nu_push", "nu") in
 let nu_is_empty = bool_var "nu_is_empty" in
@@ -59,6 +75,10 @@ let pre =
                ]
           )
 in
+let _ = printf "old:=\n%s\n" (Ast.layout pre) in
+(* let _ = printf "new:=\n%s\n" (Ast.layout vc) in *)
+(* let _ = raise @@ InterExn "end" in *)
+(* let pre = vc in *)
 let mii =
   let open SpecAbd in
   {upost = SpecApply("concat", [s1;s2;nu]);
@@ -89,13 +109,33 @@ if String.equal which_bench "1" then
   let preds = ["list_member"; "list_head"] in
   match if_diff with
   | Some _ ->
-    let _ = SpecAbd.find_weakened_model
-        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    (* let _ = SpecAbd.find_weakened_model
+     *     (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in *)
+     let _ = SpecAbd.result
+        (sprintf "%s%s" bench_name which_bench)
+        ["concat"] spectable_post holel preds in
     ()
   | None ->
+    let imps = ["Stack.is_empty", (function
+        | [V.L []] -> Some [V.B true]
+        | [V.L _] -> Some [V.B false]
+        | _ -> raise @@ InterExn "bad prog");
+       "Stack.push", push_program;
+       "Stack.top", top_program;
+       "Stack.tail", tail_program;
+       "concat", concat_program;
+      ] in
+    let imp_map = List.fold_left (fun m (name, imp) ->
+        StrMap.add name imp m
+      ) StrMap.empty imps in
+    let mii, vc, holes, spectab = Translate.trans (source, assertion1) imp_map in
+    (* let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
+     *     (sprintf "%s%s" bench_name which_bench)
+     *     ctx mii pre spectable_post holel preds 1 in *)
+    (* let _ = raise @@ InterExn "none" in *)
     let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
         (sprintf "%s%s" bench_name which_bench)
-        ctx mii pre spectable_post holel preds 1 in
+        ctx mii vc spectab holel preds 1 in
     ()
 else if String.equal which_bench "2" then
   let spectable_post = set_spec (predefined_spec_tab) "concat"
@@ -114,8 +154,11 @@ else if String.equal which_bench "2" then
   let preds = ["list_member";] in
   match if_diff with
   | Some _ ->
-    let _ = SpecAbd.find_weakened_model
-        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    (* let _ = SpecAbd.find_weakened_model
+     *     (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in *)
+    let _ = SpecAbd.result
+        (sprintf "%s%s" bench_name which_bench)
+        ["concat"] spectable_post holel preds in
     ()
   | None ->
     let total_env = SpecAbd.multi_infer
@@ -141,8 +184,11 @@ else if String.equal which_bench "3" then
   let preds = ["list_member"; "list_head"; "list_order"] in
   match if_diff with
   | Some _ ->
-    let _ = SpecAbd.find_weakened_model
-        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    (* let _ = SpecAbd.find_weakened_model
+     *     (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in *)
+    let _ = SpecAbd.result
+        (sprintf "%s%s" bench_name which_bench)
+        ["concat"] spectable_post holel preds in
     ()
   | None ->
     let total_env = SpecAbd.multi_infer
@@ -166,8 +212,11 @@ else if String.equal which_bench "4" then
   let preds = ["list_member";] in
   match if_diff with
   | Some _ ->
-    let _ = SpecAbd.find_weakened_model
-        (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in
+    (* let _ = SpecAbd.find_weakened_model
+     *     (sprintf "%s%s" bench_name which_bench) ctx mii pre spectable_post in *)
+    let _ = SpecAbd.result
+        (sprintf "%s%s" bench_name which_bench)
+        ["concat"] spectable_post holel preds in
     ()
   | None ->
     let total_env = SpecAbd.multi_infer

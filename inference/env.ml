@@ -170,7 +170,9 @@ let fvtab_decode = function
         Hashtbl.add fvtab vec label
       ) l in
     fvtab
-  | _ -> raise @@ InterExn "fvtab_decode"
+  | _ ->
+    (* let _ = Printf.printf "%s\n" (Yojson.Basic.pretty_to_string x) in *)
+    raise @@ InterExn "fvtab_decode"
 
 let encode_spec_env env =
   let current = encode_sr env.current in
@@ -214,8 +216,9 @@ let encode_weakening (vc, envs) =
   ]
 
 let decode_weakening json =
-  (json |> Util.member "vc" |> decode_vc,
-   json |> Util.member "envs" |> decode_spec_env_list)
+  (* (json |> Util.member "vc" |> decode_vc,
+   *  json |> Util.member "envs" |> decode_spec_env_list) *)
+    json |> Util.member "envs" |> decode_spec_env_list
 
 type maximal_result =
   | AlreadyMaxed of spec_env

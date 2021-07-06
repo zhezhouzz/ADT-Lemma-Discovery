@@ -107,7 +107,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
   let sym_iff = "<==>"
 
   let rec layout = function
-    | True -> "true"
+    | True -> "True"
     | Atom bexpr -> sprintf "(%s)" (SE.layout bexpr)
     | Implies (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_implies (layout p2)
     | And ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_and "true")
@@ -127,8 +127,8 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
       | True -> "True"
       | Atom bexpr -> sprintf "%s" (SE.layoutcoq bexpr)
       | Implies (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_implies (layout p2)
-      | And ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_and "true")
-      | Or ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_or "false")
+      | And ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_and "True")
+      | Or ps -> sprintf "(%s)" (List.inner_layout (List.map layout ps) sym_or "False")
       | Not p -> sprintf "(%s %s)" sym_not (layout p)
       | Iff (p1, p2) -> sprintf "(%s %s %s)" (layout p1) sym_iff (layout p2)
       | Ite (_, _, _) -> raise @@ InterExn "never happen in layoutcoq"

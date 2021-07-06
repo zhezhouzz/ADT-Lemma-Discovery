@@ -10,7 +10,7 @@ module SE = E.SE
 module T = Tp.Tp
 module V = Pred.Value
 open Language.Helper
-open Frontend.Fast.Fast
+(* open Frontend.Fast.Fast *)
 ;;
 
 let get_head dttp =
@@ -109,10 +109,10 @@ let register_spec spec_tab (name, spec) =
   let spec_tab = StrMap.add name spec spec_tab in
   spec_tab, fun args -> SpecApply (name, args)
 
-let make_lets l body =
-  List.fold_right (fun (names, es) body ->
-      Let(names, es, body)
-    ) l body
+(* let make_lets l body =
+ *   List.fold_right (fun (names, es) body ->
+ *       Let(names, es, body)
+ *     ) l body *)
 
 (* module SpecAbd = Inference.SpecAbduction;;
  * let test ctx vc spectable holes preds bpreds startnum endnum traces =
