@@ -10,25 +10,32 @@ al.
 ## TODO
 
 * Test these instructions in OSX and Windows.
+  + Donot worry about OSX and windows, the submission website says "running in a VM or Docker container on a Windows machine does *not* count as running natively on Windows" and asks us to choose single one platform.
 
 * Should we publish a Docker image instead of asking evaluators to
   build the Dockerfile directly?
+  + Not sure, their website metions "dockerfile", I think it's Ok. Anyway, as the artifact is developing thus dockerfile is better.
 
 * Where in the artifact layout is the Dockerfile? Root?
+  + We need provide a doc(.pdf) and a single file(probably a docker image).
 
 * A "Hello World" Elrond invocation to make sure the Docker image is
   up and running successfully.
+  + TODO.
 
 * How to actually run benchmarks? The README instructions are likely
   outdated, and it's not obvious to me how to do it.
+  + in new README
 
 * A script to run all benchmarks from the paper at once.
+  + in new README
 
 * Is verification via Dafny still supported, or should we omit that
   section?
+  + We do not have Dafny, but should add a section about coq proof.
 
 * Annotate the artifact structure.
-
+  + TODO
 
 ## Requirements
 
