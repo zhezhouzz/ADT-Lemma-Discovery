@@ -256,7 +256,7 @@ let layout_funcm funcm =
     ) funcm
 
 let vcgen asts =
-  let ppf = Format.std_formatter in
+  (* let ppf = Format.std_formatter in *)
   if List.length asts != 3 then
     (* let _ = Pprintast.structure ppf [ List.nth asts 1] in *)
     raise @@ InterExn "vcgen wrong format"
@@ -272,7 +272,7 @@ let vcgen asts =
     match client.pstr_desc with
     | Pstr_value (_, [value_binding]) ->
       let expr = value_binding.pvb_expr in
-      let _ = Pprintast.expression ppf expr in
+      (* let _ = Pprintast.expression ppf expr in *)
       let rawargs, body = parse_func_args expr in
       let rawargs = List.map patten_to_typedvar rawargs in
       let tenv = List.fold_left (fun e (tp, name) ->
@@ -351,7 +351,7 @@ let parse_assertion client_name mtp argtps asts =
     match p.pstr_desc with
     | Pstr_value (_, [value_binding]) ->
       let expr = value_binding.pvb_expr in
-      let _ = Pprintast.expression ppf expr in
+      (* let _ = Pprintast.expression ppf expr in *)
       let rawargs, body = parse_func_args expr in
       let rawargs = List.map patten_to_typedvar rawargs in
       let tenv = List.fold_left (fun e (tp, name) ->

@@ -21,33 +21,42 @@ let parse sourcefile =
   structure
 ;;
 
-let start if_full sourcefile assertionfile outputdir =
+let start if_full sourcefile assertionfile outputdir sampling_bound =
   let ctx = init () in
   let bench_name = "customstk" in
   let source = parse sourcefile in
   let assertion = parse assertionfile in
   let mii, vc, holes, preds, spectab = Translate.trans (source, assertion) in
-  let r = if if_full
-    then
-      SpecAbd.do_full ~snum:(Some 4) ~uniform_qv_num:1
-        outputdir
-        ctx mii vc spectab holes preds 1
-    else
-      SpecAbd.do_consistent ~snum:(Some 4) ~uniform_qv_num:1
-        outputdir
-        ctx mii vc spectab holes preds 1
+  let r =
+  match if_full, sampling_bound with
+  | true, Some snum ->
+    SpecAbd.do_full ~snum:(Some snum) ~uniform_qv_num:1
+      outputdir
+      ctx mii vc spectab holes preds 1
+  | true, None ->
+    SpecAbd.do_full
+      outputdir
+      ctx mii vc spectab holes preds 1
+  | false, Some snum ->
+    SpecAbd.do_consistent ~snum:(Some snum) ~uniform_qv_num:1
+      outputdir
+      ctx mii vc spectab holes preds 1
+  | false, None ->
+    SpecAbd.do_consistent
+      outputdir
+      ctx mii vc spectab holes preds 1
   in
   match r with
-  | SpecAbd.Cex _ -> printf "Fail with Cex"
+  | SpecAbd.Cex _ -> printf "Fail with Cex!\n"
   | _ ->
     printf "Inference Seccussed!\n"
 
 let print_help () =
-  printf "help: ./main.exe full [sourcefile] [assertionfile] [outputdir]\n";
-  printf "      ./main.exe consistent [sourcefile] [assertionfile] [outputdir]\n";
-  printf "      ./main.exe weakening [outputdir]\n";
-  printf "      ./main.exe show consistent [outputdir]\n";
-  printf "      ./main.exe show weakening [outputdir]\n"
+  printf "help: ./main.exe full <sourcefile> <assertionfile> <outputdir> [sampling bound] \n";
+  printf "      ./main.exe consistent <sourcefile> <assertionfile> <outputdir> [sampling bound]\n";
+  printf "      ./main.exe weakening <outputdir>\n";
+  printf "      ./main.exe show consistent <outputdir>\n";
+  printf "      ./main.exe show weakening <outputdir>\n"
 ;;
 let action =
   try
@@ -69,9 +78,11 @@ match action with
       print_help ();
       raise @@ Failure "wrong arguments"
   in
+  let sampling_bound = try Some (int_of_string (Array.get Sys.argv 5)) with _ -> None in
+  let sampling_bound =  None in
   (match action with
-   | "consistent" -> start false sourcefile assertionfile outputdir
-   | "full" -> start true sourcefile assertionfile outputdir
+   | "consistent" -> start false sourcefile assertionfile outputdir sampling_bound
+   | "full" -> start true sourcefile assertionfile outputdir sampling_bound
    | _ -> raise @@ Failure "never happen"
   )
 |"weakening" ->
