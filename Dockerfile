@@ -11,6 +11,8 @@ RUN opam install qcheck.0.14
 SHELL ["/bin/bash", "-lc"]
 RUN git clone https://github.com/zhezhouzz/ADT-Lemma-Discovery.git
 WORKDIR ADT-Lemma-Discovery
+ARG CACHEBUST=1
+RUN git pull
 RUN git checkout artifact
 ENV LD_LIBRARY_PATH=/home/opam/.opam/4.08/lib/z3
 RUN bash ./init.sh
