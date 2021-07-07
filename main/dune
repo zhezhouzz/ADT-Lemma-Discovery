@@ -1,0 +1,9 @@
+(env
+  (dev
+    (flags (:standard -w -32 -w -35 -w -27 -w -33 -w -26)))
+)
+(executable
+ (name main)
+ (libraries ounit2 solver inference frontend translate core)
+ (preprocess (pps ppx_jane))
+)

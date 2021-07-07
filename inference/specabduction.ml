@@ -1201,8 +1201,11 @@ module SpecAbduction = struct
 
  let do_full ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
      benchname ctx mii pre spectable holel preds startX =
-   let _ = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
+   let e = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
        ctx mii pre spectable holel preds startX in
-   do_weakening ctx benchname
+   match e with
+   | Cex _ -> e
+   | _ ->
+     do_weakening ctx benchname
 
 end

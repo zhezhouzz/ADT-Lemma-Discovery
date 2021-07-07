@@ -69,6 +69,13 @@ module Tp = struct
                     counter.itreeinum, {counter with itreeinum = counter.itreeinum + 1}
     | IntTreeB -> name "itb" counter.itreebnum, {counter with itreebnum = counter.itreebnum + 1}
 
+  let universal_counter = ref (make_counter ())
+
+  let universal_auto_name tp =
+    let name, counter = counter_set (!universal_counter) tp in
+    let _ = universal_counter := counter in
+    name
+
   let auto_name tps =
     let res, _ =
       List.fold_left (fun (r, counter) tp ->

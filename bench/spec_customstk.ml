@@ -13,8 +13,8 @@ module V = Pred.Value
 open Language.Helper
 open Bench_utils
 ;;
-let sourcefile = "/Users/zhezhou/workspace/research/ADT-Spec-Inference/data/bench_customstack.ml"
-let assertionfile1 = "/Users/zhezhou/workspace/research/ADT-Spec-Inference/data/bench_customstack_assertion.ml"
+let sourcefile = "/Users/zhezhou/workspace/research/ADT-Spec-Inference/data/customstk.ml"
+let assertionfile1 = "/Users/zhezhou/workspace/research/ADT-Spec-Inference/data/customstk_assertion1.ml"
 let tool_name = "ocamlc"
 let ppf = Format.err_formatter
 
@@ -37,10 +37,10 @@ let concat_program = function
   | _ -> raise @@ InterExn "bad prog"
 in
 let concat, concat_hole =
-  make_hole "concat" [T.IntList; T.IntList; T.IntList] concat_program in
+  make_hole "concat_post" [T.IntList; T.IntList; T.IntList] concat_program in
 let is_empty_program = List.is_empty in
 let is_empty, is_empty_hole = make_hole_from_info
-    {name = "Stack.is_empty"; intps = [T.IntList;T.Bool;]; outtps = [];
+    {name = "Customstk.is_empty"; intps = [T.IntList;T.Bool;]; outtps = [];
      prog = function
        | [V.L []] -> Some [V.B true]
        | [V.L _] -> Some [V.B false]
@@ -50,18 +50,18 @@ let top_program = function
   | [V.L (h :: _)] -> Some [V.I h]
   | _ -> raise @@ InterExn "bad prog"
 in
-let top, top_hole = make_hole "Stack.top" [T.IntList; T.Int] top_program in
+let top, top_hole = make_hole "Customstk.top" [T.IntList; T.Int] top_program in
 let tail_program = function
   | [V.L []] -> None
   | [V.L (_ :: t)] -> Some [V.L t]
   | _ -> raise @@ InterExn "bad prog"
 in
-let tail, tail_hole = make_hole "Stack.tail" [T.IntList; T.IntList] tail_program in
+let tail, tail_hole = make_hole "Customstk.tail" [T.IntList; T.IntList] tail_program in
 let push_program = function
   | [V.I x; V.L l] -> Some [V.L (x :: l)]
   | _ -> raise @@ InterExn "bad prog"
 in
-let push, push_hole = make_hole "Stack.push" [T.Int; T.IntList; T.IntList] push_program in
+let push, push_hole = make_hole "Customstk.push" [T.Int; T.IntList; T.IntList] push_program in
 let s1, s2, nu_tail, nu_concat, nu_push, nu =
   map6 list_var ("s1", "s2", "nu_tail", "nu_concat", "nu_push", "nu") in
 let nu_is_empty = bool_var "nu_is_empty" in
@@ -82,10 +82,21 @@ let _ = printf "old:=\n%s\n" (Ast.layout pre) in
 (* let pre = vc in *)
 let mii =
   let open SpecAbd in
-  {upost = SpecApply("concat", [s1;s2;nu]);
+  {upost = SpecApply("concat_post", [s1;s2;nu]);
    uvars = [T.Int, "nu_top"];
    uinputs = [T.IntList, "s1"; T.IntList, "s2"];
    uoutputs = [T.IntList, "nu"];
+   uprog = function
+     | [V.L s1; V.L s2] -> Some [V.L (s1 @ s2)]
+     | _ -> raise @@ InterExn "bad prog"
+  }
+in
+let mii' =
+  let open SpecAbd in
+  {upost = SpecApply("concat_post", [list_var "s1"; list_var "s2"; list_var "il_0"]);
+   uvars = [T.Int, "i_0"];
+   uinputs = [T.IntList, "s1"; T.IntList, "s2"];
+   uoutputs = [T.IntList, "il_0"];
    uprog = function
      | [V.L s1; V.L s2] -> Some [V.L (s1 @ s2)]
      | _ -> raise @@ InterExn "bad prog"
@@ -99,7 +110,7 @@ if String.equal which_bench "1" then
     is_empty_hole;
     top_hole;
     tail_hole] in
-  let spectable_post = set_spec (predefined_spec_tab) "concat"
+  let spectable_post = set_spec (predefined_spec_tab) "concat_post"
       [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
       [T.Int, "u"]
       (E.And [
@@ -117,14 +128,16 @@ if String.equal which_bench "1" then
         ["concat"] spectable_post holel preds in
     ()
   | None ->
-    let imps = Imps.find bench_name in
-    let mii, vc, holes, preds, spectab = Translate.trans (source, assertion1) imps in
+    let mii'', vc, holes, preds, spectab = Translate.trans (source, assertion1) in
     (* let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
      *     (sprintf "%s%s" bench_name which_bench)
      *     ctx mii pre spectable_post holel preds 1 in *)
-    let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
+    (* let _ = printf "new:%s\n" (Ast.layout vc);
+     *   printf "old:%s\n" (Ast.layout pre);
+     *   raise @@ InterExn "end" in *)
+    let total_env = SpecAbd.do_consistent ~snum:(Some 4) ~uniform_qv_num:1
         (sprintf "%s%s" bench_name which_bench)
-        ctx mii vc spectab holel preds 1 in
+        ctx mii'' vc spectab holes preds 1 in
     ()
 else if String.equal which_bench "2" then
   let spectable_post = set_spec (predefined_spec_tab) "concat"
@@ -155,7 +168,7 @@ else if String.equal which_bench "2" then
         ctx mii pre spectable_post holel preds 1 in
     ()
 else if String.equal which_bench "3" then
-  let spectable_post = set_spec (predefined_spec_tab) "concat"
+  let spectable_post = set_spec (predefined_spec_tab) "concat_post"
       [T.IntList, "l1";T.IntList, "l2";T.IntList, "l3"]
       [T.Int, "u"; T.Int, "v"]
       (E.And [
