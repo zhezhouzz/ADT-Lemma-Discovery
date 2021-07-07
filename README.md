@@ -11,7 +11,7 @@ Data-Driven Abductive Inference of Library Specifications
 
 + run `./init.sh` first to initilize lexer and parser.
 + run `dune build` to build.
-+ run `cp _build/default/bench/main.exe main.exe` to copy the tool to current path.
++ run `cp _build/default/main/main.exe main.exe` to copy the tool to current path.
 + run `rm main.exe && dune clean && ./init_clean.sh` to clean the repo.
 
 ## Benchmarks
@@ -24,8 +24,8 @@ Data-Driven Abductive Inference of Library Specifications
 
 ## Detail Execution Instructions
 
-- run `./main.exe <arguments>` or `dune exec -- bench/main.exe <arguments>` to execute the tool.
-- run `./main.exe --help` or `dune exec -- bench/main.exe --help` to show instructions.
+- run `./main.exe <arguments>` or `dune exec -- main/main.exe <arguments>` to execute the tool.
+- run `./main.exe --help` or `dune exec -- main/main.exe --help` to show instructions.
 - The tool first infers a consistent specification mapping, then tries to weaken it until maximal. The tool will serialize all results and statistic informations in json. 
   + Infer a specification mapping result and save the result to the target output directory(with a prefix "_"):
 

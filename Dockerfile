@@ -15,4 +15,4 @@ RUN git checkout artifact
 ENV LD_LIBRARY_PATH=/home/opam/.opam/4.08/lib/z3
 RUN bash ./init.sh
 RUN dune build
-RUN cp _build/default/bench/main.exe main.exe
+RUN cp _build/default/main/main.exe main.exe
