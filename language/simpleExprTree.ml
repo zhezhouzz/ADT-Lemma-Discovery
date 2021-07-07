@@ -9,6 +9,7 @@ module type SimpleExprTree = sig
     | Op of tp * op * t list
 
   val layout: t -> string
+  val layout_simple: t -> string
   val layoutt: t -> string
   val layoutcoq: t -> string
   val subst: t -> string list -> t list -> t
@@ -50,6 +51,18 @@ module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
     | "<", [a; b] -> Printf.sprintf "(%s<%s)" a b
     | pred, args -> Printf.sprintf "%s(%s)" pred (List.to_string (fun x -> x) args)
 
+  let layout_op_simple op args =
+    match op, args with
+    | "+", [a; b] -> Printf.sprintf "(%s+%s)" a b
+    | "-", [a; b] -> Printf.sprintf "%s-%s" a b
+    | "==", [a; b] -> Printf.sprintf "(%s==%s)" a b
+    | "<>", [a; b] -> Printf.sprintf "(%s<>%s)" a b
+    | ">=", [a; b] -> Printf.sprintf "(%s>=%s)" a b
+    | "<=", [a; b] -> Printf.sprintf "(%s<=%s)" a b
+    | ">", [a; b] -> Printf.sprintf "(%s>%s)" a b
+    | "<", [a; b] -> Printf.sprintf "(%s<%s)" a b
+    | pred, args -> Printf.sprintf "%s(%s)" (Pred.Pred.layout_simple pred) (List.to_string (fun x -> x) args)
+
   let layout_op_coq op args =
     match op, args with
     | "+", [a; b] -> Printf.sprintf "(%s+%s)" a b
@@ -68,12 +81,17 @@ module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
     | Var (_, name) -> name
     | Op (_, op, args) -> layout_op op (List.map layout args)
 
+  let rec layout_simple = function
+    | Literal (_, x) -> L.layout x
+    | Var (_, name) -> name
+    | Op (_, op, args) -> layout_op_simple op (List.map layout_simple args)
+
   let rec layoutt = function
     | Literal (_, x) -> L.layout x
     | Var (tp, name) -> T.layouttvar (tp, name)
     | Op (tp, op, args) ->
       Printf.sprintf "%s:%s"
-      (layout_op op (List.map layout args)) (T.layout tp)
+      (layout_op op (List.map layoutt args)) (T.layout tp)
 
   let rec layoutcoq = function
     | Literal (_, x) -> L.layout x

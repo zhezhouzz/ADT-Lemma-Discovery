@@ -139,7 +139,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     let mk_indent indent = String.init indent (fun _ -> ' ') in
     let rec aux indent = function
       | True -> "true"
-      | Atom bexpr -> sprintf "%s%s" (mk_indent indent) (SE.layout bexpr)
+      | Atom bexpr -> sprintf "%s%s" (mk_indent indent) (SE.layout_simple bexpr)
       | Implies (Atom e1, Atom e2) ->
         sprintf "%s(%s %s %s)"
           (mk_indent indent) (aux 0 (Atom e1)) sym_implies (aux 0 (Atom e2))
@@ -180,7 +180,7 @@ module EprTree(SE: SimpleExpr.SimpleExpr) : EprTree
     aux indent e
 
   let pretty_layout_forallformula (forallvars, body) =
-    let qvstr = List.map T.layouttvar forallvars in
+    let qvstr = List.map snd forallvars in
     if (List.length forallvars) == 0 then layout body else
       sprintf "forall %s,%s" (List.inner_layout qvstr " " "") (pretty_layout 0 body)
 

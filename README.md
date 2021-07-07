@@ -1,41 +1,64 @@
-# ADT-Lemma-Discovery
-Algebraic data type lemma discovery
-
-## Structure
-
-- utils
-- tp
-  + types
-- ml
-  + decistion tree implementation(external library)
-- pred
-  + implemetation of the ADT predicates(member, order...)
-- solver
-  + SMT solver wrapper
-- language
-  + the specification language, which if limited first-order logic with ADT predicates
-- inference
-  + spec/lemma inference
-- test
-- bench
-  + benchmarks
+# Data-Driven Abductive Inference of Library Specifications
+Data-Driven Abductive Inference of Library Specifications
 
 ## Dependency
 
 - ocaml version: ocaml-base-compiler.4.08.1
+- dune: 2.7.0
 - z3 version: z3.4.7.1
-- dafny(optional): version 2.3.0
 
-## Test
+## Build and Clean
 
-+ run 
++ run `./init.sh` first to initilize lexer and parser.
++ run `dune build` to build.
++ run `cp _build/default/bench/main.exe main.exe` to copy the tool to current path.
++ run `rm main.exe && dune clean && ./init_clean.sh` to clean the repo.
+
+## Instructures
+
+- run `./main.exe [arguments]` or `dune exec bench/main.exe [arguments]` to execute the tool.
+- The tool first infers a consistent specification mapping, then tries to weaken it until maximal. The tool will serialize all results and statistic informations in json. 
+  + Infer a specification mapping result and save the result to the target output directory(with a prefix "_"):
 
 ```
-export DUNE_ROOT=`pwd`
+      ./main.exe consistent [sourcefile] [assertionfile] [outputdir]
 ```
 
-To setup the environment.
+  + Weaken the consistent specification mapping in the output directory and save maximal result in the same directory(need to run consistent inference first)::
 
-+ run `dune exec bench/$benchname.exe` to run infer the lemmas. E.g. `dune exec bench/customstack.exe` which includes all benchmarks in Custom Stack.
+```
+      ./main.exe weakening [outputdir]
+```
 
-+ (optional) If you want to verify the inferred lemma, run `dafny lemma_verifier/$benchname.dfy`. E.g. `dafny lemma_verifier/custstk.dfy`.
+  + Do consistent inference and weakening consecutively.
+  
+```
+      ./main.exe consistent [sourcefile] [assertionfile] [outputdir]
+```
+  
+  + Show the consistent specification mappinp(if exists):
+
+```
+      ./main.exe show consistent [outputdir]
+```
+
+  + Show the consistent specification mappinp(if exists):
+  
+```
+      ./main.exe show weakening [outputdir]
+```
+
+## Examples
+
+- run `./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout` to infer consistent and maximal specification mapping.
+- run `./main.exe show consistent exampleout` to show consistent specification mapping.
+
+```
+Customstk.top(il_0,i_0):=
+forall u_0,(
+ !(u_0==i_0) ||
+ hd(il_0,i_0)
+)
+```
+
+where `Customstk.top` is the library function name, `il_0,i_0` are the input and output of the library function, `u_0` is the univeral quantified variable. The specification means `Customstk.top` always returns the top element.

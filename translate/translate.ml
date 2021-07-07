@@ -8,11 +8,58 @@ module T = Tp.Tp;;
 module Helper = Language.Helper;;
 module V = Pred.Value;;
 
+module Impmap = struct
+  (* hardcode the Polymorphic Variants! *)
+  let reduce f =
+    match f with
+    | `StackIsEmpty f ->
+      ("Customstk.is_empty", function
+          | [V.L l] ->
+            (try Some [V.B (f l)] with
+             | _ -> None)
+          | _ -> raise @@ InterExn "bad prog"
+      )
+    | `StackPush f ->
+      ("Customstk.push", function
+          | [V.I x; V.L l] ->
+            (try Some [V.L (f x l)] with
+             | _ -> None)
+          | _ -> raise @@ InterExn "bad prog"
+      )
+    | `StackTop f ->
+      ("Customstk.top", function
+          | [V.L l] ->
+            (try Some [V.I (f l)] with
+             | _ -> None)
+          | _ -> raise @@ InterExn "bad prog"
+      )
+    | `StackTail f ->
+      ("Customstk.tail", function
+          | [V.L l] ->
+            (try Some [V.L (f l)] with
+             | _ -> None)
+          | _ -> raise @@ InterExn "bad prog"
+      )
+    | `Concat f ->
+      ("concat", function
+          | [V.L l1; V.L l2] ->
+            (try Some [V.L (f l1 l2)] with
+             | _ -> None
+            )
+          | _ -> raise @@ InterExn "bad prog"
+      )
+    | _ -> raise @@ InterExn "unknown implementation"
+  let l_to_map l =
+    List.fold_left (fun m (name, f) ->
+        StrMap.add name f m
+      ) StrMap.empty (List.map reduce l)
+end
+
 let client_pre client_name = sprintf "%s_pre" client_name
 let client_post client_name = sprintf "%s_post" client_name
 
 let type_reduction = function
-  | "Stack.t" -> T.IntList
+  | "Customstk.t" -> T.IntList
   | "bool" -> T.Bool
   | _ -> T.Int
 
@@ -34,7 +81,7 @@ let patten_to_string pattern =
   | _ -> raise @@ InterExn "wrong patten name"
 
 let patten_to_typedvar patten =
-  let rec get_type tp =
+  let get_type tp =
     match tp.ptyp_desc with
     | Ptyp_var tp -> type_reduction tp
     | Ptyp_package _ -> raise @@ InterExn "package patten type"
@@ -187,16 +234,16 @@ let vd_to_tpedvars signame vd =
   funcname, tp
 
 let signature_to_functypes (signame, signature) =
-  let aux funcmapping sig_item =
+  let aux (fnames, funcmapping) sig_item =
     match sig_item.psig_desc with
     | Psig_value vd ->
       let funcname, tp = vd_to_tpedvars (Some signame) vd in
-      StrMap.add funcname tp funcmapping
-    | Psig_type _ -> funcmapping
+      fnames @ [funcname], StrMap.add funcname tp funcmapping
+    | Psig_type _ -> fnames, funcmapping
     | _ -> raise @@ InterExn "signature_to_functypes"
   in
-  type_reduction (signame_concat (Some signame) "t"),
-  List.fold_left aux StrMap.empty signature
+  (signame, type_reduction (signame_concat (Some signame) "t")),
+  List.fold_left aux ([], StrMap.empty) signature
 
 let structure_to_vd struc =
   match struc.pstr_desc with
@@ -218,7 +265,7 @@ let vcgen asts =
     let clienttp = List.nth asts 1 in
     let client = List.nth asts 2 in
     (* let _ = Pprintast.structure ppf [signature] in *)
-    let mtp, funcm = signature_to_functypes @@ structure_to_signagture signature in
+    let (signame, mtp), (fnames, funcm) = signature_to_functypes @@ structure_to_signagture signature in
     let client_name, (intp, outtp) = vd_to_tpedvars None @@ structure_to_vd clienttp in
     let funcm = StrMap.add client_name (intp, outtp) funcm in
     let _ = layout_funcm funcm in
@@ -237,7 +284,7 @@ let vcgen asts =
        * let _ = Pprintast.expression ppf body in *)
       let vc, nus = body_vc_gen client_name funcm tenv body in
       let _ = printf "body:=\n%s\n" (Vc.layout vc) in
-      client_name, mtp, funcm, (intp, outtp), (rawargs, nus), vc
+      client_name, (signame, mtp), fnames, funcm, (intp, outtp), (rawargs, nus), vc
     | _ -> raise @@ InterExn "translate not a function value"
 
 let known_preds mtp name =
@@ -246,11 +293,6 @@ let known_preds mtp name =
   | T.IntList, "hd" -> "list_head"
   | T.IntList, "ord" -> "list_order"
   | _, _ -> raise @@ InterExn "unknown preds"
-
-let logical_implies = "implies"
-let logical_iff = "iff"
-let logical_and = "&&"
-let logical_and = "||"
 
 let parse_propositional_term mtp tenv expr =
   let expr_to_se = expr_to_se tenv in
@@ -291,6 +333,20 @@ let parse_propositional_term mtp tenv expr =
 
 let parse_assertion client_name mtp argtps asts =
   let ppf = Format.std_formatter in
+  let get_preds p =
+    match p.pstr_desc with
+    | Pstr_value (_, [value_binding]) ->
+      let expr = value_binding.pvb_expr in
+      (match expr.pexp_desc with
+       | Pexp_array es ->
+         List.map (fun e ->
+             match e.pexp_desc with
+             | Pexp_constant (Pconst_string (c, None)) -> c
+             | _ -> raise @@ InterExn "parse_assertion::get_preds"
+           ) es
+       | _ -> raise @@ InterExn "parse_assertion::get_preds")
+    | _ -> raise @@ InterExn "parse_assertion::get_preds"
+  in
   let get_assertion p =
     match p.pstr_desc with
     | Pstr_value (_, [value_binding]) ->
@@ -311,27 +367,20 @@ let parse_assertion client_name mtp argtps asts =
       spec
     | _ -> raise @@ InterExn "translate not an assertion"
   in
-  if List.length asts != 2 then
+  if List.length asts != 3 then
     raise @@ InterExn "assertions wrong format"
   else
-    let pre = get_assertion @@ List.nth asts 0 in
-    let post = get_assertion @@ List.nth asts 1 in
+    let preds = get_preds @@ List.nth asts 0 in
+    let pre = get_assertion @@ List.nth asts 1 in
+    let post = get_assertion @@ List.nth asts 2 in
     let spectab =
       StrMap.add (client_pre client_name) pre @@
       StrMap.add (client_post client_name) post
         Helper.predefined_spec_tab
     in
-    spectab
+    preds, spectab
 
-type hole_info = {
-  name: string;
-  intps: Tp.Tp.t list;
-  outtps: Tp.Tp.t list;
-  prog: V.t list -> (V.t list) option
-}
-
-let make_holes funcmap imp_map =
-  let funcnames = StrMap.to_key_list funcmap in
+let make_holes funcnames funcmap imp_map =
   let aux funcname =
     let intps, outtps = StrMap.find "make_hole::funcmap" funcmap funcname in
     let argstp = intps @ outtps in
@@ -339,14 +388,16 @@ let make_holes funcmap imp_map =
     let imp = StrMap.find (sprintf "make_hole::imp_map(%s)" funcname) imp_map funcname in
     let open Helper in
     let hole = {name = funcname; args = List.combine argstp names} in
-    (fun args -> Vc.SpecApply (funcname, args)), (hole, imp)
+    (hole, imp)
   in
   List.map aux funcnames
 
-let trans (source, assertion) imp_map =
-  let client_name, mtp, funcm, (intp, outtp), (uinputs, uoutputs), vc = vcgen source in
-  let spectab = parse_assertion client_name mtp (intp @ outtp) assertion in
-  let holes = make_holes funcm imp_map in
+let trans (source, assertion) =
+  let client_name, (signame, mtp), fnames, funcm, (intp, outtp), (uinputs, uoutputs), vc = vcgen source in
+  let imp_map = Impmap.l_to_map (Imps.find signame) in
+  let preds, spectab = parse_assertion client_name mtp (intp @ outtp) assertion in
+  let preds = List.map (fun p -> known_preds mtp p) preds in
+  let holes = make_holes fnames funcm imp_map in
   let uvars = Vc.get_uvars vc in
   let _ = printf "%s\n" (List.to_string T.layouttvar uvars) in
   let open Inference.SpecAbduction in
@@ -361,4 +412,8 @@ let trans (source, assertion) imp_map =
       uprog = StrMap.find "trans::imp_map" imp_map client_name
     }
   in
-  mii, vc, holes, spectab
+  (* let _ = printf "pres:%s\n" (StrList.to_string preds); raise @@ InterExn "end" in *)
+  (* let _ = printf "holes:%s\n" (List.to_string (fun (h, _) ->
+   *     h.Helper.name
+   *   ) holes); raise @@ InterExn "end" in *)
+  mii, vc, holes, preds, spectab

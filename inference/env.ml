@@ -87,8 +87,8 @@ let encode_vc vc =
 
 let decode_vc json =
   let open Util in
-  {preds = json |> member "multi_pre" |> decode_list "decode_vc" to_string;
-    multi_pre = json |> member "multi_pre" |>
+  {preds = json |> member "preds" |> decode_list "decode_vc" to_string;
+   multi_pre = json |> member "multi_pre" |>
                (decode_list "decode_vc" decode_flow);
    post = json |> member "post" |> Ast.decode;
    spectable = json |> member "spectable" |> Ast.spectable_decode;
@@ -216,9 +216,9 @@ let encode_weakening (vc, envs) =
   ]
 
 let decode_weakening json =
-  (* (json |> Util.member "vc" |> decode_vc,
-   *  json |> Util.member "envs" |> decode_spec_env_list) *)
-    json |> Util.member "envs" |> decode_spec_env_list
+  (json |> Util.member "vc" |> decode_vc,
+   json |> Util.member "envs" |> decode_spec_env_list)
+    (* json |> Util.member "envs" |> decode_spec_env_list *)
 
 type maximal_result =
   | AlreadyMaxed of spec_env

@@ -38,6 +38,7 @@ let concat_program = function
 in
 let concat, concat_hole =
   make_hole "concat" [T.IntList; T.IntList; T.IntList] concat_program in
+let is_empty_program = List.is_empty in
 let is_empty, is_empty_hole = make_hole_from_info
     {name = "Stack.is_empty"; intps = [T.IntList;T.Bool;]; outtps = [];
      prog = function
@@ -116,23 +117,11 @@ if String.equal which_bench "1" then
         ["concat"] spectable_post holel preds in
     ()
   | None ->
-    let imps = ["Stack.is_empty", (function
-        | [V.L []] -> Some [V.B true]
-        | [V.L _] -> Some [V.B false]
-        | _ -> raise @@ InterExn "bad prog");
-       "Stack.push", push_program;
-       "Stack.top", top_program;
-       "Stack.tail", tail_program;
-       "concat", concat_program;
-      ] in
-    let imp_map = List.fold_left (fun m (name, imp) ->
-        StrMap.add name imp m
-      ) StrMap.empty imps in
-    let mii, vc, holes, spectab = Translate.trans (source, assertion1) imp_map in
+    let imps = Imps.find bench_name in
+    let mii, vc, holes, preds, spectab = Translate.trans (source, assertion1) imps in
     (* let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
      *     (sprintf "%s%s" bench_name which_bench)
      *     ctx mii pre spectable_post holel preds 1 in *)
-    (* let _ = raise @@ InterExn "none" in *)
     let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
         (sprintf "%s%s" bench_name which_bench)
         ctx mii vc spectab holel preds 1 in

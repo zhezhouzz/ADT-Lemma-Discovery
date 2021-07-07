@@ -2,6 +2,7 @@ module type Predicate = sig
   module V: Value.Value
   type t = string
   val layout : t -> string
+  val layout_simple : t -> string
   val apply_layout: (t * V.t * V.t list) -> string
   val apply: (t * V.t * V.t list) -> bool
   val desugar: t -> t * int list
@@ -81,6 +82,46 @@ module Predicate (V: Value.Value) : Predicate with type V.t = V.t = struct
     | Some info -> info
 
   let layout name = name
+
+  let layout_simple name =
+    match name with
+    | "list_member" -> "mem"
+    | "list_head" -> "hd"
+    | "list_order" -> "ord"
+    | "list_once" -> "once"
+    | "list_last" -> "last"
+    | "list_next" -> "next"
+
+    | "tree_head" -> "hd"
+    | "tree_member" -> "mem"
+    | "tree_left" -> "left"
+    | "tree_right" -> "right"
+    | "tree_parallel" -> "para"
+    | "tree_once" -> "once"
+    | "tree_leaf" -> "leaf"
+    | "tree_node" -> "node"
+    | "tree_ancestor" -> "ance"
+
+    | "treei_head" -> "hd"
+    | "treei_member" -> "mem"
+    | "treei_left" -> "left"
+    | "treei_right" -> "right"
+    | "treei_parallel" -> "para"
+    | "treei_once" -> "once"
+    | "treei_leaf" -> "leaf"
+    | "treei_node" -> "node"
+    | "treei_ancestor" -> "ance"
+
+    | "treeb_head" -> "hd"
+    | "treeb_member" -> "mem"
+    | "treeb_left" -> "left"
+    | "treeb_right" -> "right"
+    | "treeb_parallel" -> "para"
+    | "treeb_once" -> "once"
+    | "treeb_leaf" -> "leaf"
+    | "treeb_node" -> "node"
+    | "treeb_ancestor" -> "ance"
+    | _ -> raise @@ InterExn "unknown pred"
 
   let tp_to_preds tp =
     let pres =

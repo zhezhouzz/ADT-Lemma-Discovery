@@ -873,7 +873,7 @@ module SpecAbduction = struct
       ) spectable
 
   let try_tmp tmpfile =
-    let envs = Env.decode_weakening @@ Yojson.Basic.from_file tmpfile in
+    let _, envs = Env.decode_weakening @@ Yojson.Basic.from_file tmpfile in
     let t_env = List.find "try_tmp" (fun env -> String.equal env.Env.hole.name "t") envs in
     let p, n = Hashtbl.fold (fun _ label (p, n) ->
         match label with
@@ -1109,7 +1109,7 @@ module SpecAbduction = struct
     let _ = close_out outc in
     ()
 
-  let multi_infer ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
+  let do_consistent ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
       benchname ctx mii pre spectable holel preds startX =
     let benchname = "_" ^ benchname ^ "/" in
     let _ = make_dir benchname in
@@ -1153,7 +1153,27 @@ module SpecAbduction = struct
           in
           single_env
         ) names in
-      weakening ctx benchname env.vc single_envs time_bound
+      let midfile = benchname ^ "_" ^ "beforeweakening.json" in
+      let _ = Yojson.Basic.to_file midfile
+          (Env.encode_weakening (env.vc, single_envs)) in
+      let result = spectable_filter_result names env.vc.Env.spectable in
+      Result result
+
+  let do_weakening ctx benchname =
+    let benchname = "_" ^ benchname ^ "/" in
+    let midfile = benchname ^ "_" ^ "beforeweakening.json" in
+    let _ = printf "before decode(%s)\n" midfile in
+    let total_env, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
+    let _ = printf "flow\n" in
+    let _ = List.map (fun fl -> printf "flow:%s\n" (Ast.layout fl.Env.pre_flow)) total_env.multi_pre in
+    weakening ctx benchname total_env single_envs time_bound
+
+ let multi_infer ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
+     benchname ctx mii pre spectable holel preds startX =
+   let _ = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
+       ctx mii pre spectable holel preds startX in
+   do_weakening ctx benchname
+      (* weakening ctx benchname env.vc single_envs time_bound *)
       (* let single_envs_arr = Array.of_list single_envs in
        * let rec aux total_env idx =
        *   if idx >= Array.length single_envs_arr
@@ -1178,4 +1198,11 @@ module SpecAbduction = struct
        * let _ = Yojson.Basic.to_file (name ^ "_" ^ "maximal.json")
        *     (Ast.spectable_encode result) in
        * result *)
+
+ let do_full ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
+     benchname ctx mii pre spectable holel preds startX =
+   let _ = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
+       ctx mii pre spectable holel preds startX in
+   do_weakening ctx benchname
+
 end

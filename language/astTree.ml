@@ -66,7 +66,7 @@ module AstTree (E: Epr.Epr) : AstTree
     | Ite (p1, p2, p3) ->
       sprintf "(ite %s %s %s)" (layout p1) (layout p2) (layout p3)
     | SpecApply (specname, args) ->
-      sprintf "%s(%s)" specname (List.to_string E.SE.layoutt args)
+      sprintf "%s(%s)" specname (List.to_string E.SE.layout args)
 
   let neg_spec name ast =
     let rec aux = function
@@ -162,9 +162,14 @@ module AstTree (E: Epr.Epr) : AstTree
     sprintf "%s(%s):=\n%s" name
       (List.to_string T.layouttvar args) (E.pretty_layout_forallformula formula)
 
+  let layout_spec_entry_simple name (args, formula) =
+    let _, args = List.split args in
+    sprintf "%s(%s):=\n%s" name
+      (StrList.to_string args) (E.pretty_layout_forallformula formula)
+
   let print_spectable spectable =
     StrMap.iter (fun name spec ->
-        printf "%s\n" (layout_spec_entry name spec)
+        printf "%s\n" (layout_spec_entry_simple name spec)
       ) spectable
 
   let eq a b =
@@ -327,8 +332,8 @@ module AstTree (E: Epr.Epr) : AstTree
     | field, `List [p1;p2] when String.equal "AIff" field -> Iff (decode p1, decode p2)
     | field, `List [p1;p2;p3] when String.equal "AIte" field ->
       Ite (decode p1, decode p2, decode p3)
-    | field, `List [specname;`List args] when String.equal "ASpecApply" field ->
-      SpecApply (to_string specname, List.map E.SE.decode args)
+    | field, `List [`String specname;`List args] when String.equal "ASpecApply" field ->
+      SpecApply (specname, List.map E.SE.decode args)
     | _ -> raise e
 
   let spec_tpname = "spec"
