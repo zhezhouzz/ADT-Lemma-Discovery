@@ -11,7 +11,6 @@ module T = Tp.Tp
 module V = Pred.Value
 open Language.Helper
 open Bench_utils
-open Frontend.Fast.Fast
 ;;
 let bench_name =  "bankersq" in
 let ctx = init () in

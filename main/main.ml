@@ -36,6 +36,7 @@ let start action sourcefile assertionfile outputdir sampling_bound =
   let bench_name = "customstk" in
   let source = parse sourcefile in
   let assertion = parse assertionfile in
+  (* let () = raise @@ InterExn "end" in *)
   let mii, vc, holes, preds, spectab = Translate.trans (source, assertion) in
   let r =
     match action, sampling_bound with

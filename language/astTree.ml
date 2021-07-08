@@ -262,10 +262,10 @@ module AstTree (E: Epr.Epr) : AstTree
       | Iff (p1, p2) -> aux p2 (aux p1 res)
       | Ite (p1, p2, p3) -> aux p3 (aux p2 (aux p1 res))
       | SpecApply (_, args) ->
-        (List.map (fun se ->
+        (List.filter_map (fun se ->
             match se with
-            | E.SE.Var (tp, name) -> (tp, name)
-            | _ -> raise @@ InterExn "get_uvars"
+            | E.SE.Var (tp, name) -> Some (tp, name)
+            | _ -> None
           ) args) @ res
     in
     List.filter (fun (tp, _) -> match tp with
