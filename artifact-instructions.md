@@ -9,33 +9,32 @@ al.
 
 ## TODO
 
-* Test these instructions in OSX and Windows.
-  + Donot worry about OSX and windows, the submission website says "running in a VM or Docker container on a Windows machine does *not* count as running natively on Windows" and asks us to choose single one platform.
-
 * Should we publish a Docker image instead of asking evaluators to
   build the Dockerfile directly?
-  + Not sure, their website metions "dockerfile", I think it's Ok. Anyway, as the artifact is developing thus dockerfile is better.
+  + [ZZ] Not sure, their website mentions "dockerfile", I think it's
+    Ok. Anyway, as the artifact is developing thus dockerfile is
+    better.
+  + [RD] I'm guessing it's fine to submit a Dockerfile, but having the
+    image ready to go would save a bunch of the evaluators' time. So,
+    publishing an image seems like the nice thing to do if we have the
+    time / resources. I'll leave this TODO here, but maybe we should
+    consider it lower priority / nice-to-have.
 
-* Where in the artifact layout is the Dockerfile? Root?
-  + We need provide a doc(.pdf) and a single file(probably a docker image).
-
-* A "Hello World" Elrond invocation to make sure the Docker image is
-  up and running successfully.
-  + TODO.
-
-* How to actually run benchmarks? The README instructions are likely
-  outdated, and it's not obvious to me how to do it.
-  + in new README
-
-* A script to run all benchmarks from the paper at once.
-  + in new README
-
-* Is verification via Dafny still supported, or should we omit that
-  section?
-  + We do not have Dafny, but should add a section about coq proof.
+* Add a section about the Coq formalization.
 
 * Annotate the artifact structure.
-  + TODO
+
+* Command to get _time<sub>w</sub>_ and _time<sub>d</sub>_ values from
+  Table 4.
+
+* There are other columns in Table 4; does our benchmark script give
+  us all of these numbers?
+
+* Improve output of the benchmark script; currently difficult to
+  correlate the script's output to our evaluation figure (Table 4).
+
+* Document the input file formats.
+
 
 ## Requirements
 
@@ -51,7 +50,7 @@ al.
 will test your installation.) If Docker is not installed, install it
 via the [official installation guide](https://docs.docker.com/get-docker/).
 
-2. Navigate to the location of the Elrond Docker file in this artifact.
+2. Navigate to the location of the Elrond Docker file.
 
    ```# cd <Dockerfile dir>```
 
@@ -63,39 +62,89 @@ via the [official installation guide](https://docs.docker.com/get-docker/).
 
     ```# docker run -it elrond```
 
-5. Verify Elrond is running successfully.
+5. Print the Elrond's help message to verify the tool was installed
+   successfully.
 
-    **TODO: Need a "hello world" Elrond invocation here.**
+    ```$ ./main.exe --help```
 
 6. When you are finished, you may stop the Elrond image by terminating
 the shell with `exit`.
 
 
-## Running Benchmarks
+## Using Elrond
 
-To run benchmark `$bench`, run `dune exec bench/$bench.exe`. For example,
+### Running All Benchmarks
 
-```dune exec bench/customstack.exe```
+Experimental results on the benchmark suite displayed in Table 4 of
+the paper can be obtained via the
+`~/ADT-Lemma-Discovery/run_benchmarks.sh` script in the Docker image
+as follows:
 
-will run all Custom Stack benchmarks.
+* `./run_benchmarks.sh consistent` finds consistent specification
+  mappings which enable successful verifications, but does not find
+  weakenings of these specifications. This corresponds to the
+  _time<sub>c</sub>_ column in Table 4.
 
-**TODO: I pulled the above from the project's README, but I can't
-actually figure out how to execute benchmarks.**
+* **TODO: Command** finds weakened specifications, corresponding to
+  the _time<sub>w</sub>_ and _time<sub>d</sub>_ columns in Table 4.
 
-**TODO: A script that runs all benchmarks from the paper?**
+* **TODO: There are other columns in Table 4; can our benchmark script
+  give us these numbers too?**
 
-### Verifying Inferred Lemmas (TODO: Is this still supported?)
 
-Optionally, the inferred lemmas may be verified via
-[Dafny](https://github.com/dafny-lang/dafny). To verify a benchmark
-named `$bench`, run `dafny lemma_verifier/$bench.dfy` after running
-Elrond. For example,
+### Running Individual Benchmarks
 
-```dafny lemma_verifier/custstk.dfy```
+Elrond requires both a source file and assertion file as input, and
+outputs results in JSON format to some output directory. The input
+source and assertion files for the benchmark suite are located in the
+`~/ADT-Lemma-Discovery/data` directory in the Docker image.
 
-verifies the abduced specifications for the `custstk` benchmark.
+The command to run an individual benchmark without weakening is:
+
+```./main.exe infer consistent <source_file> <assertion_file> <output_dir>```
+
+For example,
+
+```$ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out```
+
+will run the `bankersq` benchmark, writing results to the
+`_bankersq_out` directory. **TODO: A little confusing to prepend `_`
+to the output dir here?**
+
+To find weakened specification mappings, first run the benchmark without
+weakening as above, then say:
+
+```./main.exe infer weakening <output_dir>```
+
+on the same `<output_dir>`.
+
+For example,
+
+```$ ./main.exe infer weakening bankersq_out```
+
+will perform weakening on the `bankersq` benchmark we executed above.
+
+Alternately, you may run the full inference-with-weakening pipeline
+at once by saying:
+
+```$ ./main.exe infer full <source_file> <assertion_file> <output_dir>```
+
+For example, we can recreate the `bankersq` output directory in one pass:
+
+    $ rm -rf _bankersq_out
+    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
+
+
+### Running Other Programs
+
+To run Elrond on your own programs, you must provide both an input
+OCaml code listing and an assertion file.
+
+**TODO: Document the requirements on these inputs.**
 
 
 ## Artifact Structure
+
+This section gives a brief overview of the files in this artifact.
 
 TODO: Annotate the basic layout of the artifact code.
