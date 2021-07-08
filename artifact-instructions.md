@@ -126,7 +126,7 @@ will perform weakening on the `bankersq` benchmark we executed above.
 Alternately, you may run the full inference-with-weakening pipeline
 at once by saying:
 
-```$ ./main.exe infer full <source_file> <assertion_file> <output_dir>```
+```./main.exe infer full <source_file> <assertion_file> <output_dir>```
 
 For example, we can recreate the `bankersq` output directory in one pass:
 
