@@ -108,8 +108,7 @@ For example,
 ```$ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out```
 
 will run the `bankersq` benchmark, writing results to the
-`_bankersq_out` directory. **TODO: A little confusing to prepend `_`
-to the output dir here?**
+`_bankersq_out` directory.
 
 To find weakened specification mappings, first run the benchmark without
 weakening as above, then say:
