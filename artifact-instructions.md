@@ -24,14 +24,10 @@ al.
 
 * Annotate the artifact structure.
 
-* Command to get _time<sub>w</sub>_ and _time<sub>d</sub>_ values from
-  Table 4.
-
-* There are other columns in Table 4; does our benchmark script give
-  us all of these numbers?
-
 * Improve output of the benchmark script; currently difficult to
   correlate the script's output to our evaluation figure (Table 4).
+  There are several columns in Table 4; does our benchmark script give
+  us all of these numbers?
 
 * Document the input file formats.
 
@@ -85,8 +81,9 @@ as follows:
   weakenings of these specifications. This corresponds to the
   _time<sub>c</sub>_ column in Table 4.
 
-* **TODO: Command** finds weakened specifications, corresponding to
-  the _time<sub>w</sub>_ and _time<sub>d</sub>_ columns in Table 4.
+* `./run_benchmarks.sh full` finds weakened specifications,
+  corresponding to the _time<sub>w</sub>_ and _time<sub>d</sub>_
+  columns in Table 4.
 
 * **TODO: There are other columns in Table 4; can our benchmark script
   give us these numbers too?**
