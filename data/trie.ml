@@ -13,11 +13,11 @@ let rec ins (default: int) (i: Trie.tp) (a: int) (m: Trie.t) =
   match m with
   | _ when Trie.leaf ->
     (match i with
-     | _ when Trie.nil -> (Trie.node Trie.leaf a Trie.leaf)
+     | _ when Trie.nil -> (Trie.node m a m)
      | _ when Trie.cons (z1: int) (i1: Trie.tp) ->
        if z1 > 0
-       then Trie.node (ins default i1 a Trie.leaf) default Trie.leaf
-       else Trie.node Trie.leaf default (ins default i1 a Trie.leaf)
+       then Trie.node (ins default i1 a m) default m
+       else Trie.node m default (ins default i1 a m)
     )
   | _ when (Trie.node (l: Trie.t) (y: int) (r: Trie.t))->
     (match i with
