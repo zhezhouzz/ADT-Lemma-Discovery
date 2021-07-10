@@ -37,6 +37,7 @@ let start action sourcefile assertionfile outputdir sampling_bound =
   let assertion = parse assertionfile in
   (* let () = raise @@ InterExn "end" in *)
   let mii, vc, holes, preds, spectab, basic_info = Translate.trans (source, assertion) in
+  let () = Core.Unix.mkdir_p (Printf.sprintf "_%s" outputdir) in
   let basic_info_filename = Printf.sprintf "_%s/_basic_info.json" outputdir in
   let () = Yojson.Basic.to_file basic_info_filename basic_info in
   let r =
