@@ -128,16 +128,16 @@ if String.equal which_bench "1" then
         ["concat"] spectable_post holel preds in
     ()
   | None ->
-    let mii'', vc, holes, preds, spectab = Translate.trans (source, assertion1) in
-    (* let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
-     *     (sprintf "%s%s" bench_name which_bench)
-     *     ctx mii pre spectable_post holel preds 1 in *)
+    (* let mii'', vc, holes, preds, spectab = Translate.trans (source, assertion1) in *)
+    let total_env = SpecAbd.multi_infer ~snum:(Some 4) ~uniform_qv_num:1
+        (sprintf "%s%s" bench_name which_bench)
+        ctx mii pre spectable_post holel preds 1 in
     (* let _ = printf "new:%s\n" (Ast.layout vc);
      *   printf "old:%s\n" (Ast.layout pre);
      *   raise @@ InterExn "end" in *)
-    let total_env = SpecAbd.do_consistent ~snum:(Some 4) ~uniform_qv_num:1
-        (sprintf "%s%s" bench_name which_bench)
-        ctx mii'' vc spectab holes preds 1 in
+    (* let total_env = SpecAbd.do_consistent ~snum:(Some 4) ~uniform_qv_num:1
+     *     (sprintf "%s%s" bench_name which_bench)
+     *     ctx mii'' vc spectab holes preds 1 in *)
     ()
 else if String.equal which_bench "2" then
   let spectable_post = set_spec (predefined_spec_tab) "concat"

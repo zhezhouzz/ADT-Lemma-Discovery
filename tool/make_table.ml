@@ -258,18 +258,18 @@ else if String.equal commandline "single" then
   let _ = make_lines info in
   ()
 else if String.equal commandline "coq" then
-  let info_consistent = [
-    (* "bankersq", "BankersqCons", "push", [1;2];
-     * "batchedq", "ListCons", "push", [1;2];
-     * "customstk", "push", "push", [1;3];
-     * "stream", "Cons", "push", [1;2;3];
-     * "uniquel", "cons", "push", [1;2]; *)
-    (* "leftisthp", "t", "t", [2]; *)
-    (* "unbset", "t", "t", [1;2;3]; *)
-    (* "splayhp", "t", "t", [1]; *)
-    "rbset", "t", "t", [1;2];
-    (* "rbset", "t", [1;2]; "trie", "triet", [1]; *)
-  ] in
+  (* let info_consistent = [
+   *   (\* "bankersq", "BankersqCons", "push", [1;2];
+   *    * "batchedq", "ListCons", "push", [1;2];
+   *    * "customstk", "push", "push", [1;3];
+   *    * "stream", "Cons", "push", [1;2;3];
+   *    * "uniquel", "cons", "push", [1;2]; *\)
+   *   (\* "leftisthp", "t", "t", [2]; *\)
+   *   (\* "unbset", "t", "t", [1;2;3]; *\)
+   *   (\* "splayhp", "t", "t", [1]; *\)
+   *   "rbset", "t", "t", [1;2];
+   *   (\* "rbset", "t", [1;2]; "trie", "triet", [1]; *\)
+   * ] in *)
   let info_bound = [
     (* "customstk", "push", "push", [1];
      * "stream", "Cons", "push", [3]; *)
