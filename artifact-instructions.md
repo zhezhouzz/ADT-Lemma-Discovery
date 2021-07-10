@@ -52,7 +52,7 @@ via the [official installation guide](https://docs.docker.com/get-docker/).
 
 3. Build the Elrond Docker image.
 
-    ```# docker build . --tag elrond```
+    ```# docker build --build-arg CACHEBUST=$(date +%s) . --tag elrond```
 
 4. Launch a shell in the Elrond Docker image.
 
@@ -73,21 +73,20 @@ the shell with `exit`.
 
 Experimental results on the benchmark suite displayed in Table 4 of
 the paper can be obtained via the
-`~/ADT-Lemma-Discovery/run_benchmarks.sh` script in the Docker image
+`~/ADT-Lemma-Discovery/build_table4.py` script in the Docker image
 as follows:
 
-* `./run_benchmarks.sh consistent` finds consistent specification
+* `python3 build_table4.py consistent config/table4.config` finds consistent specification
   mappings which enable successful verifications, but does not find
-  weakenings of these specifications. This corresponds to the
-  _time<sub>c</sub>_ column in Table 4.
+  weakenings of these specifications. 
+  
+* `python3 build_table4.py column1 config/table4.config` shows this corresponds first part of columns in the Table 4.
 
-* `./run_benchmarks.sh full` finds weakened specifications,
-  corresponding to the _time<sub>w</sub>_ and _time<sub>d</sub>_
-  columns in Table 4.
+* `python3 build_table4.py column2 config/table4.config** shows this corresponds second part of columns in the Table 4.
 
-* **TODO: There are other columns in Table 4; can our benchmark script
-  give us these numbers too?**
+* **TODO: `python3 build_table4.py weakening config/table4.config`
 
+* **TODO: Figure 5
 
 ### Running Individual Benchmarks
 
@@ -136,8 +135,89 @@ For example, we can recreate the `bankersq` output directory in one pass:
 To run Elrond on your own programs, you must provide both an input
 OCaml code listing and an assertion file.
 
-**TODO: Document the requirements on these inputs.**
++ source file:
 
+```c
+(* Signature of library *)
+module type DT_NAME = sig
+  type TP_NAME
+  ...
+  val VAR: FUNC_TP
+  ...
+end
+
+(* type of client *)
+val VAR: FUNC_TP
+
+(* implementation of client *)
+let [rec] VAR (VAR: ARG_TP) ... = EXPR
+```
+
+```c
+DT_NAME:= string
+TP_NAME:= string | DT_NAME "." TP_NAME
+ARG_TP:= "int" | "bool" | TP_NAME
+RET_TP:= "int" | "bool" | TP_NAME | "(" FUNC_TP "," ... ")"
+FUNC_TP:= RET_TP | ARG_TP "->" FUNC_TP
+
+VAR := string
+VAR_TUPLE := VAR | "(" VAR "," ... ")"
+Lit := integer | boolean
+OP := "+" | "<=" | ">=" | ">" | "<" | "=="
+FUNC_APP := FUNC_NAME | FUNC_APP VAR
+CASE := "| _ when" EXPR "->" EXPR
+EXPR :=
+| "if" FUNC_APP "then" EXPR "else" EXPR
+| VAR
+| EXPR OP EXPR
+| "(" EXPR "," ... ")"
+| FUNC_NAME
+| EXPR EXPR
+| "let" VAR_TUPLE : ARG_TP "=" EXPR "in" EXPR
+| match VAR_TUPLE with CASE ...
+```
++ The type in signature should be abstract.
++ The input type of function is a list of "ARG_TP", the output type of function are written as a tuple. 
++ The condition of "if" should be a single function application. 
++ The matched case in "match" are written as "| _ -> when CASE" instead of "| CASE"(we use ocaml parser which asks the matched case be an application of data type constrcutor, put the CASE after when can get round this limitation. In our situation the datatype is abstract and we do not distinguish if it is a constructor.)
++ New variable should be typed when it first appears(we do not do type inference).
++ All variables have distinct names(we do not do alpha renaming now).
+
++ assertion:
+
+```c
+(* Predicates *)
+let preds = [| PRED; ...|]
+
+(* Precondtion, which is optional *)
+let pre VAR (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
+(* Postcondtion *)
+let post VAR (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
+```
+
+```c
+DT_NAME:= string
+TP_NAME:= string | DT_NAME "." TP_NAME
+ARG_TP:= "int" | "bool" | TP_NAME
+
+IVAR := string
+OVAR := string
+QVAR := string
+
+PRED := "mem" | "hd" | "ord" | "once" | "left" | "right" | "para" | "ance" | "root"
+OP := "==" | "!=" | "<=" | ">=" | "<" | ">"
+
+ASSERTION :=
+| PRED VAR ...
+| VAR OP VAR
+| implies ASSERTION ASSERTION
+| iff ASSERTION ASSERTION
+| ASSERTION "&&" ASSERTION
+| ASSERTION "||" ASSERTION
+| NOT ASSERTION
+```
+
++ Impelementation of libraries and impelementation of predicates are fixed now, thus user cannot define their own libraries/predicaets. But user can define their own assertions.
 
 ## Artifact Structure
 
