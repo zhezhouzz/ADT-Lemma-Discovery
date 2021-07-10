@@ -427,6 +427,7 @@ module SpecAbduction = struct
            (RealCex ms)
       )
     in
+    (* let _ = printf "post:%s\n" (Ast.layout env.vc.Env.post) in *)
     let build_smt_query version =
       Ast.to_z3 ctx
         (Ast.Not (Ast.Implies (flow.Env.pre_flow, env.vc.Env.post)))

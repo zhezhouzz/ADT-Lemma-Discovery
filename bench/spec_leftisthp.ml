@@ -12,7 +12,6 @@ module V = Pred.Value
 module LT = LabeledTree
 open Language.Helper
 open Bench_utils
-open Frontend.Fast.Fast
 ;;
 let bench_name = "leftisthp" in
 let ctx = init () in
@@ -74,6 +73,7 @@ let pre =
       [(T.IntTreeI, "tree3");]);
     ]
 in
+let _ = printf "vc:%s\n" (Ast.vc_layout pre); raise @@ InterExn "end" in
 let client_code tree1 tree2 =
   let open LabeledTree in
   let rank = function Leaf -> 0 | Node (r,_,_,_) -> r in

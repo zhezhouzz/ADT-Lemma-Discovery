@@ -12,7 +12,6 @@ module V = Pred.Value
 module LT = LabeledTree
 open Language.Helper
 open Bench_utils
-open Frontend.Fast.Fast
 ;;
 let bench_name = "rbset" in
 let ctx = init () in
@@ -97,6 +96,7 @@ let pre =
        [(T.IntTree, "tmp4");]);
     ]
 in
+let _ = printf "vc:%s\n" (Ast.vc_layout pre); raise @@ InterExn "end" in
 let client_code r tree1 x tree2 =
   let open LabeledTree in
   let balance = function

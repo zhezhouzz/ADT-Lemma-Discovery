@@ -33,11 +33,12 @@ type infer_action =
 
 let start action sourcefile assertionfile outputdir sampling_bound =
   let ctx = init () in
-  let bench_name = "customstk" in
   let source = parse sourcefile in
   let assertion = parse assertionfile in
   (* let () = raise @@ InterExn "end" in *)
-  let mii, vc, holes, preds, spectab = Translate.trans (source, assertion) in
+  let mii, vc, holes, preds, spectab, basic_info = Translate.trans (source, assertion) in
+  let basic_info_filename = Printf.sprintf "_%s/_basic_info.json" outputdir in
+  let () = Yojson.Basic.to_file basic_info_filename basic_info in
   let r =
     match action, sampling_bound with
     | InferFull, Some snum ->

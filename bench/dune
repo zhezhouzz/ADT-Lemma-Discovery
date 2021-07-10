@@ -7,14 +7,14 @@
  serialization
  spec_customstk
  ; spec_splayhp
- ; spec_leftisthp
+ spec_leftisthp
  ; spec_unbset
- ; spec_rbset
+ spec_rbset
  ; spec_trie
  ; spec_stream
  spec_bankersq
  ; spec_uniquel
- ; spec_batchedq
+ spec_batchedq
  show
  )
  (libraries ounit2 solver inference frontend translate core)

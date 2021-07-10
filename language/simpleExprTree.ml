@@ -100,8 +100,8 @@ module SimpleExprTree (L: Lit.Lit) : SimpleExprTree
 
 
   let subst expr args argsvalue =
-    (* let _ = Printf.printf "args: %s\n" (StrList.to_string args) in
-     * let _ = Printf.printf "argsvalue: %s\n" (List.to_string layoutt argsvalue) in *)
+    (* let _ = Printf.printf "args: %s\n" (StrList.to_string args) in *)
+    (* let _ = Printf.printf "argsvalue: %s\n" (List.to_string layoutt argsvalue) in *)
     let l = List.combine args argsvalue in
     let rec aux expr =
       match expr with

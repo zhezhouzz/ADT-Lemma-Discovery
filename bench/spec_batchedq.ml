@@ -11,7 +11,6 @@ module T = Tp.Tp
 module V = Pred.Value
 open Language.Helper
 open Bench_utils
-open Frontend.Fast.Fast
 ;;
 let bench_name = "batchedq" in
 let ctx = init () in
@@ -54,6 +53,7 @@ let pre = make_match [T.IntList, "l"; T.IntList, "r"] [T.IntList, "l'"; T.IntLis
      )
     ]
 in
+let _ = printf "old vc:%s\n" (Ast.layout pre); raise @@ InterExn "end" in
 let mii =
   let open SpecAbd in
   {upost = tail [f;r;f';r'];
