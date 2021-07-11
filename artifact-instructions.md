@@ -71,22 +71,23 @@ the shell with `exit`.
 
 ### Running All Benchmarks and Build Tables
 
-##### Running All Benchmarks
-
 Experimental results on the benchmark suite displayed in Table 4 of
 the paper can be obtained via the
 `~/ADT-Lemma-Discovery/build_table4.py` script in the Docker image
 as follows:
 
+##### Running All Benchmarks
+
 * `python3 build_table4.py consistent config/table4.config` finds consistent specification
   mappings which enable successful verifications, but does not find
   weakenings of these specifications.
   
-* `python3 build_table4.py weakening config/table4.config` finds consistent and maximal specification
-  mappings which enable successful verifications. The weakening will take a very long time to run. There are `6` benchmarks we labeled as `Limit` in Table which will take more than `1` hour to finish and there are `3` of them timeout.
-  + `python3 build_table4.py weakening config/table4.config` will skip these `6` benchmarks.
-  + `python3 build_table4.py weakening config/table4.config all` will run all benchmarks with in 1 hour time bound. It takes at least `6` hours.
-  + `python3 build_table4.py weakening config/table4.config unlimited` will run all benchmarks without time bound.
+* `python3 build_table4.py weakening config/table4.config [option]` finds consistent and maximal specification
+  mappings which enable successful verifications. 
+  + The weakening will take a very long time to run. There are `6` benchmarks we labeled as `Limit` in Table which will take more than `1` hour to finish. 
+  + `python3 build_table4.py weakening config/table4.config short` will run all benchmarks besides these `6` benchmarks.
+  + `python3 build_table4.py weakening config/table4.config long` will run these `6` benchmarks with a `1` hour time bound. It takes about `6` hours.
+  + `python3 build_table4.py weakening config/table4.config unlimited` will run these `6` benchmarks without time bound.
   + We also provide our expirement result which is saved in `_data` directory, you can use this result by config file `config/result_table4.config`.
   
 ##### Build Tables

@@ -1,6 +1,9 @@
 import json
 import subprocess
 import sys
+import argparse
+
+verbose=False
 
 def parse_config(table_file):
     with open(table_file) as f:
@@ -31,12 +34,13 @@ def run_table4_consistent(table_file):
                 arguments = info['arguments']
             cmd = ["dune", "exec", "--", "main/main.exe", "infer", "consistent",
                    source_file, assertion_file, output_dir] + arguments
-            print(" ".join(cmd))
             with open(log_file_name, "w") as log_file:
+                if verbose:
+                    print(" ".join(cmd))
                 subprocess.run(cmd, stdout=log_file)
                 subprocess.run(["mv", log_file_name, "_" + output_dir + "/" + log_file_name])
 
-def run_table4_weakening(table_file, timebound, if_skip):
+def run_table4_weakening(table_file, shortbench, longbench, timebound):
     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
     for benchmark in benchmarks:
         adt = benchmark['adt']
@@ -50,20 +54,17 @@ def run_table4_weakening(table_file, timebound, if_skip):
             output_dir = outputprefix + source + str(idx)
             log_file_name = "log.txt"
             long_time = False
-            if 'long_time' in info:
-                long_time = info['long_time']
-            arguments = []
-            if 'arguments' in info:
-                arguments = info['arguments']
-            if if_skip and long_time:
+            if 'weakening_long_time' in info:
+                long_time = info['weakening_long_time']
+            if ((not shortbench) and (not long_time)) or ((not longbench) and (long_time)):
                 print("skip")
-                return
-            if timebound >= 0:
-                arguments = arguments + ["-tb", "{}".format(timebound)]
-            cmd = ["dune", "exec", "--", "main/main.exe", "infer", "weakening",
-                   source_file, assertion_file, output_dir] + arguments
-            print(" ".join(cmd))
+                continue
+            if timebound > 0:
+                arguments = ["-tb", "{}".format(timebound)]
+            cmd = ["dune", "exec", "--", "main/main.exe", "infer", "weakening", output_dir] + arguments
             with open(log_file_name, "w") as log_file:
+                if verbose:
+                    print(" ".join(cmd))
                 subprocess.run(cmd, stdout=log_file)
                 subprocess.run(["mv", log_file_name, "_" + output_dir + "/" + log_file_name])
 
@@ -81,10 +82,11 @@ def run_table4_diff(table_file):
             output_dir = outputprefix + source + str(idx)
             cmd = ["dune", "exec", "--", "main/main.exe", "diff",
                    source_file, assertion_file, output_dir]
-            print(" ".join(cmd))
+            if verbose:
+                print(" ".join(cmd))
             subprocess.run(cmd)
 
-def run_table4_count(table_file, if_all):
+def run_table4_count(table_file, shortbench, longbench):
     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
     for benchmark in benchmarks:
         adt = benchmark['adt']
@@ -94,18 +96,105 @@ def run_table4_count(table_file, if_all):
             source = info['source']
             idx = info['idx']
             output_dir = outputprefix + source + str(idx)
-            if_complicate = False
-            if 'if_complicate' in info:
-                if_complicate = info['if_complicate']
-            print(if_complicate)
-            if if_all or (not if_complicate):
-                cmd = ["dune", "exec", "--", "main/main.exe", "count",
-                       output_dir, (source.capitalize() + "." + info['funcname'])]
+            long_time = False
+            if 'count_long_time' in info:
+                long_time = info['count_long_time']
+            if ((not shortbench) and (not long_time)) or ((not longbench) and (long_time)):
+                print("skip")
+                continue
+            cmd = ["dune", "exec", "--", "main/main.exe", "count",
+                   output_dir, (source.capitalize() + "." + info['funcname'])]
+            if verbose:
                 print(" ".join(cmd))
-                subprocess.run(cmd)
+            subprocess.run(cmd)
 
-def build_table4_c1(table_file):
-    c1 = []
+def build_table4_c1(output_dir):
+    with open(output_dir + "/" + "_basic_info.json") as basic_info_file:
+        return json.load(basic_info_file)
+    return None
+
+# def build_table4_c1(table_file):
+#     c1 = []
+#     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
+#     for benchmark in benchmarks:
+#         adt = benchmark['adt']
+#         res = []
+#         infos = benchmark['infos']
+#         for info in infos:
+#             source = info['source']
+#             idx = info['idx']
+#             output_dir = "_" + outputprefix + source + str(idx)
+#             with open(output_dir + "/" + "_basic_info.json") as basic_info_file:
+#                 basic_info = json.load(basic_info_file)
+#                 res.append(basic_info)
+#         c1.append({'name': adt, 'info': res})
+#     print("\t(|𝐹|,|𝑅|) |𝑃|")
+#     for x in c1:
+#         print(x['name'])
+#         for info in x['info']:
+#             print("\t({}, {}) {}".format(info['num_f'], info['num_r'], info['num_p']))
+
+def build_table4_c2(output_dir):
+    with open(output_dir + "/" + "_consistent_stat.json") as stat_file:
+        stat = json.load(stat_file)
+        return stat['consist_list'][-1]
+    return None
+
+# def build_table4_c2(table_file):
+#     c2 = []
+#     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
+#     for benchmark in benchmarks:
+#         adt = benchmark['adt']
+#         res = []
+#         infos = benchmark['infos']
+#         for info in infos:
+#             source = info['source']
+#             idx = info['idx']
+#             output_dir = "_" + outputprefix + source + str(idx)
+#             with open(output_dir + "/" + "_consistent_stat.json") as stat_file:
+#                 stat = json.load(stat_file)
+#                 res.append(stat['consist_list'][-1])
+#         c2.append({'name': adt, 'stat': res})
+#     print("\t |𝑢| |𝑐𝑒𝑥| time𝑐 (s)")
+#     for x in c2:
+#         print(x['name'])
+#         for info in x['stat']:
+#             print("\t{} {} {:.2f}".format(info['num_qv'], info['num_cex'], info['run_time']))
+
+def build_table4_c3(source, info, output_dir):
+    c3 = {'if_weakened': False, 'info': None, 'num_phi': None, 'time_d': None}
+    funcfile_prefix = output_dir + "/" + source.capitalize() + "." + info['funcname']
+    try:
+        # print(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json")
+        with open(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json") as count_file:
+            c3['num_phi'] = "{}".format(json.load(count_file)['num_phi'])
+    except IOError:
+        c3['num_phi'] = None
+
+    try:
+        with open( output_dir + "/" + "_diff.json") as count_file:
+            c3['time_d'] = "{}".format(json.load(count_file)['diff'])
+    except IOError:
+        c3['time_d'] = None
+
+    try:
+        with open(funcfile_prefix + "_3600.000000_stat.json") as stat_file:
+            stat = json.load(stat_file)
+            try:
+                with open(funcfile_prefix + "_none_stat.json") as none_stat_file:
+                    none_stat = json.load(none_stat_file)
+                    stat['end_negfv'] = none_stat['end_negfv']
+            except IOError:
+                stat['end_negfv'] = stat['end_negfv']
+            c3['if_weakened'] = True
+            c3['info'] = stat
+    except IOError:
+        c3['if_weakened'] = False
+        c3['info'] = None
+    return c3
+
+def build_table4_all(table_file):
+    tab = []
     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
     for benchmark in benchmarks:
         adt = benchmark['adt']
@@ -115,92 +204,119 @@ def build_table4_c1(table_file):
             source = info['source']
             idx = info['idx']
             output_dir = "_" + outputprefix + source + str(idx)
-            with open(output_dir + "/" + "_basic_info.json") as basic_info_file:
-                basic_info = json.load(basic_info_file)
-                res.append(basic_info)
-        c1.append({'name': adt, 'info': res})
-    print("\t(|𝐹|,|𝑅|) |𝑃|")
-    for x in c1:
+            # init
+            basic_info = build_table4_c1(output_dir)
+            stat2 = build_table4_c2(output_dir)
+            c3 = build_table4_c3(source, info, output_dir)
+            res.append((basic_info, stat2, c3))
+        tab.append({'name': adt, 'stat': res})
+    print("\t(|𝐹| , |𝑅| )  |𝑃|   |𝑢|   |𝑐𝑒𝑥| time𝑐 (s)  #Gather/|𝜙+|    time𝑤 (s)  time𝑑 (ms)")
+    for x in tab:
         print(x['name'])
-        for info in x['info']:
-            print("\t({}, {}) {}".format(info['num_f'], info['num_r'], info['num_p']))
+        for basic_info, stat2, c3 in x['stat']:
+            num_f = None
+            num_r = None
+            num_p = None
+            if basic_info is not None:
+                num_f = basic_info['num_f']
+                num_r = basic_info['num_r']
+                num_p = basic_info['num_p']
 
-def build_table4_c2(table_file):
-    c2 = []
-    datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
-    for benchmark in benchmarks:
-        adt = benchmark['adt']
-        res = []
-        infos = benchmark['infos']
-        for info in infos:
-            source = info['source']
-            idx = info['idx']
-            output_dir = "_" + outputprefix + source + str(idx)
-            with open(output_dir + "/" + "_consistent_stat.json") as stat_file:
-                stat = json.load(stat_file)
-                res.append(stat['consist_list'][-1])
-        c2.append({'name': adt, 'stat': res})
-    print("\t |𝑢| |𝑐𝑒𝑥| time𝑐 (s)")
-    for x in c2:
-        print(x['name'])
-        for info in x['stat']:
-            print("\t{} {} {:.2f}".format(info['num_qv'], info['num_cex'], info['run_time']))
+            num_qv = None
+            num_cex = None
+            time_c = None
+            if stat2 is not None:
+                num_qv = stat2['num_qv']
+                num_cex = stat2['num_cex']
+                time_c = "{:.2f}".format(stat2['run_time'])
 
-def build_table4_c3(table_file):
-    c3 = []
-    datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
-    for benchmark in benchmarks:
-        adt = benchmark['adt']
-        res = []
-        infos = benchmark['infos']
-        for info in infos:
-            source = info['source']
-            idx = info['idx']
-            output_dir = "_" + outputprefix + source + str(idx)
-            funcfile_prefix = output_dir + "/" + source.capitalize() + "." + info['funcname']
-            # print(output_dir + "/" + funcfile)
-            # exit(0)
-            try:
-                # print(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json")
-                with open(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json") as count_file:
-                    num_phi = "{}".format(json.load(count_file)['num_phi'])
-            except IOError:
-                num_phi = "None"
-
-            try:
-                with open( output_dir + "/" + "_diff.json") as count_file:
-                    time_d = "{}".format(json.load(count_file)['diff'])
-            except IOError:
-                time_d = "None"
-
-            try:
-                with open(funcfile_prefix + "_3600.000000_stat.json") as stat_file:
-                    stat = json.load(stat_file)
-                    try:
-                        with open(funcfile_prefix + "_none_stat.json") as none_stat_file:
-                            # print(funcfile_prefix + "_none_stat.json")
-                            none_stat = json.load(none_stat_file)
-                            stat['end_negfv'] = none_stat['end_negfv']
-                    except IOError:
-                        res=res
-                    res.append((True, stat, num_phi, time_d))
-            except IOError:
-                res.append((False,{}, num_phi, time_d))
-        c3.append({'name': adt, 'stat': res})
-    print("\t #Gather/|𝜙+| time𝑤 (s)  time𝑑 (ms)")
-    for x in c3:
-        print(x['name'])
-        for if_weakened, info, num_phi, time_d in x['stat']:
-            if if_weakened:
-                if info['run_time'] >= 3600.0:
-                    run_time = "Limit"
+            if_weakened = c3['if_weakened']
+            gather = None
+            time_w = None
+            time_d = None
+            if c3['time_d'] is not None:
+                time_d = c3['time_d']
+            if c3['info'] is not None:
+                gather = c3['info']['end_posfv'] + c3['info']['end_negfv']
+                time_w = c3['info']['run_time']
+                if time_w >= 3600.0:
+                    time_w = "Limit"
                 else:
-                    run_time = "{:.1f}".format(info['run_time'])
+                    time_w = "{:.1f}".format(time_w)
                     if time_d == "Timeout":
-                         time_d = "Max"
-                print("\t{}/{} {}  {}".format(info['end_posfv'] + info['end_negfv'], num_phi, run_time, time_d))
-            else:
-                print("\tNone")
+                        time_d = "Max"
+            num_phi = c3['num_phi']
+            num_f = "{}".format(num_f).ljust(4)
+            num_r = "{}".format(num_r).ljust(4)
+            num_p = "{}".format(num_p).ljust(4)
+            num_qv = "{}".format(num_qv).ljust(4)
+            num_cex = "{}".format(num_cex).ljust(4)
+            time_c = "{}".format(time_c).ljust(9)
+            gather = "{}".format(gather).ljust(7)
+            num_phi = "{}".format(num_phi).ljust(6)
+            time_w = "{}".format(time_w).ljust(9)
+            time_d = "{}".format(time_d).ljust(9)
+            print("\t({}, {})  {}  {}  {}  {}  {}/{}  {}  {}".format(
+                num_f, num_r, num_p,
+                num_qv, num_cex, time_c,
+                gather, num_phi, time_w, time_d
+            ))
+
+# def build_table4_c3(table_file):
+#     c3 = []
+#     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
+#     for benchmark in benchmarks:
+#         adt = benchmark['adt']
+#         res = []
+#         infos = benchmark['infos']
+#         for info in infos:
+#             source = info['source']
+#             idx = info['idx']
+#             output_dir = "_" + outputprefix + source + str(idx)
+#             funcfile_prefix = output_dir + "/" + source.capitalize() + "." + info['funcname']
+#             # print(output_dir + "/" + funcfile)
+#             # exit(0)
+#             try:
+#                 # print(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json")
+#                 with open(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json") as count_file:
+#                     num_phi = "{}".format(json.load(count_file)['num_phi'])
+#             except IOError:
+#                 num_phi = "None"
+
+#             try:
+#                 with open( output_dir + "/" + "_diff.json") as count_file:
+#                     time_d = "{}".format(json.load(count_file)['diff'])
+#             except IOError:
+#                 time_d = "None"
+
+#             try:
+#                 with open(funcfile_prefix + "_3600.000000_stat.json") as stat_file:
+#                     stat = json.load(stat_file)
+#                     try:
+#                         with open(funcfile_prefix + "_none_stat.json") as none_stat_file:
+#                             # print(funcfile_prefix + "_none_stat.json")
+#                             none_stat = json.load(none_stat_file)
+#                             stat['end_negfv'] = none_stat['end_negfv']
+#                     except IOError:
+#                         res=res
+#                     res.append((True, stat, num_phi, time_d))
+#             except IOError:
+#                 res.append((False,{}, num_phi, time_d))
+#         c3.append({'name': adt, 'stat': res})
+#     print("\t #Gather/|𝜙+| time𝑤 (s)  time𝑑 (ms)")
+#     for x in c3:
+#         print(x['name'])
+#         for if_weakened, info, num_phi, time_d in x['stat']:
+#             if if_weakened:
+#                 if info['run_time'] >= 3600.0:
+#                     run_time = "Limit"
+#                 else:
+#                     run_time = "{:.1f}".format(info['run_time'])
+#                     if time_d == "Timeout":
+#                          time_d = "Max"
+#                 print("\t{}/{} {}  {}".format(info['end_posfv'] + info['end_negfv'], num_phi, run_time, time_d))
+#             else:
+#                 print("\tNone")
 
 def solve_name(name):
     if name == "BankersqConcat":
@@ -263,53 +379,43 @@ def rename(source, funcfile_prefix, filename):
 
 
 def end_with_help():
-    print("python3 build_table4.py <consistent | weakening | count | column1 | column2 | column3 | column4 > <config file>")
+    print("python3 build_table4.py <consistent | weakening | count | table > <config file>")
     exit(1)
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        end_with_help()
-    action = sys.argv[1]
-    if (action == "help") or (action == "-help") or (action == "--help"):
-        end_with_help()
-    elif action == "consistent":
-        table_file = sys.argv[2]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("action", type=str,
+                        help="the expected you want: consistent | weakening | count | diff | table")
+    parser.add_argument("config", type=str,
+                        help="the config file")
+    parser.add_argument("timebound", nargs='?', type=int, default=3600,
+                        help="the time bound in second for weakening, default is 3600s")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="show executing commands")
+    parser.add_argument("-s", "--shortbench", action="store_true",
+                        help="work on benchmarks not labeled as [weakening|count]long time")
+    parser.add_argument("-l", "--longbench", action="store_true",
+                        help="work on benchmarks labeled as [weakening|count]long time")
+    args = parser.parse_args()
+    action = args.action
+    table_file = args.config
+    timebound = args.timebound
+    verbose=args.verbose
+    if action == "consistent":
         run_table4_consistent(table_file)
     elif action == "weakening":
-        table_file = sys.argv[2]
-        if_skip = True
-        timebound = 3600
-        if len(sys.argv) >= 4:
-            if sys.argv[3] == "all":
-                if_skip = False
-            if sys.argv[3] == "unlimited":
-                if_skip = False
-                timebound = -1
-        run_table4_weakening(table_file, timebound, if_skip )
+        run_table4_weakening(table_file, args.shortbench, args.longbench, args.timebound)
     elif action == "count":
-        table_file = sys.argv[2]
-        if_all = False
-        if len(sys.argv) >= 4:
-            if_all = (sys.argv[3] == "all")
-        run_table4_count(table_file, if_all)
+        run_table4_count(table_file, args.shortbench, args.longbench)
     elif action == "diff":
-        table_file = sys.argv[2]
         run_table4_diff(table_file)
-    elif action == "column1":
-        table_file = sys.argv[2]
-        build_table4_c1(table_file)
-    elif action == "column2":
-        table_file = sys.argv[2]
-        build_table4_c2(table_file)
-    elif action == "column3":
-        table_file = sys.argv[2]
-        build_table4_c3(table_file)
+    elif action == "table":
+        build_table4_all(table_file)
     elif action == "rename":
         f1 = "_consistent.json"
         f2 = "_bound_maximal.json"
         f3 = "_oracle_maximal.json"
-        rename(sys.argv[2], sys.argv[3], f3)
+        # rename(sys.argv[2], sys.argv[3], f3)
         # rename(sys.argv[2], f2)
     else:
-        print("unknown arguments")
-        end_with_help()
+        print("unknown arguments, try -h to get the usage")

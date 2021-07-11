@@ -31,7 +31,7 @@ type infer_action =
   | InferFull
   | InferWeakening
 
-let start action sourcefile assertionfile outputdir sampling_bound =
+let start action sourcefile assertionfile outputdir sampling_bound timebound =
   let ctx = init () in
   let source = parse sourcefile in
   let assertion = parse assertionfile in
@@ -45,11 +45,11 @@ let start action sourcefile assertionfile outputdir sampling_bound =
     | InferFull, Some snum ->
       SpecAbd.do_full ~snum:(Some snum) ~uniform_qv_num:1
         outputdir
-        ctx mii vc spectab holes preds 1
+        ctx mii vc spectab holes preds 1 timebound
     | InferFull, None ->
       SpecAbd.do_full
         outputdir
-        ctx mii vc spectab holes preds 1
+        ctx mii vc spectab holes preds 1 timebound
     | InferConsistent, Some snum ->
       SpecAbd.do_consistent ~snum:(Some snum) ~uniform_qv_num:1
         outputdir
@@ -92,14 +92,12 @@ let count_phi dir funcname =
   let open Yojson.Basic in
   let open Util in
   let aux preds spectable name =
-    let (_, spectable) = Env.decode_infer_result @@ from_file oraclefile in
     let spec = StrMap.find "make_single_table" spectable funcname in
     let num_oracle_fv = fst (SpecAbd.merge_spec spec preds) in
     let () = Yojson.Basic.to_file (sprintf "_%s/_count_%s.json" dir funcname)
         (`Assoc ["cat", `String name; "num_phi", `Int num_oracle_fv]) in
     printf "%i\n" num_oracle_fv
   in
-  (* let () = printf "%s\n" resultfile ; failwith "sad" in *)
   try
     let (preds, result) = Env.decode_infer_result (from_file resultfile) in
     (try
@@ -135,11 +133,15 @@ let infer_weakening =
   Command.basic
     ~summary:"weaken inferred specification mapping"
     Command.Let_syntax.(
-      let%map_open outputdir = anon ("outputdir" %: string) in
+      let%map_open outputdir = anon ("outputdir" %: string)
+      and time_bound = flag "-tb" (optional float) ~doc:"the time bound" in
       fun () ->
         let ctx = init () in
-        let _ : SpecAbd.multi_infer_result = SpecAbd.do_weakening ctx outputdir in
-        eprintf "Weakening Inference Seccussed!\n"
+        try
+          let _ : SpecAbd.multi_infer_result = SpecAbd.do_weakening ctx outputdir time_bound in
+          eprintf "Weakening Inference Seccussed!\n"
+        with
+        | _ -> eprintf "No Consistent Result Found!\n"
     )
 
 let common_parser doc cont =
@@ -150,23 +152,25 @@ let common_parser doc cont =
       and assertionfile = anon ("assertionfile" %: regular_file)
       and outputdir = anon ("outputdir" %: string)
       and sampling_bound = flag "-sb" (optional int)
-                             ~doc:"the sampling number bound"
+          ~doc:"the sampling number bound"
+      and time_bound = flag "-tb" (optional float)
+          ~doc:"the time bound"
       in
-      cont sourcefile assertionfile assertionfile outputdir sampling_bound
+      cont sourcefile assertionfile assertionfile outputdir sampling_bound time_bound
     )
 
 let infer =
   Command.group ~summary:"inference"
     [ "consistent",
       common_parser "infer consistent specification mapping"
-        (fun sourcefile assertionfile assertionfile outputdir sampling_bound ->
+        (fun sourcefile assertionfile assertionfile outputdir sampling_bound timebound ->
            fun () ->
-           start InferConsistent sourcefile assertionfile outputdir sampling_bound);
+             start InferConsistent sourcefile assertionfile outputdir sampling_bound timebound);
       "full",
       common_parser "infer consistent specification mapping, then do weakening"
-        (fun sourcefile assertionfile assertionfile outputdir sampling_bound ->
+        (fun sourcefile assertionfile assertionfile outputdir sampling_bound timebound ->
            fun () ->
-           start InferFull sourcefile assertionfile outputdir sampling_bound);
+             start InferFull sourcefile assertionfile outputdir sampling_bound timebound);
       "weakening", infer_weakening
     ]
 

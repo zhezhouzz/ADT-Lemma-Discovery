@@ -942,7 +942,7 @@ module SpecAbduction = struct
         (Env.encode_infer_result (preds, result)) in
     ()
 
-  let time_bound = Some 3600.0
+  (* let time_bound = Some 3600.0 *)
   (* let time_bound = None *)
 
   type mode = Bound | Oracle
@@ -1166,7 +1166,7 @@ module SpecAbduction = struct
       let result = spectable_filter_result names env.vc.Env.spectable in
       Result result
 
-  let do_weakening ctx benchname =
+  let do_weakening ctx benchname time_bound =
     let benchname = "_" ^ benchname ^ "/" in
     let midfile = benchname ^ "_" ^ "beforeweakening.json" in
     let _ = printf "before decode(%s)\n" midfile in
@@ -1207,12 +1207,12 @@ module SpecAbduction = struct
        * result *)
 
  let do_full ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
-     benchname ctx mii pre spectable holel preds startX =
+     benchname ctx mii pre spectable holel preds startX time_bound =
    let e = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
        ctx mii pre spectable holel preds startX in
    match e with
    | Cex _ -> e
    | _ ->
-     do_weakening ctx benchname
+     do_weakening ctx benchname time_bound
 
 end
