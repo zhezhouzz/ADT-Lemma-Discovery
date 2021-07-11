@@ -69,7 +69,9 @@ the shell with `exit`.
 
 ## Using Elrond
 
-### Running All Benchmarks
+### Running All Benchmarks and Build Tables
+
+##### Running All Benchmarks
 
 Experimental results on the benchmark suite displayed in Table 4 of
 the paper can be obtained via the
@@ -78,15 +80,42 @@ as follows:
 
 * `python3 build_table4.py consistent config/table4.config` finds consistent specification
   mappings which enable successful verifications, but does not find
-  weakenings of these specifications. 
+  weakenings of these specifications.
+  
+* `python3 build_table4.py weakening config/table4.config` finds consistent and maximal specification
+  mappings which enable successful verifications. The weakening will take a very long time to run. There are `6` benchmarks we labeled as `Limit` in Table which will take more than `1` hour to finish and there are `3` of them timeout.
+  + `python3 build_table4.py weakening config/table4.config` will skip these `6` benchmarks.
+  + `python3 build_table4.py weakening config/table4.config all` will run all benchmarks with in 1 hour time bound. It takes at least `6` hours.
+  + `python3 build_table4.py weakening config/table4.config unlimited` will run all benchmarks without time bound.
+  + We also provide our expirement result which is saved in `_data` directory, you can use this result by config file `config/result_table4.config`.
+  
+##### Build Tables
+
+* We provides two config files in json format under `config` directory. Both of them describes the lines in Figure 4 from which benchmark source file, assertion file, output directory and details arguments.
+  + `table4.config` for reviewers to run consistent inference and weakening inference by themselvies.
+  + We provides our consistent inference and weakening inference result under the output directory of `result_table4.config` as some command takes serveral hours to run. The reviewers can use these saved result to build table directly by `result_table4.config`.
   
 * `python3 build_table4.py column1 config/table4.config` shows this corresponds first part of columns in the Table 4.
 
-* `python3 build_table4.py column2 config/table4.config** shows this corresponds second part of columns in the Table 4.
+* `python3 build_table4.py column2 config/table4.confi` shows this corresponds second part of columns in the Table 4.
+  
+* `python3 build_table4.py count config/result_table4.config` counts the total positive feature vectors(|𝜙+|) in Table 4. This command may take `10 - 20` minutes to run.
 
-* **TODO: `python3 build_table4.py weakening config/table4.config`
+* `python3 build_table4.py diff config/result_table4.config` calculates the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (time𝑑).
 
-* **TODO: Figure 5
+* `python3 build_table4.py column3 config/result_table4.config` shows this corresponds third part of columns in the Table 4.
+
+* There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_build_table4.sh` which builds the table from our saved expirement result.
+
+```
+#!/bin/bash
+config=result_table4.config
+python3 build_table4.py count $config
+python3 build_table4.py diff $config
+python3 build_table4.py column1 $config
+python3 build_table4.py column2 $config
+python3 build_table4.py column3 $config
+```
 
 ### Running Individual Benchmarks
 

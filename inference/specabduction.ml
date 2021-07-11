@@ -1024,19 +1024,19 @@ module SpecAbduction = struct
         Ast.And ((Ast.Not (Ast.And ps')) :: ps)
       | _ -> raise @@ InterExn "never happen in make_constraint"
     in
-    let consistent_file = sprintf "_remote_result/_%s/_consistent.json" benchname in
-    let bound_file = sprintf "_remote_result/_%s/_bound_maximal.json" benchname in
+    let consistent_file = sprintf "_%s/_consistent.json" benchname in
+    let bound_file = sprintf "_%s/_bound_maximal.json" benchname in
     let consistent_result = try Some (Yojson.Basic.from_file consistent_file) with
       | _ -> None in
     let bound_result = try Some (Yojson.Basic.from_file bound_file) with
       | _ -> None in
     match consistent_result with
-    | None -> printf "%s: cex\n" benchname
+    | None -> printf "\tNone\n"
     | Some r ->
       (* let _ = printf "%s\n" consistent_file in *)
       let _, consistent_spectable = Env.decode_infer_result r in
       match bound_result with
-      | None -> printf "%s: never happen\n" benchname
+      | None -> printf "%s: do not find weakening result\n" benchname
       | Some r ->
         (* let _ = printf "%s\n" bound_file in *)
         let _, bound_spectable = Env.decode_infer_result r in
@@ -1065,10 +1065,16 @@ module SpecAbduction = struct
         let smt_query = build_smt_query version in
         (* let _ = printf "%s\n" (Expr.to_string smt_query) in *)
         let r, delta_time = time (fun _ -> S.check ctx smt_query) in
-        match r with
-        | S.SmtUnsat | S.Timeout -> printf "%s: maxed\n" benchname
-        | S.SmtSat _ ->
-          printf "%s: %f\n" benchname delta_time
+        let res =
+          match r with
+          | S.SmtUnsat -> "Max"
+          | S.Timeout -> "Timeout"
+          | S.SmtSat _ ->
+            sprintf "%.1f" (delta_time *. 1000.0)
+        in
+        let out_file = sprintf "_%s/_diff.json" benchname in
+        Yojson.Basic.to_file out_file (`Assoc ["diff", `String res])
+
 
   let result benchname assertions spectable holel preds =
     let names = List.map (fun (hole, _) -> hole.name) holel in

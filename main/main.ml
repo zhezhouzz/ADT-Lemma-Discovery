@@ -22,7 +22,7 @@ let parse sourcefile =
 let init () =
   let _ : unit = Random.init 0 in
   let ctx =
-    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "19999")] in
+    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "29999")] in
   ctx
 ;;
 
@@ -65,6 +65,14 @@ let start action sourcefile assertionfile outputdir sampling_bound =
   | _ ->
     eprintf "Inference Seccussed!\n"
 
+let time_d sourcefile assertionfile outputdir =
+  let ctx = init () in
+  let source = parse sourcefile in
+  let assertion = parse assertionfile in
+  (* let () = raise @@ InterExn "end" in *)
+  let mii, vc, _, _, spectab, _ = Translate.trans (source, assertion) in
+  SpecAbd.find_weakened_model outputdir ctx mii vc spectab
+
 let fallback_load outputdir =
   let oracle_max_file = sprintf "_%s/_oracle_maximal.json" outputdir in
   let bound_max_file = sprintf "_%s/_bound_maximal.json" outputdir in
@@ -78,6 +86,31 @@ let fallback_load outputdir =
     with
     | _ -> raise @@ Failure "cannot find weakened result!"
 
+let count_phi dir funcname =
+  let resultfile = sprintf "_%s/_bound_maximal.json" dir in
+  let oraclefile = sprintf "_%s/_oracle_maximal.json" dir in
+  let open Yojson.Basic in
+  let open Util in
+  let aux preds spectable name =
+    let (_, spectable) = Env.decode_infer_result @@ from_file oraclefile in
+    let spec = StrMap.find "make_single_table" spectable funcname in
+    let num_oracle_fv = fst (SpecAbd.merge_spec spec preds) in
+    let () = Yojson.Basic.to_file (sprintf "_%s/_count_%s.json" dir funcname)
+        (`Assoc ["cat", `String name; "num_phi", `Int num_oracle_fv]) in
+    printf "%i\n" num_oracle_fv
+  in
+  (* let () = printf "%s\n" resultfile ; failwith "sad" in *)
+  try
+    let (preds, result) = Env.decode_infer_result (from_file resultfile) in
+    (try
+       let (_, spectable) = Env.decode_infer_result @@ from_file oraclefile in
+       aux preds spectable "oracle"
+       with
+       | _ ->
+         aux preds result "bound"
+      )
+  with
+  | _ -> printf "None\n"
 ;;
 
 open Core
@@ -182,9 +215,34 @@ let show =
       "weakening", show_weakening
     ]
 
+let diff =
+   Command.basic
+     ~summary:"time𝑑: calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one"
+    Command.Let_syntax.(
+      let%map_open sourcefile = anon ("sourcefile" %: regular_file)
+      and assertionfile = anon ("assertionfile" %: regular_file)
+      and outputdir = anon ("outputdir" %: string)
+      in
+      fun () ->
+         time_d sourcefile assertionfile outputdir
+    )
+
+let count =
+  Command.basic
+    ~summary:"|𝜙+|: count the total positive feature vectors in the space of weakenings, notice it may cost several minutes. For the blue entries, it will takes serveal hours. "
+    Command.Let_syntax.(
+      let%map_open outputdir = anon ("outputdir" %: string)
+      and funcname = anon ("funcname" %: string)
+      in
+      fun () ->
+        count_phi outputdir funcname
+    )
+
 let command =
   Command.group ~summary:"Data-Driven Abductive Inference of Library Specifications"
     [ "infer", infer;
+      "diff", diff;
+      "count", count;
       "show", show;
     ]
 
