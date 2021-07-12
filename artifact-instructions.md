@@ -241,13 +241,13 @@ forall u_0,(ite mem(il_1,u_0)
 The following command displays the weakened specification mappings
 (`-s` asks for simplified specifications):
 
-        $ ./main.exe show weakening <output_dir> -s
+    $ ./main.exe show weakening <output_dir> -s
 
 For example, the following command displays weakened specifications
 for the paper's motivating example (assuming the specifications have
 already been found as above):
 
-        $ ./main.exe show weakening exampleout
+    $ ./main.exe show weakening exampleout
 
 This yields the output:
 
