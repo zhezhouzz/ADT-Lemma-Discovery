@@ -57,28 +57,34 @@ al.
 
 ## Getting Started
 
-1. Ensure Docker is installed. (On *nix, `sudo docker run hello-world`
-will test your installation.) If Docker is not installed, install it
-via the [official installation guide](https://docs.docker.com/get-docker/).
+This artifact is built as a Docker image. Before proceeding, ensure
+Docker is installed. (On *nix, `sudo docker run hello-world` will test
+your installation.) If Docker is not installed, install it via the
+[official installation guide](https://docs.docker.com/get-docker/).
 
-2. Navigate to the location of the Elrond Docker file.
+### Using the Pre-Built Docker Image
 
-   `# cd <Dockerfile dir>`
+**TODO**
 
-3. Build the Elrond Docker image.
+### Building the Docker Image
 
-    `# docker build . --tag elrond`
+To build the Docker image yourself, navigate to the directory
+containing the Dockerfile and tell Docker to build:
 
-4. Launch a shell in the Elrond Docker image.
+    # docker build . --tag elrond
 
-    `# docker run -it elrond`
+### Running the Docker Image
 
-5. Print Elrond's help message to verify the tool was installed
-   successfully.
+To launch a shell in the Elrond Docker image, say:
 
-    `$ ./main.exe --help`
+    # docker run -it elrond
 
-6. When you are finished, you may stop the Elrond image by terminating
+You can print Elrond's help message to verify the tool is operating
+successfully:
+
+    $ ./main.exe --help
+
+When you are finished using the image, you may stop it by terminating
 the shell with `exit`.
 
 
