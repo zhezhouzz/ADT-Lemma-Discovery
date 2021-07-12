@@ -219,7 +219,6 @@ following commands:
     $ ./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4
     $ ./main.exe show consistent exampleout
 
-
 (Here, the `-sb 4` flag limits the sampling bound to small number in order to simulate a biased test generator.)
 
 This yields the following result:
