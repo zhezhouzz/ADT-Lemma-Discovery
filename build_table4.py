@@ -41,6 +41,8 @@ def run_table4_consistent(table_file):
                 subprocess.run(["mv", log_file_name, "_" + output_dir + "/" + log_file_name])
 
 def run_table4_weakening(table_file, shortbench, longbench, timebound):
+    if not (shortbench or longbench):
+        shortbench = True
     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
     for benchmark in benchmarks:
         adt = benchmark['adt']
@@ -57,7 +59,8 @@ def run_table4_weakening(table_file, shortbench, longbench, timebound):
             if 'weakening_long_time' in info:
                 long_time = info['weakening_long_time']
             if ((not shortbench) and (not long_time)) or ((not longbench) and (long_time)):
-                print("skip")
+                if verbose:
+                    print("skip")
                 continue
             if timebound > 0:
                 arguments = ["-tb", "{}".format(timebound)]
@@ -87,6 +90,8 @@ def run_table4_diff(table_file):
             subprocess.run(cmd)
 
 def run_table4_count(table_file, shortbench, longbench):
+    if not (shortbench or longbench):
+        shortbench = True
     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
     for benchmark in benchmarks:
         adt = benchmark['adt']
@@ -100,7 +105,8 @@ def run_table4_count(table_file, shortbench, longbench):
             if 'count_long_time' in info:
                 long_time = info['count_long_time']
             if ((not shortbench) and (not long_time)) or ((not longbench) and (long_time)):
-                print("skip")
+                if verbose:
+                    print("skip")
                 continue
             cmd = ["dune", "exec", "--", "main/main.exe", "count",
                    output_dir, (source.capitalize() + "." + info['funcname'])]
@@ -113,53 +119,11 @@ def build_table4_c1(output_dir):
         return json.load(basic_info_file)
     return None
 
-# def build_table4_c1(table_file):
-#     c1 = []
-#     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
-#     for benchmark in benchmarks:
-#         adt = benchmark['adt']
-#         res = []
-#         infos = benchmark['infos']
-#         for info in infos:
-#             source = info['source']
-#             idx = info['idx']
-#             output_dir = "_" + outputprefix + source + str(idx)
-#             with open(output_dir + "/" + "_basic_info.json") as basic_info_file:
-#                 basic_info = json.load(basic_info_file)
-#                 res.append(basic_info)
-#         c1.append({'name': adt, 'info': res})
-#     print("\t(|𝐹|,|𝑅|) |𝑃|")
-#     for x in c1:
-#         print(x['name'])
-#         for info in x['info']:
-#             print("\t({}, {}) {}".format(info['num_f'], info['num_r'], info['num_p']))
-
 def build_table4_c2(output_dir):
     with open(output_dir + "/" + "_consistent_stat.json") as stat_file:
         stat = json.load(stat_file)
         return stat['consist_list'][-1]
     return None
-
-# def build_table4_c2(table_file):
-#     c2 = []
-#     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
-#     for benchmark in benchmarks:
-#         adt = benchmark['adt']
-#         res = []
-#         infos = benchmark['infos']
-#         for info in infos:
-#             source = info['source']
-#             idx = info['idx']
-#             output_dir = "_" + outputprefix + source + str(idx)
-#             with open(output_dir + "/" + "_consistent_stat.json") as stat_file:
-#                 stat = json.load(stat_file)
-#                 res.append(stat['consist_list'][-1])
-#         c2.append({'name': adt, 'stat': res})
-#     print("\t |𝑢| |𝑐𝑒𝑥| time𝑐 (s)")
-#     for x in c2:
-#         print(x['name'])
-#         for info in x['stat']:
-#             print("\t{} {} {:.2f}".format(info['num_qv'], info['num_cex'], info['run_time']))
 
 def build_table4_c3(source, info, output_dir):
     c3 = {'if_weakened': False, 'info': None, 'num_phi': None, 'time_d': None}
@@ -210,7 +174,7 @@ def build_table4_all(table_file):
             c3 = build_table4_c3(source, info, output_dir)
             res.append((basic_info, stat2, c3))
         tab.append({'name': adt, 'stat': res})
-    print("\t(|𝐹| , |𝑅| )  |𝑃|   |𝑢|   |𝑐𝑒𝑥| time𝑐 (s)  #Gather/|𝜙+|    time𝑤 (s)  time𝑑 (ms)")
+    print("\t(|𝐹| , |𝑅| )  |𝑃|   |𝑢|   |𝑐𝑒𝑥| time𝑐 (s)  #Gather/|𝜙+|      time𝑤 (s)  time𝑑 (ms)")
     for x in tab:
         print(x['name'])
         for basic_info, stat2, c3 in x['stat']:
@@ -253,7 +217,7 @@ def build_table4_all(table_file):
             num_cex = "{}".format(num_cex).ljust(4)
             time_c = "{}".format(time_c).ljust(9)
             gather = "{}".format(gather).ljust(7)
-            num_phi = "{}".format(num_phi).ljust(6)
+            num_phi = "{}".format(num_phi).ljust(8)
             time_w = "{}".format(time_w).ljust(9)
             time_d = "{}".format(time_d).ljust(9)
             print("\t({}, {})  {}  {}  {}  {}  {}/{}  {}  {}".format(
@@ -261,62 +225,6 @@ def build_table4_all(table_file):
                 num_qv, num_cex, time_c,
                 gather, num_phi, time_w, time_d
             ))
-
-# def build_table4_c3(table_file):
-#     c3 = []
-#     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
-#     for benchmark in benchmarks:
-#         adt = benchmark['adt']
-#         res = []
-#         infos = benchmark['infos']
-#         for info in infos:
-#             source = info['source']
-#             idx = info['idx']
-#             output_dir = "_" + outputprefix + source + str(idx)
-#             funcfile_prefix = output_dir + "/" + source.capitalize() + "." + info['funcname']
-#             # print(output_dir + "/" + funcfile)
-#             # exit(0)
-#             try:
-#                 # print(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json")
-#                 with open(output_dir + "/" + "_count_" + source.capitalize() + "." +info['funcname'] +".json") as count_file:
-#                     num_phi = "{}".format(json.load(count_file)['num_phi'])
-#             except IOError:
-#                 num_phi = "None"
-
-#             try:
-#                 with open( output_dir + "/" + "_diff.json") as count_file:
-#                     time_d = "{}".format(json.load(count_file)['diff'])
-#             except IOError:
-#                 time_d = "None"
-
-#             try:
-#                 with open(funcfile_prefix + "_3600.000000_stat.json") as stat_file:
-#                     stat = json.load(stat_file)
-#                     try:
-#                         with open(funcfile_prefix + "_none_stat.json") as none_stat_file:
-#                             # print(funcfile_prefix + "_none_stat.json")
-#                             none_stat = json.load(none_stat_file)
-#                             stat['end_negfv'] = none_stat['end_negfv']
-#                     except IOError:
-#                         res=res
-#                     res.append((True, stat, num_phi, time_d))
-#             except IOError:
-#                 res.append((False,{}, num_phi, time_d))
-#         c3.append({'name': adt, 'stat': res})
-#     print("\t #Gather/|𝜙+| time𝑤 (s)  time𝑑 (ms)")
-#     for x in c3:
-#         print(x['name'])
-#         for if_weakened, info, num_phi, time_d in x['stat']:
-#             if if_weakened:
-#                 if info['run_time'] >= 3600.0:
-#                     run_time = "Limit"
-#                 else:
-#                     run_time = "{:.1f}".format(info['run_time'])
-#                     if time_d == "Timeout":
-#                          time_d = "Max"
-#                 print("\t{}/{} {}  {}".format(info['end_posfv'] + info['end_negfv'], num_phi, run_time, time_d))
-#             else:
-#                 print("\tNone")
 
 def solve_name(name):
     if name == "BankersqConcat":
@@ -376,11 +284,6 @@ def rename(source, funcfile_prefix, filename):
             j['spectable'][i]['name'] = source + "." + name
     with open(funcfile_prefix + "/" + filename, 'w') as stat_file:
         json.dump(j, stat_file)
-
-
-def end_with_help():
-    print("python3 build_table4.py <consistent | weakening | count | table > <config file>")
-    exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

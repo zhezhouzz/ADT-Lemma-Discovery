@@ -108,7 +108,7 @@ let count_phi dir funcname =
          aux preds result "bound"
       )
   with
-  | _ -> printf "None\n"
+  | _ -> ()
 ;;
 
 open Core

@@ -76,6 +76,12 @@ the paper can be obtained via the
 `~/ADT-Lemma-Discovery/build_table4.py` script in the Docker image
 as follows:
 
+##### Config File
+
+* We use config file in json format to describe the source file, assertion file, output directory and details arguments for each benchmark. There are two config files:
+  + `config/table4.config` for reviewers to run consistent inference and weakening inference by themselvies, the output directory of it is empty.
+  + As the weakening inference may take several hours, we provides our consistent inference and weakening inference result under the output directory of `config/result_table4.config` as some command takes serveral hours to run. Don't use this config file do inference which will corrupt the saved expirement result.
+
 ##### Running All Benchmarks
 
 * `python3 build_table4.py consistent config/table4.config` finds consistent specification
@@ -84,39 +90,32 @@ as follows:
   
 * `python3 build_table4.py weakening config/table4.config [option]` finds consistent and maximal specification
   mappings which enable successful verifications. 
-  + The weakening will take a very long time to run. There are `6` benchmarks we labeled as `Limit` in Table which will take more than `1` hour to finish. 
-  + `python3 build_table4.py weakening config/table4.config short` will run all benchmarks besides these `6` benchmarks.
-  + `python3 build_table4.py weakening config/table4.config long` will run these `6` benchmarks with a `1` hour time bound. It takes about `6` hours.
-  + `python3 build_table4.py weakening config/table4.config unlimited` will run these `6` benchmarks without time bound.
-  + We also provide our expirement result which is saved in `_data` directory, you can use this result by config file `config/result_table4.config`.
+  + There are `6` benchmarks we labeled as `Limit` in Table 4 which will take more than `1` hour to finish, we recommand you run the shorter benchmarks first(`-s`). 
+  + `python3 build_table4.py weakening config/table4.config -s` will run all benchmarks besides these `6` benchmarks.
+  + `python3 build_table4.py weakening config/table4.config -l` will run these `6` benchmarks.
+  + `python3 build_table4.py weakening config/table4.config -s -l` will run all benchmarks.
+  + `python3 build_table4.py weakening config/table4.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
+  
+##### Additonal Processing
+
+* There are two columns in the table needs the additional processing, notice that these processing are not a part of our tool, but just used to build the table.
+
+* `python3 build_table4.py diff <config_file>` calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (`time𝑑`).
+
+* `python3 build_table4.py count <config_file> [option]` count total positive feature vectors in the space of weakenings(`|𝜙+|`).
+  + There are `3` cells in the Table 4 of our paper are colored as blue, indicate the `3` timeout benchmarks when weakening. We use the weakened specification(instead of maximal one) to count the positive feature vectors in the space of weakenings. As these benchmarks are complicate, thus the counting may also cout long time(hours). We recommand you run the shorter benchmarks first(`-s`). 
+  + `python3 build_table4.py count <config_file> -s` counts `|𝜙+|` for all benchmarks except these `3` benchmarks.
+  + `python3 build_table4.py count <config_file> -l` counts `|𝜙+|` for these `3` benchmarks.
+  + `python3 build_table4.py count <config_file> -s -l` counts `|𝜙+|` for all benchmarks.
   
 ##### Build Tables
-
-* We provides two config files in json format under `config` directory. Both of them describes the lines in Figure 4 from which benchmark source file, assertion file, output directory and details arguments.
-  + `table4.config` for reviewers to run consistent inference and weakening inference by themselvies.
-  + We provides our consistent inference and weakening inference result under the output directory of `result_table4.config` as some command takes serveral hours to run. The reviewers can use these saved result to build table directly by `result_table4.config`.
   
-* `python3 build_table4.py column1 config/table4.config` shows this corresponds first part of columns in the Table 4.
-
-* `python3 build_table4.py column2 config/table4.confi` shows this corresponds second part of columns in the Table 4.
-  
-* `python3 build_table4.py count config/result_table4.config` counts the total positive feature vectors(|𝜙+|) in Table 4. This command may take `10 - 20` minutes to run.
-
-* `python3 build_table4.py diff config/result_table4.config` calculates the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (time𝑑).
-
-* `python3 build_table4.py column3 config/result_table4.config` shows this corresponds third part of columns in the Table 4.
+* `python3 build_table4.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`. 
+* Notice that, the build table may be different from the table shown in our paper, however the numbers should be close.  The reason of difference may be:
+  + The inference is based on the random generation, thus some intermidate statistic data are uncertained(i.g. `|𝑐𝑒𝑥|`, `#Gather` and `|𝜙+|`).
+  + The performance statistic data(i.g `time_c`, `time_w`, `time_d`) depends on the machine you use.
 
 * There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_build_table4.sh` which builds the table from our saved expirement result.
-
-```
-#!/bin/bash
-config=result_table4.config
-python3 build_table4.py count $config
-python3 build_table4.py diff $config
-python3 build_table4.py column1 $config
-python3 build_table4.py column2 $config
-python3 build_table4.py column3 $config
-```
 
 ### Running Individual Benchmarks
 

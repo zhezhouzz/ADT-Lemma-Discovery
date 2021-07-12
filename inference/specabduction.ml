@@ -1031,12 +1031,16 @@ module SpecAbduction = struct
     let bound_result = try Some (Yojson.Basic.from_file bound_file) with
       | _ -> None in
     match consistent_result with
-    | None -> printf "\tNone\n"
+    | None ->
+      ()
+      (* printf "\tNone\n" *)
     | Some r ->
       (* let _ = printf "%s\n" consistent_file in *)
       let _, consistent_spectable = Env.decode_infer_result r in
       match bound_result with
-      | None -> printf "%s: do not find weakening result\n" benchname
+      | None ->
+        ()
+        (* printf "%s: do not find weakening result\n" benchname *)
       | Some r ->
         (* let _ = printf "%s\n" bound_file in *)
         let _, bound_spectable = Env.decode_infer_result r in
