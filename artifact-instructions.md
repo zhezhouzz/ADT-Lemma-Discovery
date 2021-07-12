@@ -60,7 +60,7 @@ via the [official installation guide](https://docs.docker.com/get-docker/).
 
 3. Build the Elrond Docker image.
 
-    ```# docker build --build-arg . --tag elrond```
+    ```# docker build . --tag elrond```
 
 4. Launch a shell in the Elrond Docker image.
 
