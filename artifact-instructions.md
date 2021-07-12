@@ -31,14 +31,20 @@ al.
 
 * Document the input file formats.
 
-* Move running all benchmarks instructions to top of "Using Elrond."
-
-* Motivation section -> showing spec mapping.
-
 * Running Other Programs -> Providing Other Assertions or similar.
 
 * Re-add this comment somewhere?
   `python3 bin/evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
+
+* Add suggested hardware requirements (i.e. RAM and hard disk)
+
+* Stipulate that reviews might need to disable memory limits in docker
+
+* Include our own docker image
+
+* Add a command to run a single benchmark to the ‘Getting Started’ guide, so reviewers have a sense things are actually working
+
+* Include lists of claims supported and not supported by the artifact
 
 
 ## Requirements
@@ -133,68 +139,83 @@ the paper can be obtained as follows:
 
   The table may be displayed at any stage of the benchmark process;
   any missing entries will be displayed as `None`.
-  
-##### Build The Figure
+
+##### Comprehensive Scripts
+
+* `./bin/run_benchmarks_short.sh` runs all short benchmarks (~ 1 to 2 hours).
+* `./bin/run_benchmarks_long.sh` runs the longer benchmarks (over ~10 hours).
+* `./bin/visualize_running_result.sh` visualizes from results which were just run (immediate).
+
+##### Building Figure 5
 
 `python3 bin/evaluation_tool.py figure config/prebuilt.config` generates
 Figure 5 from the weakening expirement result. The resulting figure is
 saved under the output directory.
-  
-##### Comprehensive Scripts
-
-* `./bin/run_benchmarks_short.sh` run all short benchmarks(1 ~ 2 hours).
-* `./bin/run_benchmarks_long.sh` run rest benchmarks(over 10 hours)..
-* `./bin/visualize_running_result.sh` visualizes from result just run(immediate).
 
 ##### Building From Saved Results
 
 * `./bin/visualize_prebuilt_result.sh` visualizes from prebuilt result(immediate).
 
-### Running Individual Benchmarks
+
+## Running Elrond
 
 Elrond requires both a source file and assertion file as input, and
 outputs results in JSON format to some output directory. The input
 source and assertion files for the benchmark suite are located in the
 `~/ADT-Lemma-Discovery/data` directory in the Docker image.
 
-The command to run an individual benchmark without weakening is:
+The command to run an individual input without weakening is:
 
-```./main.exe infer consistent <source_file> <assertion_file> <output_dir>```
+        $ ./main.exe infer consistent <source_file> <assertion_file> <output_dir>
 
 For example,
 
-```$ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out```
+        $ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
 will run the `bankersq` benchmark, writing results to the
 `_bankersq_out` directory.
 
-To find weakened specification mappings, first run the benchmark without
-weakening as above, then say:
+To find weakened specification mappings, first run the benchmark
+without weakening as above, then say:
 
-```./main.exe infer weakening <output_dir>```
+        $ ./main.exe infer weakening <output_dir>
 
-on the same `<output_dir>`.
+on the same `<output_dir>`. For example,
 
-For example,
-
-```$ ./main.exe infer weakening bankersq_out```
+        $ ./main.exe infer weakening bankersq_out
 
 will perform weakening on the `bankersq` benchmark we executed above.
 
-Alternately, you may run the full inference-with-weakening pipeline
-at once by saying:
+Alternately, you may run the full inference-with-weakening pipeline at
+once by saying:
 
-```./main.exe infer full <source_file> <assertion_file> <output_dir>```
+        $ ./main.exe infer full <source_file> <assertion_file> <output_dir>
 
 For example, we can recreate the `bankersq` output directory in one pass:
 
-    $ rm -rf _bankersq_out
-    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
+        $ rm -rf _bankersq_out
+        $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
-## Example in Motivation Section
 
-- run `./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4` to infer consistent and maximal specification mapping. The flag `-sb 4` limits the sampling bound to small number in order to simulate a biased test generator.
-- run `./main.exe show consistent exampleout` to show consistent specification mapping. TODO: add explaination according the Figure 4 in the paper.
+## Displaying Specification Mappings
+
+The following command displays inferred specifications before weakening:
+
+        $ ./main.exe show consistent <output_dir>
+
+where `<output_dir>` is the location of Elrond inference output.
+
+For example, to infer and display specifications from the paper's
+motivating example (called `exampleout` in this artifact), run the
+following commands:
+
+        $ ./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4
+        $ ./main.exe show consistent exampleout
+
+
+(Here, the `-sb 4` flag limits the sampling bound to small number in order to simulate a biased test generator.)
+
+This yields the following result:
 
 ```
 Customstk.push(i_0,il_0,il_1):=
@@ -217,7 +238,18 @@ forall u_0,(ite mem(il_1,u_0)
     ))
 ```
 
-- run `./main.exe show weakening exampleout -s` to show maximal specification mapping. The flag `-s` means simplifing the specifications. TODO: add explaination according the Figure 5 in the paper.
+The following command displays the weakened specification mappings
+(`-s` asks for simplified specifications):
+
+        $ ./main.exe show weakening <output_dir> -s
+
+For example, the following command displays weakened specifications
+for the paper's motivating example (assuming the specifications have
+already been found as above):
+
+        $ ./main.exe show weakening exampleout
+
+This yields the output:
 
 ```
 Customstk.push(i_0,il_0,il_1):=
