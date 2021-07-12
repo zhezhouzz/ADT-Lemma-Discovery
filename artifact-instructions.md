@@ -133,63 +133,61 @@ the paper can be obtained as follows:
 
   The table may be displayed at any stage of the benchmark process;
   any missing entries will be displayed as `None`.
-  
-##### Build The Figure
+
+##### Building Figure 5
 
 `python3 bin/evaluation_tool.py figure config/prebuilt.config` generates
 Figure 5 from the weakening expirement result. The resulting figure is
 saved under the output directory.
-  
+
 ##### Comprehensive Scripts
 
-* `./bin/run_benchmarks_short.sh` run all short benchmarks(1 ~ 2 hours).
-* `./bin/run_benchmarks_long.sh` run rest benchmarks(over 10 hours)..
-* `./bin/visualize_running_result.sh` visualizes from result just run(immediate).
+* `./bin/run_benchmarks_short.sh` runs all short benchmarks (~ 1 to 2 hours).
+* `./bin/run_benchmarks_long.sh` runs the longer benchmarks (over ~10 hours).
+* `./bin/visualize_running_result.sh` visualizes from results which were just run (immediate).
 
 ##### Building From Saved Results
 
 * `./bin/visualize_prebuilt_result.sh` visualizes from prebuilt result(immediate).
 
-### Running Individual Benchmarks
+## Running Elrond
 
 Elrond requires both a source file and assertion file as input, and
 outputs results in JSON format to some output directory. The input
 source and assertion files for the benchmark suite are located in the
 `~/ADT-Lemma-Discovery/data` directory in the Docker image.
 
-The command to run an individual benchmark without weakening is:
+The command to run an individual input without weakening is:
 
-```./main.exe infer consistent <source_file> <assertion_file> <output_dir>```
+        $ ./main.exe infer consistent <source_file> <assertion_file> <output_dir>
 
 For example,
 
-```$ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out```
+        $ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
 will run the `bankersq` benchmark, writing results to the
 `_bankersq_out` directory.
 
-To find weakened specification mappings, first run the benchmark without
-weakening as above, then say:
+To find weakened specification mappings, first run the benchmark
+without weakening as above, then say:
 
-```./main.exe infer weakening <output_dir>```
+        $ ./main.exe infer weakening <output_dir>
 
-on the same `<output_dir>`.
+on the same `<output_dir>`. For example,
 
-For example,
-
-```$ ./main.exe infer weakening bankersq_out```
+        $ ./main.exe infer weakening bankersq_out
 
 will perform weakening on the `bankersq` benchmark we executed above.
 
-Alternately, you may run the full inference-with-weakening pipeline
-at once by saying:
+Alternately, you may run the full inference-with-weakening pipeline at
+once by saying:
 
-```./main.exe infer full <source_file> <assertion_file> <output_dir>```
+        $ ./main.exe infer full <source_file> <assertion_file> <output_dir>
 
 For example, we can recreate the `bankersq` output directory in one pass:
 
-    $ rm -rf _bankersq_out
-    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
+        $ rm -rf _bankersq_out
+        $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
 ## Example in Motivation Section
 
