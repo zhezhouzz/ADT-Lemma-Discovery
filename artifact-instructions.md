@@ -31,6 +31,14 @@ al.
 
 * Document the input file formats.
 
+* Move running all benchmarks instructions to top of "Using Elrond."
+
+* Motivation section -> showing spec mapping.
+
+* Running Other Programs -> Providing Other Assertions or similar.
+
+* SHA on git clone in Dockerfile.
+
 
 ## Requirements
 
@@ -52,7 +60,7 @@ via the [official installation guide](https://docs.docker.com/get-docker/).
 
 3. Build the Elrond Docker image.
 
-    ```# docker build --build-arg CACHEBUST=$(date +%s) . --tag elrond```
+    ```# docker build --build-arg . --tag elrond```
 
 4. Launch a shell in the Elrond Docker image.
 
@@ -87,15 +95,15 @@ as follows:
 * `python3 evaluation_tool.py consistent config/standard.config` finds consistent specification
   mappings which enable successful verifications, but does not find
   weakenings of these specifications.
-  
+
 * `python3 evaluation_tool.py weakening config/standard.config [option]` finds consistent and maximal specification
-  mappings which enable successful verifications. 
-  + There are `6` benchmarks we labeled as `Limit` in Table 4 which will take more than `1` hour to finish, we recommand you run the shorter benchmarks first(`-s`). 
+  mappings which enable successful verifications.
+  + There are `6` benchmarks we labeled as `Limit` in Table 4 which will take more than `1` hour to finish, we recommand you run the shorter benchmarks first(`-s`).
   + `python3 evaluation_tool.py weakening config/standard.config -s` will run all benchmarks besides these `6` benchmarks.
   + `python3 evaluation_tool.py weakening config/standard.config -l` will run these `6` benchmarks.
   + `python3 evaluation_tool.py weakening config/standard.config -s -l` will run all benchmarks.
   + `python3 evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
-  
+
 ##### Additonal Processing
 
 * There are two columns in the table needs the additional processing, notice that these processing are not a part of our tool, but just used to build the table.
@@ -103,14 +111,14 @@ as follows:
 * `python3 evaluation_tool.py diff <config_file>` calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (`time𝑑`).
 
 * `python3 evaluation_tool.py count <config_file> [option]` count total positive feature vectors in the space of weakenings(`|𝜙+|`).
-  + There are `3` cells in the Table 4 of our paper are colored as blue, indicate the `3` timeout benchmarks when weakening. We use the weakened specification(instead of maximal one) to count the positive feature vectors in the space of weakenings. As these benchmarks are complicate, thus the counting may also cout long time(hours). We recommand you run the shorter benchmarks first(`-s`). 
+  + There are `3` cells in the Table 4 of our paper are colored as blue, indicate the `3` timeout benchmarks when weakening. We use the weakened specification(instead of maximal one) to count the positive feature vectors in the space of weakenings. As these benchmarks are complicate, thus the counting may also cout long time(hours). We recommand you run the shorter benchmarks first(`-s`).
   + `python3 evaluation_tool.py count <config_file> -s` counts `|𝜙+|` for all benchmarks except these `3` benchmarks.
   + `python3 evaluation_tool.py count <config_file> -l` counts `|𝜙+|` for these `3` benchmarks.
   + `python3 evaluation_tool.py count <config_file> -s -l` counts `|𝜙+|` for all benchmarks.
-  
+
 ##### Build Tables
-  
-* `python3 evaluation_tool.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`. 
+
+* `python3 evaluation_tool.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`.
 * Notice that, the build table may be different from the table shown in our paper, however the numbers should be close.  The reason of difference may be:
   + The inference is based on the random generation, thus some intermidate statistic data are uncertained(i.g. `|𝑐𝑒𝑥|`, `#Gather` and `|𝜙+|`).
   + The performance statistic data(i.g `time_c`, `time_w`, `time_d`) depends on the machine you use.
@@ -161,7 +169,7 @@ For example, we can recreate the `bankersq` output directory in one pass:
 
     $ rm -rf _bankersq_out
     $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
-    
+
 ## Example in Motivation Section
 
 - run `./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4` to infer consistent and maximal specification mapping. The flag `-sb 4` limits the sampling bound to small number in order to simulate a biased test generator.
@@ -260,8 +268,8 @@ EXPR :=
 | match VAR_TUPLE with CASE ...
 ```
 + The type in signature should be abstract.
-+ The input type of function is a list of "ARG_TP", the output type of function are written as a tuple. 
-+ The condition of "if" should be a single function application. 
++ The input type of function is a list of "ARG_TP", the output type of function are written as a tuple.
++ The condition of "if" should be a single function application.
 + The matched case in "match" are written as "| _ -> when CASE" instead of "| CASE"(we use ocaml parser which asks the matched case be an application of data type constrcutor, put the CASE after when can get round this limitation. In our situation the datatype is abstract and we do not distinguish if it is a constructor.)
 + New variable should be typed when it first appears(we do not do type inference).
 + All variables have distinct names(we do not do alpha renaming now).
@@ -305,7 +313,7 @@ ASSERTION :=
 ## Proof of the result
 
 + The coq proof of our inferred specifications are saved in `proof` directory. run `make` to execute.
-+ Each file with prefix `Verify` proves one inferred specification. 
++ Each file with prefix `Verify` proves one inferred specification.
 + These files are generated by a command `dune exec -- main/main.exe coq <specificaion mapping file> <function name>` which can convert the inferred specification mappings to the coq lemmas for the furthur proving. For example, run `dune exec -- main/main.exe coq _data/_result/_customstk1/_oracle_maximal.json Customstk.push` can print several lemmas:
 
 ```

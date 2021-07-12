@@ -14,9 +14,8 @@ RUN pip3 install matplotlib
 SHELL ["/bin/bash", "-lc"]
 RUN git clone https://github.com/zhezhouzz/ADT-Lemma-Discovery.git
 WORKDIR ADT-Lemma-Discovery
-ARG CACHEBUST=1
-RUN git pull
-RUN git checkout artifact
+RUN git fetch
+RUN git checkout 3de51b1
 ENV LD_LIBRARY_PATH=/home/opam/.opam/4.08/lib/z3
 RUN unzip data/result.zip
 RUN bash ./init.sh
