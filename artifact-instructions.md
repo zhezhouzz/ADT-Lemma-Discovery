@@ -143,18 +143,18 @@ the paper can be obtained as follows:
 ##### Comprehensive Scripts
 
 * `./bin/run_benchmarks_short.sh` runs all short benchmarks (~ 1 to 2 hours).
-* `./bin/run_benchmarks_long.sh` runs the longer benchmarks (over ~10 hours).
+* `./bin/run_benchmarks_long.sh` runs the longer benchmarks (> 10 hours).
 * `./bin/visualize_running_result.sh` visualizes from results which were just run (immediate).
 
 ##### Building Figure 5
 
-`python3 bin/evaluation_tool.py figure config/prebuilt.config` generates
-Figure 5 from the weakening expirement result. The resulting figure is
-saved under the output directory.
+`python3 bin/evaluation_tool.py figure config/prebuilt.config`
+generates Figure 5 from the weakening expiremental results. The
+figure is saved under the output directory.
 
 ##### Building From Saved Results
 
-* `./bin/visualize_prebuilt_result.sh` visualizes from prebuilt result(immediate).
+* `./bin/visualize_prebuilt_result.sh` visualizes from prebuilt results (immediate).
 
 
 ## Running Elrond
@@ -166,11 +166,11 @@ source and assertion files for the benchmark suite are located in the
 
 The command to run an individual input without weakening is:
 
-        $ ./main.exe infer consistent <source_file> <assertion_file> <output_dir>
+    $ ./main.exe infer consistent <source_file> <assertion_file> <output_dir>
 
 For example,
 
-        $ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
+    $ ./main.exe infer consistent data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
 will run the `bankersq` benchmark, writing results to the
 `_bankersq_out` directory.
@@ -178,30 +178,30 @@ will run the `bankersq` benchmark, writing results to the
 To find weakened specification mappings, first run the benchmark
 without weakening as above, then say:
 
-        $ ./main.exe infer weakening <output_dir>
+    $ ./main.exe infer weakening <output_dir>
 
 on the same `<output_dir>`. For example,
 
-        $ ./main.exe infer weakening bankersq_out
+    $ ./main.exe infer weakening bankersq_out
 
 will perform weakening on the `bankersq` benchmark we executed above.
 
 Alternately, you may run the full inference-with-weakening pipeline at
 once by saying:
 
-        $ ./main.exe infer full <source_file> <assertion_file> <output_dir>
+    $ ./main.exe infer full <source_file> <assertion_file> <output_dir>
 
 For example, we can recreate the `bankersq` output directory in one pass:
 
-        $ rm -rf _bankersq_out
-        $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
+    $ rm -rf _bankersq_out
+    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
 
 ## Displaying Specification Mappings
 
 The following command displays inferred specifications before weakening:
 
-        $ ./main.exe show consistent <output_dir>
+    $ ./main.exe show consistent <output_dir>
 
 where `<output_dir>` is the location of Elrond inference output.
 
@@ -209,8 +209,8 @@ For example, to infer and display specifications from the paper's
 motivating example (called `exampleout` in this artifact), run the
 following commands:
 
-        $ ./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4
-        $ ./main.exe show consistent exampleout
+    $ ./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4
+    $ ./main.exe show consistent exampleout
 
 
 (Here, the `-sb 4` flag limits the sampling bound to small number in order to simulate a biased test generator.)
