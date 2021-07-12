@@ -109,6 +109,56 @@ let count_phi dir funcname =
       )
   with
   | _ -> ()
+
+let tpname = "nat"
+
+let tpedvar_to_coqstr (tp, name) =
+  let tp_coqstr =
+    match tp with
+    | T.Int -> tpname
+    | T.Bool -> "bool"
+    | T.IntList -> sprintf "list %s" tpname
+    | T.IntTree | T.IntTreeI | T.IntTreeB -> sprintf "tree %s" tpname
+  in
+  sprintf "(%s:%s) " name tp_coqstr
+
+type coqresult =
+  | Consistent
+  | BoundMaximal
+  | OracleMaximal
+
+let layout_coqresult = function
+  | Consistent -> "consistent"
+  | BoundMaximal -> "bound"
+  | OracleMaximal -> "oracle"
+
+let spec_to_coq_string funcname subtasknum spec =
+  let (args, (qv, body)) = spec in
+  (* let eq_str = sprintf "(eq: %s -> %s -> Prop)" tpname tpname in *)
+  let make_args =
+    List.fold_left (fun str x -> str ^ (tpedvar_to_coqstr x)) "" (args @ qv) in
+  let spec_label = sprintf "%s_spec %s" funcname
+      (List.fold_left (fun str (_, name) -> sprintf "%s %s" str name) "" args) in
+  let prefix = sprintf "Lemma %s_%i %s: (%s) -> %s." funcname
+      subtasknum make_args spec_label (Ast.E.layoutcoq body) in
+  sprintf "%s\n" prefix
+
+let to_coq resultfile funcname =
+  let open Yojson.Basic in
+  let open Util in
+  let (preds, spectable) = Env.decode_infer_result (from_file resultfile) in
+  let spec = StrMap.find (sprintf "to_coq: cannot find (%s)" funcname) spectable funcname in
+  let args, (qv, body) =
+    match spec with
+    | args, (qv, (Ast.E.Or _)) ->
+      (* printf "merge\n"; *)
+      snd @@ SpecAbd.merge_spec spec preds
+    | _ -> spec in
+  let horns = List.map (fun body -> args, (qv, body)) (Ast.E.to_horns body) in
+  let () = List.iteri (fun idx horn ->
+      printf "%s\n" (spec_to_coq_string funcname idx horn)
+    ) horns in
+  ()
 ;;
 
 open Core
@@ -242,12 +292,23 @@ let count =
         count_phi outputdir funcname
     )
 
+let coq =
+  Command.basic
+    ~summary:"print the corresponding coq theorems need to be proved."
+    Command.Let_syntax.(
+      let%map_open resultfile = anon ("resultfile" %: regular_file)
+      and funcname = anon ("funcname" %: string)
+      in
+      fun () -> to_coq resultfile funcname
+    )
+
 let command =
   Command.group ~summary:"Data-Driven Abductive Inference of Library Specifications"
     [ "infer", infer;
       "diff", diff;
       "count", count;
       "show", show;
+      "coq", coq;
     ]
 
 let () = Command.run command

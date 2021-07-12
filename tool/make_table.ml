@@ -205,9 +205,8 @@ let save_coq_file benchname num funcname tacticname mode spec =
   let horns = List.map (fun body -> args, (qv, body)) (Epr.to_horns body) in
   let oc = open_out (sprintf "coq/Verify%s%i%s%s.v"
                        benchname num (layout_coqresult mode) funcname) in
-  let _ = fprintf oc "Require Import ListAux.\nRequire Import TreeAux.\n" in
   let _ = List.iteri (fun idx horn ->
-      fprintf oc "%s\n" (spec_to_coq_string benchname num funcname tacticname mode idx horn)
+      fprintf oc "%s\n" (spec_to_coq_string benchname num funcname "" mode idx horn)
     ) horns in
   close_out oc
 ;;

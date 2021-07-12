@@ -1,0 +1,14 @@
+Require Import ListAux.
+Require Import TreeAux.
+Lemma unbset1consistent_t0 (it_0:tree nat) (i_0:nat) (it_1:tree nat) (it_2:tree nat) (u_0:nat) : (t_spec  it_0 i_0 it_1 it_2) -> (((not (u_0 = i_0))/\(not (tree_member  it_0 u_0))/\(tree_member  it_2 u_0)) -> (tree_member  it_1 u_0)).
+Proof. solve_t. Qed.
+
+Lemma unbset1consistent_t1 (it_0:tree nat) (i_0:nat) (it_1:tree nat) (it_2:tree nat) (u_0:nat) : (t_spec  it_0 i_0 it_1 it_2) -> (((not (tree_member  it_2 u_0))) -> (not (u_0 = i_0))).
+Proof. solve_t. Qed.
+
+Lemma unbset1consistent_t2 (it_0:tree nat) (i_0:nat) (it_1:tree nat) (it_2:tree nat) (u_0:nat) : (t_spec  it_0 i_0 it_1 it_2) -> (((not (tree_member  it_2 u_0))) -> (not (tree_member  it_0 u_0))).
+Proof. solve_t. Qed.
+
+Lemma unbset1consistent_t3 (it_0:tree nat) (i_0:nat) (it_1:tree nat) (it_2:tree nat) (u_0:nat) : (t_spec  it_0 i_0 it_1 it_2) -> (((not (tree_member  it_2 u_0))) -> (not (tree_member  it_1 u_0))).
+Proof. solve_t. Qed.
+

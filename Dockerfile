@@ -8,6 +8,7 @@ RUN opam install yojson.1.7.0
 RUN opam install ounit2.2.2.3
 RUN opam install z3.4.7.1
 RUN opam install qcheck.0.14
+RUN opam install coq.8.12.0
 RUN sudo apt-get install -y python3
 SHELL ["/bin/bash", "-lc"]
 RUN git clone https://github.com/zhezhouzz/ADT-Lemma-Discovery.git

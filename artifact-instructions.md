@@ -73,49 +73,53 @@ the shell with `exit`.
 
 Experimental results on the benchmark suite displayed in Table 4 of
 the paper can be obtained via the
-`~/ADT-Lemma-Discovery/build_table4.py` script in the Docker image
+`~/ADT-Lemma-Discovery/evaluation_tool.py` script in the Docker image
 as follows:
 
 ##### Config File
 
 * We use config file in json format to describe the source file, assertion file, output directory and details arguments for each benchmark. There are two config files:
-  + `config/table4.config` for reviewers to run consistent inference and weakening inference by themselvies, the output directory of it is empty.
-  + As the weakening inference may take several hours, we provides our consistent inference and weakening inference result under the output directory of `config/result_table4.config` as some command takes serveral hours to run. Don't use this config file do inference which will corrupt the saved expirement result.
+  + `config/standard.config` for reviewers to run consistent inference and weakening inference by themselvies, the output directory of it is empty.
+  + As the weakening inference may take several hours, we provides our consistent inference and weakening inference result under the output directory of `config/prebuilt.config` as some command takes serveral hours to run. Don't use this config file do inference which will corrupt the saved expirement result.
 
 ##### Running All Benchmarks
 
-* `python3 build_table4.py consistent config/table4.config` finds consistent specification
+* `python3 evaluation_tool.py consistent config/standard.config` finds consistent specification
   mappings which enable successful verifications, but does not find
   weakenings of these specifications.
   
-* `python3 build_table4.py weakening config/table4.config [option]` finds consistent and maximal specification
+* `python3 evaluation_tool.py weakening config/standard.config [option]` finds consistent and maximal specification
   mappings which enable successful verifications. 
   + There are `6` benchmarks we labeled as `Limit` in Table 4 which will take more than `1` hour to finish, we recommand you run the shorter benchmarks first(`-s`). 
-  + `python3 build_table4.py weakening config/table4.config -s` will run all benchmarks besides these `6` benchmarks.
-  + `python3 build_table4.py weakening config/table4.config -l` will run these `6` benchmarks.
-  + `python3 build_table4.py weakening config/table4.config -s -l` will run all benchmarks.
-  + `python3 build_table4.py weakening config/table4.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
+  + `python3 evaluation_tool.py weakening config/standard.config -s` will run all benchmarks besides these `6` benchmarks.
+  + `python3 evaluation_tool.py weakening config/standard.config -l` will run these `6` benchmarks.
+  + `python3 evaluation_tool.py weakening config/standard.config -s -l` will run all benchmarks.
+  + `python3 evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
   
 ##### Additonal Processing
 
 * There are two columns in the table needs the additional processing, notice that these processing are not a part of our tool, but just used to build the table.
 
-* `python3 build_table4.py diff <config_file>` calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (`time𝑑`).
+* `python3 evaluation_tool.py diff <config_file>` calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (`time𝑑`).
 
-* `python3 build_table4.py count <config_file> [option]` count total positive feature vectors in the space of weakenings(`|𝜙+|`).
+* `python3 evaluation_tool.py count <config_file> [option]` count total positive feature vectors in the space of weakenings(`|𝜙+|`).
   + There are `3` cells in the Table 4 of our paper are colored as blue, indicate the `3` timeout benchmarks when weakening. We use the weakened specification(instead of maximal one) to count the positive feature vectors in the space of weakenings. As these benchmarks are complicate, thus the counting may also cout long time(hours). We recommand you run the shorter benchmarks first(`-s`). 
-  + `python3 build_table4.py count <config_file> -s` counts `|𝜙+|` for all benchmarks except these `3` benchmarks.
-  + `python3 build_table4.py count <config_file> -l` counts `|𝜙+|` for these `3` benchmarks.
-  + `python3 build_table4.py count <config_file> -s -l` counts `|𝜙+|` for all benchmarks.
+  + `python3 evaluation_tool.py count <config_file> -s` counts `|𝜙+|` for all benchmarks except these `3` benchmarks.
+  + `python3 evaluation_tool.py count <config_file> -l` counts `|𝜙+|` for these `3` benchmarks.
+  + `python3 evaluation_tool.py count <config_file> -s -l` counts `|𝜙+|` for all benchmarks.
   
 ##### Build Tables
   
-* `python3 build_table4.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`. 
+* `python3 evaluation_tool.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`. 
 * Notice that, the build table may be different from the table shown in our paper, however the numbers should be close.  The reason of difference may be:
   + The inference is based on the random generation, thus some intermidate statistic data are uncertained(i.g. `|𝑐𝑒𝑥|`, `#Gather` and `|𝜙+|`).
   + The performance statistic data(i.g `time_c`, `time_w`, `time_d`) depends on the machine you use.
 
-* There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_build_table4.sh` which builds the table from our saved expirement result.
+* There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_evaluation_tool.sh` which builds the table from our saved expirement result.
+
+##### Build Figure
+
+* `python3 evaluation_tool.py figure config/prebuilt.config` generate The Figure 5 from the weakening expirement result.
 
 ### Running Individual Benchmarks
 
@@ -247,6 +251,18 @@ ASSERTION :=
 ```
 
 + Impelementation of libraries and impelementation of predicates are fixed now, thus user cannot define their own libraries/predicaets. But user can define their own assertions.
+
+## Proof of the result
+
++ The coq proof of our inferred specifications are saved in `proof` directory. run `make` to execute.
++ Each file with prefix `Verify` proves one inferred specification. 
++ These files are generated by a command `dune exec -- main/main.exe coq <specificaion mapping file> <function name>` which can convert the inferred specification mappings to the coq lemmas for the furthur proving. For example, run `dune exec -- main/main.exe coq _data/_result/_customstk1/_oracle_maximal.json Customstk.push` can print several lemmas:
+
+```
+Lemma Customstk.push_1 (i_0:nat) (il_0:list nat) (il_1:list nat) (u_0:nat) : (push_spec i_0 il_0 il_1) -> (((not (u_0 = i_0))/\(list_member  il_1 u_0)) -> (not (list_head  il_1 u_0))).
+```
+
+The `push_spec` is the pre-defined specification(defined and proved in `proof/.*Aux.v*`) of the `push`, `(((not (u_0 = i_0))/\(list_member  il_1 u_0)) -> (not (list_head  il_1 u_0)))` are one branch of the inferred decision tree. The all lemmas in the file are proved, the correctness of the inferred specification will be hold.
 
 ## Artifact Structure
 
