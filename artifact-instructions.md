@@ -37,7 +37,8 @@ al.
 
 * Running Other Programs -> Providing Other Assertions or similar.
 
-* SHA on git clone in Dockerfile.
+* Re-add this comment somewhere?
+  `python3 evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
 
 
 ## Requirements
@@ -56,78 +57,95 @@ via the [official installation guide](https://docs.docker.com/get-docker/).
 
 2. Navigate to the location of the Elrond Docker file.
 
-   ```# cd <Dockerfile dir>```
+   `# cd <Dockerfile dir>`
 
 3. Build the Elrond Docker image.
 
-    ```# docker build . --tag elrond```
+    `# docker build . --tag elrond`
 
 4. Launch a shell in the Elrond Docker image.
 
-    ```# docker run -it elrond```
+    `# docker run -it elrond`
 
-5. Print the Elrond's help message to verify the tool was installed
+5. Print Elrond's help message to verify the tool was installed
    successfully.
 
-    ```$ ./main.exe --help```
+    `$ ./main.exe --help`
 
 6. When you are finished, you may stop the Elrond image by terminating
 the shell with `exit`.
 
 
-## Using Elrond
-
-### Running All Benchmarks and Build Tables
+##  Running Benchmarks
 
 Experimental results on the benchmark suite displayed in Table 4 of
-the paper can be obtained via the
-`~/ADT-Lemma-Discovery/evaluation_tool.py` script in the Docker image
-as follows:
+the paper can be obtained as follows:
 
-##### Config File
+1. Make sure you are in the root Elrond directory:
 
-* We use config file in json format to describe the source file, assertion file, output directory and details arguments for each benchmark. There are two config files:
-  + `config/standard.config` for reviewers to run consistent inference and weakening inference by themselvies, the output directory of it is empty.
-  + As the weakening inference may take several hours, we provides our consistent inference and weakening inference result under the output directory of `config/prebuilt.config` as some command takes serveral hours to run. Don't use this config file do inference which will corrupt the saved expirement result.
+    `$ cd ~/ADT-Lemma-Discovery`
 
-##### Running All Benchmarks
+2. Use Elrond to find consistent (but not weakened) specification mappings:
 
-* `python3 evaluation_tool.py consistent config/standard.config` finds consistent specification
-  mappings which enable successful verifications, but does not find
-  weakenings of these specifications.
+    `$ python3 evaluation_tool.py consistent config/standard.config`
 
-* `python3 evaluation_tool.py weakening config/standard.config [option]` finds consistent and maximal specification
-  mappings which enable successful verifications.
-  + There are `6` benchmarks we labeled as `Limit` in Table 4 which will take more than `1` hour to finish, we recommand you run the shorter benchmarks first(`-s`).
-  + `python3 evaluation_tool.py weakening config/standard.config -s` will run all benchmarks besides these `6` benchmarks.
-  + `python3 evaluation_tool.py weakening config/standard.config -l` will run these `6` benchmarks.
-  + `python3 evaluation_tool.py weakening config/standard.config -s -l` will run all benchmarks.
-  + `python3 evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
+   Output of these mappings is stored in the `_benchmark_<name>` directories.
 
-##### Additonal Processing
+3. Use Elrond to weaken the consistent specifications. There are six
+   benchmarks labeled as `Limit` in Table 4 which take more than one hour
+   to complete. We have grouped these long-running benchmarks separately;
+   you may execute the shorter-running weakening benchmarks with:
 
-* There are two columns in the table needs the additional processing, notice that these processing are not a part of our tool, but just used to build the table.
+    `$ python3 evaluation_tool.py weakening config/standard.config -s`
 
-* `python3 evaluation_tool.py diff <config_file>` calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (`time𝑑`).
+   and the longer-running weakening bencharmsk with:
 
-* `python3 evaluation_tool.py count <config_file> [option]` count total positive feature vectors in the space of weakenings(`|𝜙+|`).
-  + There are `3` cells in the Table 4 of our paper are colored as blue, indicate the `3` timeout benchmarks when weakening. We use the weakened specification(instead of maximal one) to count the positive feature vectors in the space of weakenings. As these benchmarks are complicate, thus the counting may also cout long time(hours). We recommand you run the shorter benchmarks first(`-s`).
-  + `python3 evaluation_tool.py count <config_file> -s` counts `|𝜙+|` for all benchmarks except these `3` benchmarks.
-  + `python3 evaluation_tool.py count <config_file> -l` counts `|𝜙+|` for these `3` benchmarks.
-  + `python3 evaluation_tool.py count <config_file> -s -l` counts `|𝜙+|` for all benchmarks.
+    `$ python3 evaluation_tool.py weakening config/standard.config -l`
 
-##### Build Tables
+   Output is again stored in the `_benchmark_<name>` directories.
 
-* `python3 evaluation_tool.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`.
-* Notice that, the build table may be different from the table shown in our paper, however the numbers should be close.  The reason of difference may be:
-  + The inference is based on the random generation, thus some intermidate statistic data are uncertained(i.g. `|𝑐𝑒𝑥|`, `#Gather` and `|𝜙+|`).
-  + The performance statistic data(i.g `time_c`, `time_w`, `time_d`) depends on the machine you use.
+4. Calculate the times needed for the SMT solver to find a sample
+   allowed by a weakened solution but not the initial one (`time𝑑` in
+   Table 4.) This calculation is not a core part of Elrond, but rather a
+   post-processing step for our experimental evaluation.
 
-* There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_visualization.sh`(will execute for about 10 min) which builds the table from our saved expirement result.
+    `$ python3 evaluation_tool.py diff config/standard.config`
 
-##### Build Figure
+5. Count the total positive feature vectors in the space of
+   weakenings (`|𝜙+|` in Table 4). Again, this is a post-processing step
+   for our experimental evaluation rather than a core part of Elrond.
 
-* `python3 evaluation_tool.py figure config/prebuilt.config` generate The Figure 5 from the weakening expirement result, and save under the output directory.
+   There are three cells in Table 4 shown in blue, indicating the benchmarks
+   timed out in our testing. You can perform the counting for all benchmarks
+   except these three which timed out with:
+
+    `$ python3 evaluation_tool.py count config/standard.config -s`
+
+   To run the counting for the three benchmarks which timed out for us, say:
+
+    `$ python3 evaluation_tool.py count config/standard.config -l`
+
+   The latter command may obviously take a long time to complete.
+
+6. Build the table:
+
+    `$ python3 evaluation_tool.py table config/standard.config`
+
+  The table may be displayed at any stage of the benchmark process;
+  any missing entries will be displayed as `None`.
+
+
+##### Building From Saved Results
+
+There is an comprehensive script at
+`~/ADT-Lemma-Discovery/auto_visualization.sh` which builds the table
+from our saved experimental results.
+
+##### Build The Figure
+
+`python3 evaluation_tool.py figure config/prebuilt.config` generates
+Figure 5 from the weakening expirement result. The resulting figure is
+saved under the output directory.
 
 ### Running Individual Benchmarks
 
@@ -342,3 +360,9 @@ This section gives a brief overview of the files in this artifact.
 * `init.sh`: a script initialize the parser and lexer.
 * `evaluation_tool.py`: a script for benchmarks evaluation and visualization.
 * `auto_visualization.sh`: a script generate the tables and figures in the paper.
+
+### Configuration Files
+
+* We use config file in json format to describe the source file, assertion file, output directory and details arguments for each benchmark. There are two config files:
+  + `config/standard.config` for reviewers to run consistent inference and weakening inference by themselvies, the output directory of it is empty.
+  + As the weakening inference may take several hours, we provides our consistent inference and weakening inference result under the output directory of `config/prebuilt.config` as some command takes serveral hours to run. Don't use this config file do inference which will corrupt the saved expirement result.
