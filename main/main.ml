@@ -40,7 +40,7 @@ let start action sourcefile assertionfile outputdir sampling_bound timebound =
   let () = Core.Unix.mkdir_p (Printf.sprintf "_%s" outputdir) in
   let basic_info_filename = Printf.sprintf "_%s/_basic_info.json" outputdir in
   let () = Yojson.Basic.to_file basic_info_filename basic_info in
-  let r =
+  let r () =
     match action, sampling_bound with
     | InferFull, Some snum ->
       SpecAbd.do_full ~snum:(Some snum) ~uniform_qv_num:1
@@ -60,10 +60,14 @@ let start action sourcefile assertionfile outputdir sampling_bound timebound =
         ctx mii vc spectab holes preds 1
     | InferWeakening, _ -> raise @@ InterExn "never happen"
   in
-  match r with
-  | SpecAbd.Cex _ -> eprintf "Fail with Cex!\n"
-  | _ ->
-    eprintf "Inference Seccussed!\n"
+  match time r with
+  | SpecAbd.Cex _, delta_time-> eprintf "Failed with Cex in %f(s)!\n" delta_time
+  | _ , delta_time ->
+    let mode_str = (match action with
+        | InferFull -> "Full"
+        | InferConsistent -> "Consistent"
+        | InferWeakening -> "Weakening") in
+    eprintf "%s inference Seccussed in %f(s)!\n" mode_str delta_time
 
 let time_d sourcefile assertionfile outputdir =
   let ctx = init () in
@@ -188,8 +192,8 @@ let infer_weakening =
       fun () ->
         let ctx = init () in
         try
-          let _ : SpecAbd.multi_infer_result = SpecAbd.do_weakening ctx outputdir time_bound in
-          eprintf "Weakening Inference Seccussed!\n"
+          let (_ : SpecAbd.multi_infer_result), delta_time = time (fun () -> SpecAbd.do_weakening ctx outputdir time_bound) in
+          eprintf "Weakening Inference Seccussed in %f(s)!\n" delta_time
         with
         | _ -> eprintf "No Consistent Result Found!\n"
     )

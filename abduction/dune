@@ -1,7 +1,0 @@
-;(env
-;  (dev
-;    (flags (:standard -w -32 -w -35 -w -27))))
-;(library
-; (name abduction)
-; (libraries language utils)
-;)

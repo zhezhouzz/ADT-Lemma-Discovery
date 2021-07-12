@@ -84,42 +84,47 @@ as follows:
 
 ##### Running All Benchmarks
 
-* `python3 evaluation_tool.py consistent config/standard.config` finds consistent specification
+* `python3 bin/evaluation_tool.py consistent config/standard.config` finds consistent specification
   mappings which enable successful verifications, but does not find
   weakenings of these specifications.
   
-* `python3 evaluation_tool.py weakening config/standard.config [option]` finds consistent and maximal specification
+* `python3 bin/evaluation_tool.py weakening config/standard.config [option]` finds consistent and maximal specification
   mappings which enable successful verifications. 
   + There are `6` benchmarks we labeled as `Limit` in Table 4 which will take more than `1` hour to finish, we recommand you run the shorter benchmarks first(`-s`). 
-  + `python3 evaluation_tool.py weakening config/standard.config -s` will run all benchmarks besides these `6` benchmarks.
-  + `python3 evaluation_tool.py weakening config/standard.config -l` will run these `6` benchmarks.
-  + `python3 evaluation_tool.py weakening config/standard.config -s -l` will run all benchmarks.
-  + `python3 evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
+  + `python3 bin/evaluation_tool.py weakening config/standard.config -s` will run all benchmarks besides these `6` benchmarks.
+  + `python3 bin/evaluation_tool.py weakening config/standard.config -l` will run these `6` benchmarks.
+  + `python3 bin/evaluation_tool.py weakening config/standard.config -s -l` will run all benchmarks.
+  + `python3 bin/evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
   
 ##### Additonal Processing
 
 * There are two columns in the table needs the additional processing, notice that these processing are not a part of our tool, but just used to build the table.
 
-* `python3 evaluation_tool.py diff <config_file>` calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (`time𝑑`).
+* `python3 bin/evaluation_tool.py diff <config_file>` calculate the time needed for the SMT solver to find a sample allowed by aweakened solution but not the initial one (`time𝑑`).
 
-* `python3 evaluation_tool.py count <config_file> [option]` count total positive feature vectors in the space of weakenings(`|𝜙+|`).
+* `python3 bin/evaluation_tool.py count <config_file> [option]` count total positive feature vectors in the space of weakenings(`|𝜙+|`).
   + There are `3` cells in the Table 4 of our paper are colored as blue, indicate the `3` timeout benchmarks when weakening. We use the weakened specification(instead of maximal one) to count the positive feature vectors in the space of weakenings. As these benchmarks are complicate, thus the counting may also cout long time(hours). We recommand you run the shorter benchmarks first(`-s`). 
-  + `python3 evaluation_tool.py count <config_file> -s` counts `|𝜙+|` for all benchmarks except these `3` benchmarks.
-  + `python3 evaluation_tool.py count <config_file> -l` counts `|𝜙+|` for these `3` benchmarks.
-  + `python3 evaluation_tool.py count <config_file> -s -l` counts `|𝜙+|` for all benchmarks.
+  + `python3 bin/evaluation_tool.py count <config_file> -s` counts `|𝜙+|` for all benchmarks except these `3` benchmarks.
+  + `python3 bin/evaluation_tool.py count <config_file> -l` counts `|𝜙+|` for these `3` benchmarks.
+  + `python3 bin/evaluation_tool.py count <config_file> -s -l` counts `|𝜙+|` for all benchmarks.
   
 ##### Build Tables
   
-* `python3 evaluation_tool.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`. 
+* `python3 bin/evaluation_tool.py table <config_file>` shows the Table 4. Users can display the table at any stage of benchmark running, the missing cell or empty cell will be shown as `None`. 
 * Notice that, the build table may be different from the table shown in our paper, however the numbers should be close.  The reason of difference may be:
   + The inference is based on the random generation, thus some intermidate statistic data are uncertained(i.g. `|𝑐𝑒𝑥|`, `#Gather` and `|𝜙+|`).
   + The performance statistic data(i.g `time_c`, `time_w`, `time_d`) depends on the machine you use.
 
-* There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_visualization.sh`(will execute for about 10 min) which builds the table from our saved expirement result.
-
 ##### Build Figure
 
-* `python3 evaluation_tool.py figure config/prebuilt.config` generate The Figure 5 from the weakening expirement result, and save under the output directory.
+* `python3 bin/evaluation_tool.py figure config/prebuilt.config` generate The Figure 5 from the weakening expirement result, and save under the output directory.
+
+##### Comprehensive Script
+
+* `./bin/run_benchmarks_short.sh` run all short benchmarks(1 ~ 2 hours).
+* `./bin/run_benchmarks_long.sh` run rest benchmarks(over 10 hours)..
+* `./bin/visualize_running_result.sh` visualize from result just running(immediate).
+* `./bin/visualize_prebuilt_result.sh` visualize from prebuilt result(immediate).
 
 ### Running Individual Benchmarks
 
@@ -318,19 +323,19 @@ The `push_spec` is the pre-defined specification(defined and proved in `proof/.*
 
 This section gives a brief overview of the files in this artifact.
 
+* `bin/`: scripts.
 * `config/`: the config files for benchmark script.
-* `proof/`: the coq proof.
 * `data/`: the input data of banchmarks
   + `data/result.zip`: a saved inference result.
 * `frontend/`: the parser of Elrond, modified from Ocmal parser.
 * `inference/`: the specification mapping inference modules, includes both consistent inference and weakening inference.
 * `language/`: the intermidate specification language of Elrond.
+* `ml/`: the decistion tree learner.
 * `main/main.ml`: the entry of Elrond.
 * `pred/`: built-in implementation of predicates.
+* `proof/`: the coq proof.
+* `solver/`: the z3 solver wrapper.
 * `tp/`: built-in types of Elrond.
 * `translate/`: Vc generation.
   + `translate/imps.ml`: built-in implementation of libraries.
 * `utils/`: utils functions.
-* `init.sh`: a script initialize the parser and lexer.
-* `evaluation_tool.py`: a script for benchmarks evaluation and visualization.
-* `auto_visualization.sh`: a script generate the tables and figures in the paper.
