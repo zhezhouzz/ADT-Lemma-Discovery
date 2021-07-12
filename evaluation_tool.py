@@ -54,7 +54,6 @@ def run_table4_weakening(table_file, shortbench, longbench, timebound):
             source_file = datadir + "/" + source + sourcepostfix
             assertion_file = datadir + "/" + source + assertioninfix + str(idx) + assertionpostfix
             output_dir = outputprefix + source + str(idx)
-            log_file_name = "log.txt"
             long_time = False
             if 'weakening_long_time' in info:
                 long_time = info['weakening_long_time']
@@ -65,11 +64,13 @@ def run_table4_weakening(table_file, shortbench, longbench, timebound):
             if timebound > 0:
                 arguments = ["-tb", "{}".format(timebound)]
             cmd = ["dune", "exec", "--", "main/main.exe", "infer", "weakening", output_dir] + arguments
+            log_file_name = "log.txt"
             with open(log_file_name, "w") as log_file:
                 if verbose:
                     print(" ".join(cmd))
                 subprocess.run(cmd, stdout=log_file)
-                subprocess.run(["mv", log_file_name, "_" + output_dir + "/" + log_file_name])
+                if os.path.is_file(output_dir):
+                    subprocess.run(["mv", log_file_name, "_" + output_dir + "/" + log_file_name])
 
 def run_table4_diff(table_file):
     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
@@ -306,7 +307,7 @@ def filter_log_file(source, outputdir, idx, funcname):
 def handle_data(data):
     total_num = 100
     if len(data) < total_num:
-        print("need more data")
+        print("Failed, expect more iterations from the weakening inference runing.")
         exit(0)
     interval = int(len(data)/total_num)
     iteri=0
@@ -376,8 +377,10 @@ if __name__ == "__main__":
     elif action == "diff":
         run_table4_diff(table_file)
     elif action == "table":
+        print("Generating Table 4...")
         build_table4_all(table_file)
     elif action == "figure":
+        print("Generating Figure 5...")
         build_figure5(table_file)
     elif action == "rename":
         f1 = "_consistent.json"

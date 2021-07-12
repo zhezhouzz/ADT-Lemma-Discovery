@@ -174,7 +174,7 @@ let trim_tree_same dt =
 
 (* for normal building, validEx None *)
 let build_dt (max_depth : int) (leaf_acc : float) (smooth : float) (validExO : int array option) (_F : int_array array) (_Y : bool array) (_W : float array) =
-  eprintf "."; flush stderr;
+  (* eprintf "."; flush stderr; *)
   let _N = length _Y in
   let used = H.create 5 in
 
@@ -223,8 +223,8 @@ let build_dt (max_depth : int) (leaf_acc : float) (smooth : float) (validExO : i
   done;
 
   let t' = trim_tree_same (build_dt' 0 !c_t !c_f) in
-  let treeerror = compute_tree_error t' in
-  eprintf "%g..." treeerror; flush stderr;
+  (* let treeerror = compute_tree_error t' in *)
+  (* eprintf "%g..." treeerror; flush stderr; *)
   t'
 
 (*
