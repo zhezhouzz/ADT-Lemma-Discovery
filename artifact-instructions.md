@@ -115,11 +115,11 @@ as follows:
   + The inference is based on the random generation, thus some intermidate statistic data are uncertained(i.g. `|𝑐𝑒𝑥|`, `#Gather` and `|𝜙+|`).
   + The performance statistic data(i.g `time_c`, `time_w`, `time_d`) depends on the machine you use.
 
-* There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_evaluation_tool.sh` which builds the table from our saved expirement result.
+* There is an comprehensive script: `~/ADT-Lemma-Discovery/auto_visualization.sh`(will execute for about 10 min) which builds the table from our saved expirement result.
 
 ##### Build Figure
 
-* `python3 evaluation_tool.py figure config/prebuilt.config` generate The Figure 5 from the weakening expirement result.
+* `python3 evaluation_tool.py figure config/prebuilt.config` generate The Figure 5 from the weakening expirement result, and save under the output directory.
 
 ### Running Individual Benchmarks
 
@@ -161,6 +161,56 @@ For example, we can recreate the `bankersq` output directory in one pass:
 
     $ rm -rf _bankersq_out
     $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
+    
+## Example in Motivation Section
+
+- run `./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4` to infer consistent and maximal specification mapping. The flag `-sb 4` limits the sampling bound to small number in order to simulate a biased test generator.
+- run `./main.exe show consistent exampleout` to show consistent specification mapping. TODO: add explaination according the Figure 4 in the paper.
+
+```
+Customstk.push(i_0,il_0,il_1):=
+forall u_0,(ite mem(il_1,u_0)
+    (ite mem(il_0,u_0)
+        (
+         !(u_0==i_0) &&
+         !hd(il_1,u_0)
+        )
+        ((u_0==i_0) && hd(il_1,i_0)))
+    (
+     !(u_0==i_0) &&
+     (
+      !mem(il_0,u_0) &&
+      (
+       !hd(il_0,u_0) &&
+       !hd(il_1,u_0)
+      )
+     )
+    ))
+```
+
+- run `./main.exe show weakening exampleout -s` to show maximal specification mapping. The flag `-s` means simplifing the specifications. TODO: add explaination according the Figure 5 in the paper.
+
+```
+Customstk.push(i_0,il_0,il_1):=
+forall u_0,(ite mem(il_1,u_0)
+    (
+     (u_0==i_0) ||
+     (
+      mem(il_0,u_0) &&
+      !hd(il_1,u_0)
+     )
+    )
+    (
+     !(u_0==i_0) &&
+     (
+      !mem(il_0,u_0) &&
+      (
+       hd(il_0,u_0) ||
+       !hd(il_1,u_0)
+      )
+     )
+    ))
+```
 
 
 ### Running Other Programs
@@ -284,5 +334,3 @@ This section gives a brief overview of the files in this artifact.
 * `init.sh`: a script initialize the parser and lexer.
 * `evaluation_tool.py`: a script for benchmarks evaluation and visualization.
 * `auto_visualization.sh`: a script generate the tables and figures in the paper.
-
-TODO: Annotate the basic layout of the artifact code.

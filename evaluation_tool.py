@@ -339,7 +339,9 @@ def build_figure_aux(outputdir, figure_config):
     plt.legend(loc=2, bbox_to_anchor=(1.05,1.0),borderaxespad = 0.)
     plt.yscale('log')
     plt.subplots_adjust(right=0.76, bottom=0.42)
-    plt.show()
+    figure_path = outputdir + "figure5.png"
+    print("Figure 5 saved as {}".format(figure_path))
+    plt.savefig(figure_path)
 
 def build_figure5(config_file):
     with open(config_file) as f:
