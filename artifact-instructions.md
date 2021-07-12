@@ -84,20 +84,26 @@ the shell with `exit`.
 
 ##  Running Benchmarks
 
-Experimental results on the benchmark suite displayed in Table 4 of
-the paper can be obtained as follows:
+##### Comprehensive Scripts
 
-1. Make sure you are in the root Elrond directory:
+The following scripts run the benchmark suite displayed in Table 4 of
+the paper:
 
-    `$ cd ~/ADT-Lemma-Discovery`
+* `./bin/run_benchmarks_short.sh` executes all shorter-running benchmarks (~ 1 to 2 hours).
+* `./bin/run_benchmarks_long.sh` executes all longer-running benchmarks (> 10 hours).
+* `./bin/visualize_running_result.sh` visualizes from results which were just run (immediate).
 
-2. Use Elrond to find consistent (but not weakened) specification mappings:
+##### Detailed Steps
+
+The above scripts automate the following process:
+
+1. Use Elrond to find consistent (but not weakened) specification mappings:
 
     `$ python3 bin/evaluation_tool.py consistent config/standard.config`
 
    Output of these mappings is stored in the `_benchmark_<name>` directories.
 
-3. Use Elrond to weaken the consistent specifications. There are six
+2. Use Elrond to weaken the consistent specifications. There are six
    benchmarks labeled as `Limit` in Table 4 which take more than one hour
    to complete. We have grouped these long-running benchmarks separately;
    you may execute the shorter-running weakening benchmarks with:
@@ -110,14 +116,14 @@ the paper can be obtained as follows:
 
    Output is again stored in the `_benchmark_<name>` directories.
 
-4. Calculate the times needed for the SMT solver to find a sample
+3. Calculate the times needed for the SMT solver to find a sample
    allowed by a weakened solution but not the initial one (`time𝑑` in
    Table 4.) This calculation is not a core part of Elrond, but rather a
    post-processing step for our experimental evaluation.
 
     `$ python3 bin/evaluation_tool.py diff config/standard.config`
 
-5. Count the total positive feature vectors in the space of
+4. Count the total positive feature vectors in the space of
    weakenings (`|𝜙+|` in Table 4). Again, this is a post-processing step
    for our experimental evaluation rather than a core part of Elrond.
 
@@ -133,18 +139,12 @@ the paper can be obtained as follows:
 
    The latter command may obviously take a long time to complete.
 
-6. Build the table:
+5. Build the table:
 
     `$ python3 bin/evaluation_tool.py table config/standard.config`
 
   The table may be displayed at any stage of the benchmark process;
   any missing entries will be displayed as `None`.
-
-##### Comprehensive Scripts
-
-* `./bin/run_benchmarks_short.sh` runs all short benchmarks (~ 1 to 2 hours).
-* `./bin/run_benchmarks_long.sh` runs the longer benchmarks (> 10 hours).
-* `./bin/visualize_running_result.sh` visualizes from results which were just run (immediate).
 
 ##### Building Figure 5
 
