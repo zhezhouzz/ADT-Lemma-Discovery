@@ -268,4 +268,21 @@ The `push_spec` is the pre-defined specification(defined and proved in `proof/.*
 
 This section gives a brief overview of the files in this artifact.
 
+* `config/`: the config files for benchmark script.
+* `proof/`: the coq proof.
+* `data/`: the input data of banchmarks
+  + `data/result.zip`: a saved inference result.
+* `frontend/`: the parser of Elrond, modified from Ocmal parser.
+* `inference/`: the specification mapping inference modules, includes both consistent inference and weakening inference.
+* `language/`: the intermidate specification language of Elrond.
+* `main/main.ml`: the entry of Elrond.
+* `pred/`: built-in implementation of predicates.
+* `tp/`: built-in types of Elrond.
+* `translate/`: Vc generation.
+  + `translate/imps.ml`: built-in implementation of libraries.
+* `utils/`: utils functions.
+* `init.sh`: a script initialize the parser and lexer.
+* `evaluation_tool.py`: a script for benchmarks evaluation and visualization.
+* `auto_visualization.sh`: a script generate the tables and figures in the paper.
+
 TODO: Annotate the basic layout of the artifact code.

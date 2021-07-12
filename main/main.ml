@@ -108,7 +108,7 @@ let count_phi dir funcname =
          aux preds result "bound"
       )
   with
-  | _ -> ()
+  | _ -> printf "cannot find %s\n" resultfile
 
 let tpname = "nat"
 

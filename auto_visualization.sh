@@ -7,3 +7,4 @@ config=config/prebuilt.config
 python3 evaluation_tool.py diff $config
 python3 evaluation_tool.py count $config
 python3 evaluation_tool.py table $config
+python3 evaluation_tool.py figure $config

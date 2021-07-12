@@ -28,7 +28,7 @@ def run_table4_consistent(table_file):
             source_file = datadir + "/" + source + sourcepostfix
             assertion_file = datadir + "/" + source + assertioninfix + str(idx) + assertionpostfix
             output_dir = outputprefix + source + str(idx)
-            log_file_name = "log.txt"
+            log_file_name = "consistent_log.txt"
             arguments = []
             if 'arguments' in info:
                 arguments = info['arguments']

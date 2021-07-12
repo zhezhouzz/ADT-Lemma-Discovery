@@ -954,16 +954,16 @@ module SpecAbduction = struct
   let weakening ctx benchname vc single_envs time_bound =
     let names = List.map (fun e -> e.Env.hole.name) single_envs in
     let single_envs_arr = Array.of_list single_envs in
-    let mode = ref Bound in
+    (* let mode = ref Bound in *)
     let rec aux total_env idx =
       if idx >= Array.length single_envs_arr
       then total_env
       else
         let single_env = single_envs_arr.(idx) in
-        let time_bound = match !mode with
-          | Oracle -> None
-          | Bound -> time_bound
-        in
+        (* let time_bound = match !mode with
+         *   | Oracle -> None
+         *   | Bound -> time_bound
+         * in *)
         let (single_result, stat), delta_time =
           time (fun _ -> Single_abd.infer ctx benchname total_env single_env time_bound) in
         let _ = printf "time: single: %s: %fs\n" single_env.Env.hole.name delta_time in
@@ -995,7 +995,7 @@ module SpecAbduction = struct
      * let _ = List.iter (fun (e, e') -> D.fvtab_eq e.Env.fvtab e'.Env.fvtab) @@
      *   List.combine (Array.to_list single_envs_arr) single_envs' in *)
     (* let _ = raise @@ InterExn "end" in *)
-    let _ = mode := Oracle in
+    (* let _ = mode := Oracle in *)
     let total_env = aux total_env 0 in
     let _ = save_result (benchname ^ "_oracle_maximal.json") total_env.preds names total_env in
     let result = spectable_filter_result names total_env.Env.spectable in
