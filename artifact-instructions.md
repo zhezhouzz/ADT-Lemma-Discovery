@@ -116,7 +116,7 @@ The above scripts automate the following process:
 
     `$ python3 bin/evaluation_tool.py weakening config/standard.config -s`
 
-   and the longer-running weakening bencharmsk with:
+   and the longer-running weakening benchmarks with:
 
     `$ python3 bin/evaluation_tool.py weakening config/standard.config -l`
 
@@ -155,12 +155,13 @@ The above scripts automate the following process:
 ##### Building Figure 5
 
 `python3 bin/evaluation_tool.py figure config/prebuilt.config`
-generates Figure 5 from the weakening expiremental results. The
-figure is saved under the output directory.
+generates Figure 5 from the weakening experimental results. The
+figure is saved in the output directory.
 
 ##### Building From Saved Results
 
-* `./bin/visualize_prebuilt_result.sh` visualizes from prebuilt results (immediate).
+`./bin/visualize_prebuilt_result.sh` visualizes from prebuilt results
+(immediate).
 
 
 ## Running Elrond
