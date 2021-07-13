@@ -6,13 +6,6 @@ This is the accompanying artifact for the OOPSLA 2021 submission
 *Data-Driven Abductive Inference of Library Specifications* by Zhou et
 al.
 
-## TODO
-
-* Include our own docker image
-
-* Add a command to run a single benchmark to the ‘Getting Started’
-  guide, so reviewers have a sense things are actually working.
-
 
 ## Claims Supported / Not Supported By This Artifact
 
@@ -94,6 +87,11 @@ You can print Elrond's help message to verify the tool is operating
 successfully:
 
     $ ./main.exe --help
+
+The `bankersq` benchmark should succeed in under 10 seconds
+(depending on hardware):
+
+    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
 When you are finished using the image, you may stop it by terminating
 the shell with `exit`.
@@ -231,7 +229,7 @@ once by saying:
 For example, we can recreate the `bankersq` output directory in one pass:
 
     $ rm -rf _bankersq_out
-    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out -tb 3600
+    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
 
 
 ## Displaying Specification Mappings
