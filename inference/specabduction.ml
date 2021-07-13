@@ -599,10 +599,15 @@ module SpecAbduction = struct
   let consistent_solution ctx benchname mii pres spectable holel preds startX =
     let cstat = Env.init_consistent_stat () in
     let rec search_hyp numX =
-      let _ = if numX >= max_qv then
-          let _ = Env.save_consistent_stat benchname cstat in
-          raise @@ InterExn "Cannot find consistent solutoin. The client code is wrong but cannot find concrete Cex."
-        else () in
+      if numX >= max_qv then
+        let _ = Env.save_consistent_stat benchname cstat in
+        (* let _ = Printf.printf "Cannot find consistent solutoin. The client code is wrong but cannot find concrete Cex.\n" in *)
+        CRCex []
+      else
+      (* let _ = if numX >= max_qv then
+       *     let _ = Env.save_consistent_stat benchname cstat in
+       *     raise @@ InterExn "Cannot find consistent solutoin. The client code is wrong but cannot find concrete Cex."
+       *   else () in *)
       let env = init_env mii pres spectable preds numX holel in
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"

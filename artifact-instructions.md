@@ -130,7 +130,7 @@ The above scripts automate the following process:
 
 ##### Building Figure 5
 
-`python3 bin/evaluation_tool.py figure config/prebuilt.config`
+`python3 bin/evaluation_tool.py figure config/standard.config`
 generates Figure 5 from the weakening experimental results. The
 figure is saved in the output directory.
 
@@ -192,7 +192,7 @@ For example, to infer and display specifications from the paper's
 motivating example (called `exampleout` in this artifact), run the
 following commands:
 
-    $ ./main.exe full data/customstack.ml data/customstack_assertion1.ml exampleout -sb 4
+    $ ./main.exe infer full data/customstk.ml data/customstk_assertion1.ml exampleout -sb 4
     $ ./main.exe show consistent exampleout
 
 (Here, the `-sb 4` flag limits the sampling bound to small number in order to simulate a biased test generator.)
