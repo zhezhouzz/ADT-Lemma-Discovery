@@ -161,7 +161,7 @@ will run the `bankersq` benchmark, writing results to the
 When the assertion is wrong, Elrond will print the counter-example it found, the following command run a branchmark having wrong assertion:
 
     $ ./main.exe infer infer consistent data/customstk.ml data/customstk_assertion2.ml customstk_out
-    
+
 With the following Cex:
 
 ```
@@ -388,7 +388,7 @@ Proof obligations expressed in Coq may be generated via:
 This command converts the inferred specification mappings to the Coq
 lemmas for manual proof. For example, running:
 
-    $ dune exec -- main/main.exe coq _data/_result/_customstk1/_oracle_maximal.json Customstk.push
+    $ dune exec -- main/main.exe coq _result/_customstk1/_oracle_maximal.json Customstk.push
 
 prints several lemmas:
 
