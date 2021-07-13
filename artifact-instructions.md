@@ -413,7 +413,7 @@ Proof obligations expressed in Coq may be generated via:
 This command converts the inferred specification mappings to the Coq
 lemmas for manual proof. For example, running:
 
-    $ dune exec -- main/main.exe coq _data/_result/_customstk1/_oracle_maximal.json Customstk.push
+    $ dune exec -- main/main.exe coq _result/_customstk1/_oracle_maximal.json Customstk.push
 
 prints several lemmas:
 
