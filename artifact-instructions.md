@@ -276,7 +276,7 @@ forall u_0,(ite mem(il_1,u_0)
 ```
 
 
-### Input File Formats
+## Input File Formats
 
 Elrond expects both an input OCaml code listing and an assertion
 file. The input code listing is given as a specially formatted
@@ -414,25 +414,19 @@ inferred specifications.
 
 This section gives a brief overview of the files in this artifact.
 
-* `bin/`: scripts.
-* `config/`: the config files for benchmark script.
-* `data/`: the input data of banchmarks
-  + `data/result.zip`: a saved inference result.
-* `frontend/`: the parser of Elrond, modified from Ocmal parser.
-* `inference/`: the specification mapping inference modules, includes both consistent inference and weakening inference.
-* `language/`: the intermidate specification language of Elrond.
+* `bin/`: various scripts for collecting and displaying experimental results.
+* `config/`: the configuration files for the benchmark scripts.
+* `data/`: the benchmark input files.
+  + `data/result.zip`: a collection of saved inference results.
+* `frontend/`: the Elrond parser, a modified OCaml parser.
+* `inference/`: the specification mapping inference modules, including both consistent inference and weakening inference.
+* `language/`: Elrond's intermediate specification language.
 * `ml/`: the decistion tree learner.
-* `main/main.ml`: the entry of Elrond.
+* `main/main.ml`: the main entry point of Elrond.
 * `pred/`: built-in implementation of predicates.
-* `proof/`: the coq proof.
-* `solver/`: the z3 solver wrapper.
-* `tp/`: built-in types of Elrond.
-* `translate/`: Vc generation.
+* `proof/`: the coq proof generator.
+* `solver/`: the Z3 (SMT solver) wrapper.
+* `tp/`: Elrond's built-in types.
+* `translate/`: VC generation.
   + `translate/imps.ml`: built-in implementation of libraries.
-* `utils/`: utils functions.
-
-### Configuration Files
-
-* We use config file in json format to describe the source file, assertion file, output directory and details arguments for each benchmark. There are two config files:
-  + `config/standard.config` for reviewers to run consistent inference and weakening inference by themselvies, the output directory of it is empty.
-  + As the weakening inference may take several hours, we provides our consistent inference and weakening inference result under the output directory of `config/prebuilt.config` as some command takes serveral hours to run. Don't use this config file do inference which will corrupt the saved expirement result.
+* `utils/`: miscellaneous utility functions.
