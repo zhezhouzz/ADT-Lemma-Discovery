@@ -15,7 +15,7 @@ SHELL ["/bin/bash", "-lc"]
 RUN git clone https://github.com/zhezhouzz/ADT-Lemma-Discovery.git
 WORKDIR ADT-Lemma-Discovery
 RUN git fetch
-RUN git checkout 3de51b1
+RUN git checkout 2544ddc
 ENV LD_LIBRARY_PATH=/home/opam/.opam/4.08/lib/z3
 RUN unzip data/result.zip
 RUN bash ./init.sh
