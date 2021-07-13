@@ -187,7 +187,7 @@ is saved in the `_result` directory.
 Elrond requires both a source file and assertion file as input, and
 outputs results in JSON format to some output directory. The input
 source and assertion files for the benchmark suite are located in the
-`~/ADT-Lemma-Discovery/data` directory in the Docker image.
+`~/ADT-Lemma-Discovery/result` directory in the Docker image.
 
 The command to run an individual input without weakening is:
 
@@ -204,7 +204,7 @@ When the assertion is unsound, Elrond will print the counter-example
 it found. The following command executes a benchmark with an incorrect
 assertion:
 
-    $ ./main.exe infer infer consistent data/customstk.ml data/customstk_assertion2.ml customstk_out
+    $ ./main.exe infer consistent data/customstk.ml data/customstk_assertion2.ml customstk_out
 
 Elrond returns the following counterexample:
 
