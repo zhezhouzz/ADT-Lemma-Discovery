@@ -21,9 +21,9 @@ evaluation is designed to address.
       and client use cases discussed in the paper are found in the
       `data` directory of this artifact.
     - This artifact may not support the claim that Elrond can infer a
-      consistent initial solution in under 3 minutes depending on the
-      hardware on which the benchmarks are executed, although in our
-      testing this claim was verified.
+      consistent initial solution in under 3 minutes (line 1004)
+      depending on the hardware on which the benchmarks are executed,
+      although in our testing this claim was verified.
 * _Q2: Can Elrond identify unsafe client programs?_
     - This artifact supports the claim that Elrond can return concrete
       counter-examples for clients with unsafe postconditions by
@@ -31,23 +31,23 @@ evaluation is designed to address.
 * _Q3: Can Elrond efficiently find maximal solutions?_
     - This artifact may not support the claim that `16/22` benchmarks
       of our safe benchmarks were able to find maximal solutions from
-      the initial solution within `1` hour depending on the hardware
-      used to run the benchmarks. However, this claim held in our
-      testing.
+      the initial solution within `1` hour (lines `1015-1016`)
+      depending on the hardware used to run the benchmarks. However,
+      this claim held in our testing.
 * _Q4: Is Elrond able to find useful intermediate generalizations of
   initial specifications?_
     - This artifact supports the claim that Elrond considers at most
-      40% of the full search space by providing results similar to the
-      `#Gather/|𝜙+|` column in Table 4.
+      40% of the full search space (line `1023`) by providing results
+      similar to the `#Gather/|𝜙+|` column in Table 4.
 * _Q5: Does weakening improve the quality of the inferred
   specifications?_
     - The artifact supports the claim that `time_d` of short
-      benchmarks are samller than long benchmarks by providing results
-      similar to the `time_d` column in Table 4.
+      benchmarks are samller than long benchmarks (line `1037-1040`)
+      by providing results similar to the `time_d` column in Table 4.
 
-As we claimed in the paper, we can verify most of our results except 4
-specifications which are commented out in the Coq makefile located in
-`proof/_CoqProject`.
+As we claimed in the paper (lines `1066-1067`), we can verify most of
+our results except 4 specifications which are commented out in the Coq
+makefile located in `proof/_CoqProject`.
 
 
 ## Requirements
