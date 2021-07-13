@@ -108,9 +108,12 @@ the shell with `exit`.
 The following scripts run the benchmark suite displayed in Table 4 of
 the paper:
 
-* `./bin/run_benchmarks_short.sh` executes all shorter-running benchmarks (~ 1 to 2 hours).
-* `./bin/run_benchmarks_long.sh` executes all longer-running benchmarks (> 10 hours).
-* `./bin/visualize_running_result.sh` visualizes from results which were just run (immediate).
+* `./bin/run_benchmarks_short.sh` executes all shorter-running
+  benchmarks (~1.5 hours and ~5 hours on our two test machines).
+* `./bin/run_benchmarks_long.sh` executes all longer-running
+  benchmarks (> 10 hours on our test machines).
+* `./bin/visualize_running_result.sh` visualizes from results which
+  were just run (immediate).
 
 ##### Detailed Steps
 
