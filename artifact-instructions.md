@@ -72,20 +72,22 @@ your installation.) If Docker is not installed, install it via the
 
 ### Using the Pre-Built Docker Image
 
-**TODO**
+You may fetch the pre-built Docker image from Docker Hub:
+
+    # docker pull rcdickerson/elrond:2021-oopsla
 
 ### Building the Docker Image
 
-To build the Docker image yourself, navigate to the directory
-containing the Dockerfile and tell Docker to build:
+Alternately, to build the Docker image yourself, navigate to the
+directory containing the Dockerfile and tell Docker to build:
 
-    # docker build . --tag elrond
+    # docker build . --tag rcdickerson/elrond:2021-oopsla
 
 ### Running the Docker Image
 
 To launch a shell in the Elrond Docker image, say:
 
-    # docker run -it elrond
+    # docker run -it rcdickerson/elrond:2021-oopsla
 
 You can print Elrond's help message to verify the tool is operating
 successfully:
