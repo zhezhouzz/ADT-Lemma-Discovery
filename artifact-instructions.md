@@ -29,10 +29,6 @@ al.
   There are several columns in Table 4; does our benchmark script give
   us all of these numbers?
 
-* Document the input file formats.
-
-* Running Other Programs -> Providing Other Assertions or similar.
-
 * Re-add this comment somewhere?
   `python3 bin/evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
 
@@ -164,7 +160,7 @@ figure is saved in the output directory.
 (immediate).
 
 
-## Running Elrond
+## Running Elrond on Individual Inputs
 
 Elrond requires both a source file and assertion file as input, and
 outputs results in JSON format to some output directory. The input
@@ -280,15 +276,14 @@ forall u_0,(ite mem(il_1,u_0)
 ```
 
 
-### Running Other Programs
+### Input File Formats
 
-To run Elrond on your own programs, you must provide both an input
-OCaml code listing and an assertion file.
-
-+ source file:
+Elrond expects both an input OCaml code listing and an assertion
+file. The input code listing is given as a specially formatted
+OCaml source file with certain restrictions, and looks as follows:
 
 ```c
-(* Signature of library *)
+(* The library signature. *)
 module type DT_NAME = sig
   type TP_NAME
   ...
@@ -296,12 +291,15 @@ module type DT_NAME = sig
   ...
 end
 
-(* type of client *)
+(* The type of the client function. *)
 val VAR: FUNC_TP
 
-(* implementation of client *)
+(* The client implementation. *)
 let [rec] VAR (VAR: ARG_TP) ... = EXPR
 ```
+
+The all-caps placeholders are filled according to the following
+grammar:
 
 ```c
 DT_NAME:= string
@@ -326,14 +324,23 @@ EXPR :=
 | "let" VAR_TUPLE : ARG_TP "=" EXPR "in" EXPR
 | match VAR_TUPLE with CASE ...
 ```
-+ The type in signature should be abstract.
-+ The input type of function is a list of "ARG_TP", the output type of function are written as a tuple.
-+ The condition of "if" should be a single function application.
-+ The matched case in "match" are written as "| _ -> when CASE" instead of "| CASE"(we use ocaml parser which asks the matched case be an application of data type constrcutor, put the CASE after when can get round this limitation. In our situation the datatype is abstract and we do not distinguish if it is a constructor.)
-+ New variable should be typed when it first appears(we do not do type inference).
-+ All variables have distinct names(we do not do alpha renaming now).
 
-+ assertion:
+The input source file must observe the following rules:
+
+* The type in signature must be abstract.
+* The input type of a function is a list of `ARG_TP`, and the output
+  type of a function is written as a tuple.
+* The condition of an `if` statement must be a single function application.
+* The match cases in `match` statements must be written as `| _ ->
+when CASE` instead of `| CASE`. (This is because we use the OCaml
+parser, which asks that the matched case be an application of a
+datatype constructor. However, here the type is abstract.)
+* New variables must be typed when they first appear (we do not
+  perform any type inference).
++ All variables must have distinct names (we do not do perform any
+  alpha renaming).
+
+The assertion file is formatted as follows:
 
 ```c
 (* Predicates *)
@@ -344,6 +351,9 @@ let pre VAR (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
 (* Postcondtion *)
 let post VAR (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
 ```
+
+where the all-caps placeholders are filled according to the following
+grammar:
 
 ```c
 DT_NAME:= string
@@ -367,7 +377,9 @@ ASSERTION :=
 | NOT ASSERTION
 ```
 
-+ Impelementation of libraries and impelementation of predicates are fixed now, thus user cannot define their own libraries/predicaets. But user can define their own assertions.
+Currently, implementations of libraries and predicates are fixed; users can define
+their own assertions, but not their own libraries or predicates.
+
 
 ## Proof of the result
 
