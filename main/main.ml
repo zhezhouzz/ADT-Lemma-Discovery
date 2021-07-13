@@ -67,7 +67,7 @@ let start action sourcefile assertionfile outputdir sampling_bound timebound =
         | InferFull -> "Full"
         | InferConsistent -> "Consistent"
         | InferWeakening -> "Weakening") in
-    eprintf "%s inference Seccussed in %f(s)!\n" mode_str delta_time
+    eprintf "%s inference Succeeded in %f(s)!\n" mode_str delta_time
 
 let time_d sourcefile assertionfile outputdir =
   let ctx = init () in
@@ -193,7 +193,7 @@ let infer_weakening =
         let ctx = init () in
         try
           let (_ : SpecAbd.multi_infer_result), delta_time = time (fun () -> SpecAbd.do_weakening ctx outputdir time_bound) in
-          eprintf "Weakening Inference Seccussed in %f(s)!\n" delta_time
+          eprintf "Weakening Inference Succeeded in %f(s)!\n" delta_time
         with
         | _ -> eprintf "No Consistent Result Found!\n"
     )

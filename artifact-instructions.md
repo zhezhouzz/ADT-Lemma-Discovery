@@ -11,17 +11,33 @@ al.
 
 * Re-add this comment somewhere?
   `python3 bin/evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
+  + Added in Running Elrond section.
 
 * Add suggested hardware requirements (i.e. RAM and hard disk)
+  + Added in Requirements section.
 
 * Stipulate that reviews might need to disable memory limits in docker
+  + Docker can access whole RAM/Disk/CPU resource by default.
 
 * Include our own docker image
+  + TODO
 
 * Add a command to run a single benchmark to the ‘Getting Started’ guide, so reviewers have a sense things are actually working
 
 * Include lists of claims supported and not supported by the artifact
-
+  + In our evaluation section, we discuss about `5` key questions(line `918 - 923`). 
+  + For _Q1_: 
+    - The artifact supports the claims that our benchmarks covers the rich datatypes, predicates and properties claimed on line `928-979` of paper, and rich client programs claimed on line `996-999`. We shows this by provide the client programs, assertions and predicates under directory `data/`.
+    - The artifact supports the claims that Elrond can infer consistent initial solution under `3` minutes(line `1004`) by the `time_c` column in the table we generated.
+  + For _Q2_: 
+    - The artifact supports the claim that Elrond can returns concrete counter-examples for clients with unsafe post-conditions by provide `5` unsafe benchmarks.
+  + For _Q3_:
+    - The artifact may not support the claim that `16/22` benchmarks of our safe benchmarks were able to find maximalsolutions from the initial solution within `1` hour(line `1015-1016`) by rum these benchmarks by `./bin/run_benchmarks_short.sh`, because the proference depends on the machine reviewers used. However, we examed this claim under two machine and this claim holds.
+  + For _Q4_:
+    - The artifact supports the claim that Elrond considers at most 40% of the full search space(line `1023`) by provide the `#Gather/|𝜙+|` column in generated Table 4.
+  + For _Q5_:
+    - The artifact supports the claim that `time_d` of short benchmarks are samller than long benchmarks(line `1037-1040`) by  provide the `time_d` column in generated Table 4.
+    
 
 ## Requirements
 
@@ -29,7 +45,10 @@ al.
   installation instructions](https://docs.docker.com/get-docker/).
   This guide was tested using Docker version 20.10.7, but any
   contemporary Docker version is expected to work.
+  
+* Recommand machine memory: `16`GB
 
+* Recommand machine disk: `8`GB
 
 ## Getting Started
 
@@ -162,7 +181,7 @@ When the assertion is wrong, Elrond will print the counter-example it found, the
 
     $ ./main.exe infer infer consistent data/customstk.ml data/customstk_assertion2.ml customstk_out
     
-With the following Cex:
+Then Elrond returns the following Cex:
 
 ```
 ...
@@ -176,11 +195,15 @@ without weakening as above, then say:
 
     $ ./main.exe infer weakening <output_dir>
 
-on the same `<output_dir>`. For example,
+on the same `<output_dir>`. 
 
-    $ ./main.exe infer weakening bankersq_out
+Notice that the weakening may take long time to run, `-tb <time bound>` sets the time bound(in seconds) for weakening inference, the default time bound used by benchmark scripts is `3600` seconds.
 
-will perform weakening on the `bankersq` benchmark we executed above.
+For example,
+
+    $ ./main.exe infer weakening bankersq_out -tb 3600
+
+will perform weakening on the `bankersq` benchmark we executed above with a `3600` seconds time bound.
 
 Alternately, you may run the full inference-with-weakening pipeline at
 once by saying:
@@ -190,7 +213,7 @@ once by saying:
 For example, we can recreate the `bankersq` output directory in one pass:
 
     $ rm -rf _bankersq_out
-    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out
+    $ ./main.exe infer full data/bankersq.ml data/bankersq_assertion1.ml bankersq_out -tb 3600
 
 
 ## Displaying Specification Mappings
@@ -380,6 +403,8 @@ The Coq proofs of our inferred specifications are located in the
 `proof` directory. These proofs may be executed by running `make`.
 Each file with prefix `Verify` contains the proof of one inferred
 specification.
+
+As we claimed in the paper(`1066-1067`), we can verify most of our results expects `4` specifications which are commented in the coq makefile: `proof/_CoqProject`.
 
 Proof obligations expressed in Coq may be generated via:
 
