@@ -6,37 +6,53 @@ This is the accompanying artifact for the OOPSLA 2021 submission
 *Data-Driven Abductive Inference of Library Specifications* by Zhou et
 al.
 
-
 ## TODO
 
-* Re-add this comment somewhere?
-  `python3 bin/evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
-  + Added in Running Elrond section.
-
-* Add suggested hardware requirements (i.e. RAM and hard disk)
-  + Added in Requirements section.
-
-* Stipulate that reviews might need to disable memory limits in docker
-  + Docker can access whole RAM/Disk/CPU resource by default.
-
 * Include our own docker image
-  + TODO
 
-* Add a command to run a single benchmark to the ‘Getting Started’ guide, so reviewers have a sense things are actually working
+* Add a command to run a single benchmark to the ‘Getting Started’
+  guide, so reviewers have a sense things are actually working.
 
-* Include lists of claims supported and not supported by the artifact
-  + In our evaluation section, we discuss about `5` key questions(line `918 - 923`).
-  + For _Q1_:
-    - The artifact supports the claims that our benchmarks covers the rich datatypes, predicates and properties claimed on line `928-979` of paper, and rich client programs claimed on line `996-999`. We shows this by provide the client programs, assertions and predicates under directory `data/`.
-    - The artifact supports the claims that Elrond can infer consistent initial solution under `3` minutes(line `1004`) by the `time_c` column in the table we generated.
-  + For _Q2_:
-    - The artifact supports the claim that Elrond can returns concrete counter-examples for clients with unsafe post-conditions by provide `5` unsafe benchmarks.
-  + For _Q3_:
-    - The artifact may not support the claim that `16/22` benchmarks of our safe benchmarks were able to find maximalsolutions from the initial solution within `1` hour(line `1015-1016`) by rum these benchmarks by `./bin/run_benchmarks_short.sh`, because the proference depends on the machine reviewers used. However, we examed this claim under two machine and this claim holds.
-  + For _Q4_:
-    - The artifact supports the claim that Elrond considers at most 40% of the full search space(line `1023`) by provide the `#Gather/|𝜙+|` column in generated Table 4.
-  + For _Q5_:
-    - The artifact supports the claim that `time_d` of short benchmarks are samller than long benchmarks(line `1037-1040`) by  provide the `time_d` column in generated Table 4.
+* Hardware requirements / suggestions
+
+
+## Claims Supported / Not Supported By This Artifact
+
+The paper's evaluation section discusses 5 key research questions the
+evaluation is designed to address.
+
+* _Q1: Is Elrond able to find specifications sufficient to verify a
+  range of properties and client programs in a reasonable amount of
+  time?_
+    - This artifact supports the claims that our tool covers a rich set
+      of data types, predicates, and properties drawn from the
+      literature over a diverse set of client programs. The library
+      and client use cases discussed in the paper are found in the
+      `data` directory of this artifact.
+    - This artifact may not support the claim that Elrond can infer a
+      consistent initial solution in under 3 minutes (line 1004)
+      depending on the hardware on which the benchmarks are executed,
+      although in our testing this claim was verified.
+* _Q2: Can Elrond identify unsafe client programs?_
+    - This artifact supports the claim that Elrond can return concrete
+      counter-examples for clients with unsafe postconditions by
+      providing 5 benchmarks containing unsafe client programs.
+* _Q3: Can Elrond efficiently find maximal solutions?_
+    - This artifact may not support the claim that `16/22` benchmarks
+      of our safe benchmarks were able to find maximal solutions from
+      the initial solution within `1` hour (line `1015-1016`) depending on
+      the hardware used to run the benchmarks. However, this claim held
+      in our testing.
+* _Q4: Is Elrond able to find useful intermediate generalizations of
+  initial specifications?_
+    - This artifact supports the claim that Elrond considers at most
+      40% of the full search space(line `1023`) by providing results
+      similar to the `#Gather/|𝜙+|` column in Table 4.
+* _Q5: Does weakening improve the quality of the inferred
+  specifications?_
+    - The artifact supports the claim that `time_d` of short
+      benchmarks are samller than long benchmarks (line `1037-1040`)
+      by providing results similar to the `time_d` column in Table 4.
 
 
 ## Requirements
@@ -49,6 +65,7 @@ al.
 * Recommand machine memory: `16`GB
 
 * Recommand machine disk: `8`GB
+
 
 ## Getting Started
 
