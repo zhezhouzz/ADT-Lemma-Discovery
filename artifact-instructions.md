@@ -9,26 +9,6 @@ al.
 
 ## TODO
 
-* Should we publish a Docker image instead of asking evaluators to
-  build the Dockerfile directly?
-  + [ZZ] Not sure, their website mentions "dockerfile", I think it's
-    Ok. Anyway, as the artifact is developing thus dockerfile is
-    better.
-  + [RD] I'm guessing it's fine to submit a Dockerfile, but having the
-    image ready to go would save a bunch of the evaluators' time. So,
-    publishing an image seems like the nice thing to do if we have the
-    time / resources. I'll leave this TODO here, but maybe we should
-    consider it lower priority / nice-to-have.
-
-* Add a section about the Coq formalization.
-
-* Annotate the artifact structure.
-
-* Improve output of the benchmark script; currently difficult to
-  correlate the script's output to our evaluation figure (Table 4).
-  There are several columns in Table 4; does our benchmark script give
-  us all of these numbers?
-
 * Re-add this comment somewhere?
   `python3 bin/evaluation_tool.py weakening config/standard.config -tb 3600 -l` sets the time bound(in seconds) for weakening inference, the default time bound is `3600` seconds.
 
@@ -160,7 +140,7 @@ figure is saved in the output directory.
 (immediate).
 
 
-## Running Elrond on Individual Inputs
+## Running Elrond
 
 Elrond requires both a source file and assertion file as input, and
 outputs results in JSON format to some output directory. The input
