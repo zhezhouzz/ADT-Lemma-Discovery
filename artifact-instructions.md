@@ -25,11 +25,11 @@ al.
 * Add a command to run a single benchmark to the ‘Getting Started’ guide, so reviewers have a sense things are actually working
 
 * Include lists of claims supported and not supported by the artifact
-  + In our evaluation section, we discuss about `5` key questions(line `918 - 923`). 
-  + For _Q1_: 
+  + In our evaluation section, we discuss about `5` key questions(line `918 - 923`).
+  + For _Q1_:
     - The artifact supports the claims that our benchmarks covers the rich datatypes, predicates and properties claimed on line `928-979` of paper, and rich client programs claimed on line `996-999`. We shows this by provide the client programs, assertions and predicates under directory `data/`.
     - The artifact supports the claims that Elrond can infer consistent initial solution under `3` minutes(line `1004`) by the `time_c` column in the table we generated.
-  + For _Q2_: 
+  + For _Q2_:
     - The artifact supports the claim that Elrond can returns concrete counter-examples for clients with unsafe post-conditions by provide `5` unsafe benchmarks.
   + For _Q3_:
     - The artifact may not support the claim that `16/22` benchmarks of our safe benchmarks were able to find maximalsolutions from the initial solution within `1` hour(line `1015-1016`) by rum these benchmarks by `./bin/run_benchmarks_short.sh`, because the proference depends on the machine reviewers used. However, we examed this claim under two machine and this claim holds.
@@ -37,7 +37,7 @@ al.
     - The artifact supports the claim that Elrond considers at most 40% of the full search space(line `1023`) by provide the `#Gather/|𝜙+|` column in generated Table 4.
   + For _Q5_:
     - The artifact supports the claim that `time_d` of short benchmarks are samller than long benchmarks(line `1037-1040`) by  provide the `time_d` column in generated Table 4.
-    
+
 
 ## Requirements
 
@@ -45,7 +45,7 @@ al.
   installation instructions](https://docs.docker.com/get-docker/).
   This guide was tested using Docker version 20.10.7, but any
   contemporary Docker version is expected to work.
-  
+
 * Recommand machine memory: `16`GB
 
 * Recommand machine disk: `8`GB
@@ -149,9 +149,11 @@ The above scripts automate the following process:
 
 ##### Building Figure 5
 
-`python3 bin/evaluation_tool.py figure config/standard.config`
-generates Figure 5 from the weakening experimental results. The
-figure is saved in the output directory.
+`python3 bin/evaluation_tool.py figure config/prebuilt.config`
+generates Figure 5 from the prebuilt weakening experimental results.
+(After running the benchmarks locally, this figure may be generated
+with the `config/standard.config` configuration instead.) The figure
+is saved in the `_result` directory.
 
 ##### Building From Saved Results
 
@@ -180,7 +182,7 @@ will run the `bankersq` benchmark, writing results to the
 When the assertion is wrong, Elrond will print the counter-example it found, the following command run a branchmark having wrong assertion:
 
     $ ./main.exe infer infer consistent data/customstk.ml data/customstk_assertion2.ml customstk_out
-    
+
 Then Elrond returns the following Cex:
 
 ```
@@ -195,7 +197,7 @@ without weakening as above, then say:
 
     $ ./main.exe infer weakening <output_dir>
 
-on the same `<output_dir>`. 
+on the same `<output_dir>`.
 
 Notice that the weakening may take long time to run, `-tb <time bound>` sets the time bound(in seconds) for weakening inference, the default time bound used by benchmark scripts is `3600` seconds.
 
