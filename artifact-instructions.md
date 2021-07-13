@@ -45,6 +45,10 @@ evaluation is designed to address.
       benchmarks are samller than long benchmarks (line `1037-1040`)
       by providing results similar to the `time_d` column in Table 4.
 
+As we claimed in the paper(`1066-1067`), we can verify most of our
+results except 4 specifications which are commented out in the Coq
+makefile located in `proof/_CoqProject`.
+
 
 ## Requirements
 
@@ -193,14 +197,15 @@ For example,
 will run the `bankersq` benchmark, writing results to the
 `_bankersq_out` directory.
 
-When the assertion is wrong, Elrond will print the counter-example it found, the following command run a branchmark having wrong assertion:
+When the assertion is unsound, Elrond will print the counter-example
+it found. The following command executes a benchmark with an incorrect
+assertion:
 
     $ ./main.exe infer infer consistent data/customstk.ml data/customstk_assertion2.ml customstk_out
 
-Then Elrond returns the following Cex:
+Elrond returns the following counterexample:
 
 ```
-...
 CEX:
 s2 -> [0],s1 -> [],il_0 -> [0]
 Failed with Cex in 0.088947(s)!
@@ -213,16 +218,19 @@ without weakening as above, then say:
 
 on the same `<output_dir>`.
 
-Notice that the weakening may take long time to run, `-tb <time bound>` sets the time bound(in seconds) for weakening inference, the default time bound used by benchmark scripts is `3600` seconds.
+Note that the weakening may take long time to run, `-tb <time bound>`
+sets the time bound(in seconds) for weakening inference. The default
+time bound used by benchmark scripts is 3600 seconds.
 
 For example,
 
     $ ./main.exe infer weakening bankersq_out -tb 3600
 
-will perform weakening on the `bankersq` benchmark we executed above with a `3600` seconds time bound.
+will perform weakening on the `bankersq` benchmark we executed above
+with a 3600 second time bound.
 
-Alternately, you may run the full inference-with-weakening pipeline at
-once by saying:
+You may run the full inference-with-weakening pipeline at once by
+saying:
 
     $ ./main.exe infer full <source_file> <assertion_file> <output_dir>
 
@@ -247,7 +255,8 @@ following commands:
     $ ./main.exe infer full data/customstk.ml data/customstk_assertion1.ml exampleout -sb 4
     $ ./main.exe show consistent exampleout
 
-(Here, the `-sb 4` flag limits the sampling bound to small number in order to simulate a biased test generator.)
+(Here, the `-sb 4` flag limits the sampling bound to small number in
+order to simulate a biased test generator.)
 
 This yields the following result:
 
@@ -420,8 +429,6 @@ The Coq proofs of our inferred specifications are located in the
 Each file with prefix `Verify` contains the proof of one inferred
 specification.
 
-As we claimed in the paper(`1066-1067`), we can verify most of our results expects `4` specifications which are commented in the coq makefile: `proof/_CoqProject`.
-
 Proof obligations expressed in Coq may be generated via:
 
     $ dune exec -- main/main.exe coq  <specificaion mapping file> <function name>
@@ -453,7 +460,8 @@ This section gives a brief overview of the files in this artifact.
 * `data/`: the benchmark input files.
   + `data/result.zip`: a collection of saved inference results.
 * `frontend/`: the Elrond parser, a modified OCaml parser.
-* `inference/`: the specification mapping inference modules, including both consistent inference and weakening inference.
+* `inference/`: the specification mapping inference modules, including
+  both consistent inference and weakening inference.
 * `language/`: Elrond's intermediate specification language.
 * `ml/`: the decistion tree learner.
 * `main/main.ml`: the main entry point of Elrond.
