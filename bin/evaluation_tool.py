@@ -2,7 +2,6 @@ import json
 import subprocess
 import sys
 import argparse
-import os
 
 verbose=False
 
@@ -70,8 +69,7 @@ def run_table4_weakening(table_file, shortbench, longbench, timebound):
                 if verbose:
                     print(" ".join(cmd))
                 subprocess.run(cmd, stdout=log_file)
-                if os.path.is_file(output_dir):
-                    subprocess.run(["mv", log_file_name, "_" + output_dir + "/" + log_file_name])
+                subprocess.run(["mv", log_file_name, "_" + output_dir + "/" + log_file_name])
 
 def run_table4_diff(table_file):
     datadir, outputprefix, sourcepostfix, assertioninfix, assertionpostfix, benchmarks = parse_config(table_file)
