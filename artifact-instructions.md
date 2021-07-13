@@ -60,14 +60,11 @@ evaluation is designed to address.
   This guide was tested using Docker version 20.10.7, but any
   contemporary Docker version is expected to work.
 
-* Hardware
-
-  - We recommend machines have at least 16 GB of memory and 8 GB of
-    hard disk space available when building and running Docker images.
-
-  - These benchmarks were tested on two desktop machines, an Intel
-    i7-6700K CPU @ 4.00GHz with 16 GB RAM and an Intel i7-8700 CPU @
-    3.20GHz with 64GB of RAM.
+* We recommend machines have at least 16 GB of memory and 8 GB of hard
+  disk space available when building and running Docker images. These
+  benchmarks were tested on two desktop machines, an Intel i7-6700K
+  CPU @ 4.00GHz with 16 GB RAM and an Intel i7-8700 CPU @ 3.20GHz with
+  64GB of RAM.
 
 ## Getting Started
 
