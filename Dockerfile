@@ -12,7 +12,7 @@ RUN sudo apt-get install -y python3 python3-pip
 RUN pip3 install numpy
 RUN pip3 install matplotlib
 SHELL ["/bin/bash", "-lc"]
-RUN git clone https://github.com/zhezhouzz/ADT-Lemma-Discovery.git && cd ADT-Lemma-Discovery && git checkout f4085bbdf77569b20d4d0f6f9680d569bb3c5f0f
+RUN git clone https://github.com/zhezhouzz/ADT-Lemma-Discovery.git && cd ADT-Lemma-Discovery && git checkout 68372091d03774eb30edb2b2430eff87387fee67
 WORKDIR ADT-Lemma-Discovery
 ENV LD_LIBRARY_PATH=/home/opam/.opam/4.08/lib/z3
 RUN unzip data/result.zip
