@@ -383,11 +383,12 @@ their own assertions, but not their own libraries or predicates.
 
 ## Coq Formalization
 
-The Coq proof of our inferred specifications are saved in the `proof`
-directory. Proofs may be executed by running `make`. Each file with
-prefix `Verify` proves one inferred specification.
+The Coq proofs of our inferred specifications are located in the
+`proof` directory. These proofs may be executed by running `make`.
+Each file with prefix `Verify` contains the proof of one inferred
+specification.
 
-Coq proofs are generated via:
+Proof obligations expressed in Coq may be generated via:
 
     $ dune exec -- main/main.exe coq  <specificaion mapping file> <function name>
 
@@ -402,7 +403,7 @@ prints several lemmas:
 Lemma Customstk.push_1 (i_0:nat) (il_0:list nat) (il_1:list nat) (u_0:nat) : (push_spec i_0 il_0 il_1) -> (((not (u_0 = i_0))/\(list_member  il_1 u_0)) -> (not (list_head  il_1 u_0))).
 ```
 
-Here, the `push_spec` is the pre-defined specification of `push` (see
+Here, `push_spec` is the pre-defined specification of `push` (see
 `proof/.*Aux.v*`) and `(((not (u_0 = i_0))/\(list_member il_1 u_0)) ->
 (not (list_head il_1 u_0)))` is one branch of the inferred decision
 tree. Proving all given lemmas establishes the correctness of the
