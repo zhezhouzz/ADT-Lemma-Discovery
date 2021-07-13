@@ -158,6 +158,19 @@ For example,
 will run the `bankersq` benchmark, writing results to the
 `_bankersq_out` directory.
 
+When the assertion is wrong, Elrond will print the counter-example it found, the following command run a branchmark having wrong assertion:
+
+    $ ./main.exe infer infer consistent data/customstk.ml data/customstk_assertion2.ml customstk_out
+    
+With the following Cex:
+
+```
+...
+CEX:
+s2 -> [0],s1 -> [],il_0 -> [0]
+Failed with Cex in 0.088947(s)!
+```
+
 To find weakened specification mappings, first run the benchmark
 without weakening as above, then say:
 
@@ -229,7 +242,7 @@ For example, the following command displays weakened specifications
 for the paper's motivating example (assuming the specifications have
 already been found as above):
 
-    $ ./main.exe show weakening exampleout
+    $ ./main.exe show weakening exampleout -s
 
 This yields the output:
 
