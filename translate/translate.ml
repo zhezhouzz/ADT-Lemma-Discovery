@@ -890,13 +890,14 @@ let trans (source, assertion) =
   (* let _ = printf "%s\n" (StrList.to_string intp) in
    * let _ = printf "%s\n" (StrList.to_string outtp) in
    * let _ = raise @@ InterExn "end" in *)
+  let _ = printf "%s\n" signame in
   let imp_map = Impmap.l_to_map (Imps.find signame) in
   let preds, asst, spectab = parse_assertion client_name init_tenv (intp @ outtp) assertion in
   let tenv = TenvEngine.renew_raw_funcm init_tenv raw_funcm in
   let tenv, uinputs, body = parse_client tenv client in
   let vc, uoutputs = body_vc_gen client_name tenv asst body in
-  (* let _ = printf "body:=\n%s\n" (Vc.layout vc) in *)
-  (* let _ = printf "vc:%s\n" (Vc.vc_layout vc); raise @@ InterExn "end" in *)
+   let _ = printf "body:=\n%s\n" (Vc.layout vc) in 
+   let _ = printf "vc:%s\n" (Vc.vc_layout vc); raise @@ InterExn "end" in 
   let preds = TenvEngine.all_preds tenv preds in
   let holes = make_holes fnames tenv.funcm imp_map in
   let uvars = Vc.get_uvars vc in
@@ -914,6 +915,7 @@ let trans (source, assertion) =
         Vc.Implies (Vc.SpecApply(prename, args),
                     Vc.SpecApply(postname, args))
     in
+    let _ = printf "client: %s\n" client_name in 
     { upost = upost;
       uvars = uvars;
       uinputs = uinputs;
