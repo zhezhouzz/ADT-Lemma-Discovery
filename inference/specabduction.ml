@@ -1125,6 +1125,7 @@ module SpecAbduction = struct
     let _ = close_out outc in
     ()
 
+  (* pre is verification condition *)
   let do_consistent ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
       benchname ctx mii pre spectable holel preds startX =
     let benchname = "_" ^ benchname ^ "/" in
@@ -1138,7 +1139,7 @@ module SpecAbduction = struct
     let _ = List.iter (fun pre ->
         printf "[pre]\n%s\n" (Ast.vc_layout pre)
       ) pres in
-    (* let _ = Ast.print_spectable spectable in *)
+    let _ = Ast.print_spectable spectable in
     let c = List.fold_left (fun c pre -> c + (Ast.count_apps pre names)) 0 pres in
     let _ = printf "#R:\n%i\n" c in
     (* let _ = raise @@ InterExn "end" in *)

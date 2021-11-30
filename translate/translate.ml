@@ -896,8 +896,8 @@ let trans (source, assertion) =
   let tenv = TenvEngine.renew_raw_funcm init_tenv raw_funcm in
   let tenv, uinputs, body = parse_client tenv client in
   let vc, uoutputs = body_vc_gen client_name tenv asst body in
-   let _ = printf "body:=\n%s\n" (Vc.layout vc) in 
-   let _ = printf "vc:%s\n" (Vc.vc_layout vc); raise @@ InterExn "end" in 
+    let _ = printf "vc:%s\n" (Vc.vc_layout vc) in
+   (* let _ = printf "vc:%s\n" (Vc.vc_layout vc); raise @@ InterExn "end" in  *)
   let preds = TenvEngine.all_preds tenv preds in
   let holes = make_holes fnames tenv.funcm imp_map in
   let uvars = Vc.get_uvars vc in
