@@ -427,7 +427,7 @@ type termi_status =
   | TermiRaiseExn
   | TermiNormal of Vc.t * TenvEngine.t
 
-let body_vc_gen client_name (init_tenv: TenvEngine.t) asst expr =
+let body_vc_gen client_name (init_tenv: TenvEngine.t) asst expr inductive =
   let tps_to_ses = List.fold_left (fun r tp ->
       r @ [SE.from_tpedvar (tp, T.universal_auto_name tp)]) [] in
   let handle_let vb tenv =
@@ -563,11 +563,23 @@ let body_vc_gen client_name (init_tenv: TenvEngine.t) asst expr =
            let spec_c =
              if String.equal client_name funcname
              then
+               let induc_client_name = client_name  in
                match asst with
-               | NoPre (postname, _) -> Vc.SpecApply (postname, args @ target)
+               | NoPre (postname, _) ->
+                if inductive
+                then
+                  Vc.And [Vc.SpecApply (postname, args @ target);
+                        Vc.SpecApply (induc_client_name, args @ target)]
+                else Vc.SpecApply (postname, args @ target)
                | HasPre (prename, _, postname, _) ->
-                 Vc.Implies (Vc.SpecApply (prename, args @ target),
-                             Vc.SpecApply (postname, args @ target))
+                if inductive
+                then
+                  Vc.Implies (Vc.SpecApply (prename, args @ target),
+                              Vc.And [Vc.SpecApply (postname, args @ target);
+                                    Vc.SpecApply (induc_client_name, args @ target)])
+                else
+                  Vc.Implies (Vc.SpecApply (prename, args @ target),
+                              Vc.SpecApply (postname, args @ target);)
              else
                Vc.SpecApply (funcname, args @ target)
            in
@@ -854,7 +866,8 @@ let make_holes_self clientname funcnames funcmap imp_map =
     let hole = {name = funcname; args = List.combine argstp names} in
     (hole, imp)
   in
-  List.map aux funcnames
+  let clientname_induc = clientname in
+  List.map aux (clientname_induc :: funcnames)
 
 
 let make_holes funcnames funcmap imp_map =
@@ -908,7 +921,7 @@ let trans (source, assertion) inductive =
   let preds, asst, spectab = parse_assertion client_name init_tenv (intp @ outtp) assertion in
   let tenv = TenvEngine.renew_raw_funcm init_tenv raw_funcm in
   let tenv, uinputs, body = parse_client tenv client in
-  let vc, uoutputs = body_vc_gen client_name tenv asst body in
+  let vc, uoutputs = body_vc_gen client_name tenv asst body inductive in
     let _ = printf "vc:%s\n" (Vc.vc_layout vc) in
    (* let _ = printf "vc:%s\n" (Vc.vc_layout vc); raise @@ InterExn "end" in  *)
   let preds = TenvEngine.all_preds tenv preds in

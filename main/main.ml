@@ -36,7 +36,7 @@ let start action sourcefile assertionfile outputdir sampling_bound timebound =
   let source = parse sourcefile in
   let assertion = parse assertionfile in
   (* let () = raise @@ InterExn "end" in *)
-  let mii, vc, holes, preds, spectab, basic_info = Translate.trans (source, assertion) in
+  let mii, vc, holes, preds, spectab, basic_info = Translate.trans (source, assertion) true in
   let () = Core.Unix.mkdir_p (Printf.sprintf "_%s" outputdir) in
   let basic_info_filename = Printf.sprintf "_%s/_basic_info.json" outputdir in
   let () = Yojson.Basic.to_file basic_info_filename basic_info in
@@ -74,7 +74,7 @@ let time_d sourcefile assertionfile outputdir =
   let source = parse sourcefile in
   let assertion = parse assertionfile in
   (* let () = raise @@ InterExn "end" in *)
-  let mii, vc, _, _, spectab, _ = Translate.trans (source, assertion) in
+  let mii, vc, _, _, spectab, _ = Translate.trans (source, assertion) false in
   SpecAbd.find_weakened_model outputdir ctx mii vc spectab
 
 let fallback_load outputdir =
