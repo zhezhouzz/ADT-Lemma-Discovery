@@ -609,6 +609,9 @@ module SpecAbduction = struct
        *     raise @@ InterExn "Cannot find consistent solutoin. The client code is wrong but cannot find concrete Cex."
        *   else () in *)
       let env = init_env mii pres spectable preds numX holel in
+      let _ = List.iter (fun (h, _) -> printf "[hole]: %s\n" h.name; 
+          List.iter (fun (_, arg) ->  printf "\t%s\n" arg) h.args
+        ) holel in
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"
             name (List.length env.fset) (pow 2 (List.length env.fset))

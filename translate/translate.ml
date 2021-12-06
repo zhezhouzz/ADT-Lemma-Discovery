@@ -844,6 +844,19 @@ let parse_assertion client_name init_tenv argtps asts =
   in
   preds, asst, spectab
 
+let make_holes_self clientname funcnames funcmap imp_map =
+  let aux funcname =
+    let intps, outtps = StrMap.find "make_hole::funcmap" funcmap funcname in
+    let argstp = intps @ outtps in
+    let names = T.auto_name argstp in
+    let imp = StrMap.find (sprintf "make_hole::imp_map(%s)" funcname) imp_map funcname in
+    let open Helper in
+    let hole = {name = funcname; args = List.combine argstp names} in
+    (hole, imp)
+  in
+  List.map aux funcnames
+
+
 let make_holes funcnames funcmap imp_map =
   let aux funcname =
     let intps, outtps = StrMap.find "make_hole::funcmap" funcmap funcname in
@@ -884,7 +897,7 @@ let count_r vc fnames =
    *   List.fold_left (fun pre vc -> aux pre vc) 0 (to_dnf vc)
    * ) *)
 
-let trans (source, assertion) =
+let trans (source, assertion) inductive =
   let client_name, (signame, tpnames), fnames, raw_funcm, (intp, outtp), client = parse_source source in
   let init_tenv = TenvEngine.make_tenv signame tpnames StrMap.empty StrMap.empty in
   (* let _ = printf "%s\n" (StrList.to_string intp) in
@@ -899,7 +912,9 @@ let trans (source, assertion) =
     let _ = printf "vc:%s\n" (Vc.vc_layout vc) in
    (* let _ = printf "vc:%s\n" (Vc.vc_layout vc); raise @@ InterExn "end" in  *)
   let preds = TenvEngine.all_preds tenv preds in
-  let holes = make_holes fnames tenv.funcm imp_map in
+  let holes = if inductive
+    then make_holes_self client_name fnames tenv.funcm imp_map
+    else make_holes fnames tenv.funcm imp_map in
   let uvars = Vc.get_uvars vc in
   (* let _ = printf "%s\n" (List.to_string T.layouttvar uvars); raise @@ InterExn "end" in *)
   (* let _ = printf "%s\n" (List.to_string T.layouttvar uinputs) in
@@ -935,3 +950,8 @@ let trans (source, assertion) =
    *     h.Helper.name
    *   ) holes); raise @@ InterExn "end" in *)
   mii, vc, holes, preds, spectab, basic_info
+
+  (* let bb = function
+  | [Value.L s1; Value.L s2] -> Some [Value.L (s1 @ s2)]
+  | _ -> raise @@ failwith "error"
+   *)
