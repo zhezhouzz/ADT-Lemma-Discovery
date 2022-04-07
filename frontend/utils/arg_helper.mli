@@ -16,8 +16,13 @@
 
 (** Decipher command line arguments of the form
         <value> | <key>=<value>[,...]
+
     (as used for example for the specification of inlining parameters
     varying by simplification round).
+
+  {b Warning:} this module is unstable and part of
+  {{!Compiler_libs}compiler-libs}.
+
 *)
 
 module Make (S : sig
@@ -51,13 +56,13 @@ end) : sig
 
   val add_user_override : S.Key.t -> S.Value.t -> parsed -> parsed
 
-  val parse : string -> help_text:string -> update:parsed ref -> unit
+  val parse : string -> string -> parsed ref -> unit
 
   type parse_result =
     | Ok
     | Parse_failed of exn
 
-  val parse_no_error : string -> update:parsed ref -> parse_result
+  val parse_no_error : string -> parsed ref -> parse_result
 
   val get : key:S.Key.t -> parsed -> S.Value.t
 end

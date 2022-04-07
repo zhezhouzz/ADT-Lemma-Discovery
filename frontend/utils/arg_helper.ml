@@ -58,15 +58,12 @@ end) = struct
   let add_user_override key value t =
     { t with user_override = S.Key.Map.add key value t.user_override }
 
-  let no_equals value =
-    match String.index value '=' with
-    | exception Not_found -> true
-    | _index -> false
-
   exception Parse_failure of exn
 
   let parse_exn str ~update =
-    let values = Misc.Stdlib.String.split str ~on:',' in
+    (* Is the removal of empty chunks really relevant here? *)
+    (* (It has been added to mimic the old Misc.String.split.) *)
+    let values = String.split_on_char ',' str |> List.filter ((<>) "") in
     let parsed =
       List.fold_left (fun acc value ->
           match String.index value '=' with
@@ -101,7 +98,7 @@ end) = struct
     in
     update := parsed
 
-  let parse str ~help_text ~update =
+  let parse str help_text update =
     match parse_exn str ~update with
     | () -> ()
     | exception (Parse_failure exn) ->
@@ -111,7 +108,7 @@ end) = struct
     | Ok
     | Parse_failed of exn
 
-  let parse_no_error str ~update =
+  let parse_no_error str update =
     match parse_exn str ~update with
     | () -> Ok
     | exception (Parse_failure exn) -> Parse_failed exn
