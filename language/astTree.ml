@@ -414,12 +414,12 @@ module AstTree (E: Epr.Epr) : AstTree
         StrMap.empty murphy_inps in
     let samples = List.map (fun murphy_inp -> (murphy_inp.mname, murphy_inp.mss))
         murphy_inps in
-    let () = Sexplib.Sexp.save (sprintf ".elrond.%s.alpha" benchname) @@ Pred.Value.sexp_of_nss samples in
-    let () = Yojson.Basic.to_file (sprintf ".elrond.%s.spectable_encode" benchname) @@
+    let () = Sexplib.Sexp.save (sprintf ".elrond/%s.alpha" benchname) @@ Pred.Value.sexp_of_nss samples in
+    let () = Yojson.Basic.to_file (sprintf ".elrond/%s.spectable" benchname) @@
       (`Assoc ["benchname",`String benchname; "spectab", spectable_encode spectable ])       in
     ()
   let from_murphy benchname =
     let benchname = List.nth (String.split_on_char '/' benchname) 0 in
-    let samples = Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp (sprintf ".murphy.%s.alpha" benchname) in
+    let samples = Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp (sprintf ".elrond/%s.malpha" benchname) in
     samples
 end
