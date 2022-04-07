@@ -406,13 +406,13 @@ module AstTree (E: Epr.Epr) : AstTree
   let spec_num_atom (_, (_, body)) = E.num_atom body
 
   let to_murphy benchname spectable samples =
-    let _ = List.nth (String.split_on_char '/' benchname) 0 in
+    let benchname = List.nth (String.split_on_char '/' benchname) 0 in
     let () = Sexplib.Sexp.save (sprintf ".elrond.%s.alpha" benchname) @@ Pred.Value.sexp_of_nss samples in
     let () = Yojson.Basic.to_file (sprintf ".elrond.%s.spectable_encode" benchname) @@
       (`Assoc ["benchname",`String benchname; "spectab", spectable_encode spectable ])       in
     ()
   let from_murphy benchname =
-    let _ = List.nth (String.split_on_char '/' benchname) 0 in
+    let benchname = List.nth (String.split_on_char '/' benchname) 0 in
     let samples = Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp (sprintf ".murphy.%s.alpha" benchname) in
     samples
 end
