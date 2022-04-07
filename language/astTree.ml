@@ -35,6 +35,8 @@ module type AstTree = sig
   val spec_num_atom: spec -> int
   val count_apps: t -> string list -> int
   val get_uvars: t -> Tp.Tp.tpedvar list
+  val to_murphy: string -> spec Utils.StrMap.t -> (string * Pred.Value.t list list) list -> unit
+  val from_murphy: string -> (string * Pred.Value.t list list) list
 end
 
 module AstTree (E: Epr.Epr) : AstTree
@@ -170,7 +172,7 @@ module AstTree (E: Epr.Epr) : AstTree
   let print_spectable spectable =
     StrMap.iter (fun name spec ->
         printf "%s\n" (layout_spec_entry_simple name spec)
-      ) spectable
+    ) spectable
 
   let eq a b =
     let rec aux a b =
@@ -402,4 +404,13 @@ module AstTree (E: Epr.Epr) : AstTree
     (spectable_eq_succ t1 t2) (* && (spectable_eq_succ t2 t1) *)
 
   let spec_num_atom (_, (_, body)) = E.num_atom body
+
+  let to_murphy benchname spectable samples =
+    let () = Sexplib.Sexp.save (sprintf ".elrond.%s.alpha" benchname) @@ Pred.Value.sexp_of_nss samples in
+    let () = Yojson.Basic.to_file (sprintf ".elrond.%s.spectable_encode" benchname) @@
+      (`Assoc ["benchname",`String benchname; "spectab", spectable_encode spectable ])       in
+    ()
+  let from_murphy benchname =
+    let samples = Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp (sprintf ".murphy.%s.alpha" benchname) in
+    samples
 end

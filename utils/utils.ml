@@ -381,6 +381,7 @@ module Tree = struct
   type 'a t =
     | Leaf
     | Node of ('a * 'a t * 'a t)
+[@@deriving sexp]
 
   let exists f t =
     let rec aux before t =
@@ -482,7 +483,7 @@ module LabeledTree = struct
   type ('a, 'b) t =
     | Leaf
     | Node of ('b * 'a * ('a, 'b) t * ('a, 'b) t)
-
+[@@deriving sexp]
   let rec from_tree label t =
     match t with
     | Tree.Leaf -> Leaf

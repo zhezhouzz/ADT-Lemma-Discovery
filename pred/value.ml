@@ -7,6 +7,10 @@ module type Value = sig
     | TI of (int, int) Utils.LabeledTree.t
     | TB of (int, bool) Utils.LabeledTree.t
     | NotADt
+  [@@deriving sexp]
+  type ts = t list [@@deriving sexp]
+  type tss = t list list [@@deriving sexp]
+  type nss = (string * t list list) list [@@deriving sexp]
   val layout : t -> string
   val eq : t -> t -> bool
   val flatten_forall: t -> int list
@@ -17,6 +21,7 @@ end
 module Value: Value = struct
   open Utils
   open Printf
+  open Sexplib.Std
   type t =
     | L of int list
     | T of int Utils.Tree.t
@@ -25,6 +30,10 @@ module Value: Value = struct
     | TI of (int, int) Utils.LabeledTree.t
     | TB of (int, bool) Utils.LabeledTree.t
     | NotADt
+  [@@deriving sexp]
+  type ts = t list [@@deriving sexp]
+  type tss = t list list [@@deriving sexp]
+  type nss = (string * t list list) list [@@deriving sexp]
   let layout = function
     | L l -> sprintf "[%s]" (IntList.to_string l)
     | T tr -> Tree.layout string_of_int tr

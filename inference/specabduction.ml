@@ -81,15 +81,15 @@ module SpecAbduction = struct
   let handle_snum snum =
     match snum with None -> () | Some i -> sver := SV2 i
 
-  let count_tested_sample env hole samples =
-    let c = List.fold_left (fun c args_value ->
+  let count_tested_sample env hole inpts_outputs =
+    let c = List.fold_left (fun c (alpha, beta) ->
         let m = List.fold_left (fun m ((_, name), v) ->
             StrMap.add name v m
-          ) StrMap.empty (List.combine hole.args args_value) in
+          ) StrMap.empty (List.combine hole.args (alpha @ beta)) in
         if Epr.forallformula_exec env.abduciable m
         then c
-        else c + 1
-      ) 0 samples in
+        else alpha :: c
+    ) [] inpts_outputs in
     c
 
   let sampling hole imp env =
@@ -104,10 +104,11 @@ module SpecAbduction = struct
     let samples = List.filter_map (fun input ->
         let output = imp input in
         match output with
-        | Some output -> Some (input @ output)
+        | Some output -> Some (input, output)
         | None -> None
-      ) samples in
+    ) samples in
     let c = count_tested_sample env hole samples in
+    let samples = List.map (fun (a, b) -> a @ b) samples in
     let s =
       match !sver with
       | SV1 _ ->
@@ -466,7 +467,7 @@ module SpecAbduction = struct
   type pos_refine_result =
     | PRFCex of (V.t StrMap.t) list
     | PRFIncreaseHyp
-    | PRFFinalEnv of multi_spec_env
+    | PRFFinalEnv of multi_spec_env * ((string * V.t list list) list)
 
   let refinement_loop ctx env cstat_once =
     let _ = printf "refinement_loop\n" in
@@ -504,10 +505,13 @@ module SpecAbduction = struct
       let _ = addadd cstat_once.Env.num_pos_refine in
       let total_pos_num = ref 0 in
       let total_sample_pos_num = ref 0 in
-      let spec_envs' = StrMap.mapi (fun specname spec_env ->
+      let name_samples = ref [] in
+      let spec_envs'= StrMap.mapi (fun specname spec_env ->
           let hole = StrMap.find "pos_refine_loop" env.holes specname in
           let imp = StrMap.find "pos_refine_loop" env.imps specname in
-          let pos_sample_num, pos_num = sampling hole imp spec_env in
+          let ss, pos_num = sampling hole imp spec_env in
+          let pos_sample_num = List.length ss in
+          let _ = name_samples := (specname, ss) :: (!name_samples) in
           let _ = total_pos_num := !total_pos_num + pos_num in
           let _ = total_sample_pos_num := !total_sample_pos_num + pos_sample_num in
           let spec_env = learn_in_spec_env spec_env in
@@ -525,10 +529,12 @@ module SpecAbduction = struct
         let res = neg_refine_loop env in
         match res with
         | NRFCex cexs -> PRFCex cexs
-        | NRFNewEnv env -> pos_refine_loop env
+        | NRFNewEnv env -> PRFFinalEnv (env, !name_samples)
+(* Murphy *)
+(* pos_refine_loop env *)
         | NRFIncreaseHyp -> PRFIncreaseHyp
       else
-        PRFFinalEnv env
+        PRFFinalEnv (env, !name_samples)
     in
     pos_refine_loop env
 
@@ -592,9 +598,14 @@ module SpecAbduction = struct
 
   type consistent_result =
     | CRCex of (V.t StrMap.t) list
-    | CRFinalEnv of multi_spec_env
+    | CRFinalEnv of (multi_spec_env * (string * V.t list list) list)
 
   let max_qv = 4
+
+  let spectable_filter_result names spectable =
+    List.fold_left (fun m name ->
+        let spec = StrMap.find "spectable_filter_result" spectable name in
+        StrMap.add name spec m) StrMap.empty names
 
   let consistent_solution ctx benchname mii pres spectable holel preds startX =
     let cstat = Env.init_consistent_stat () in
@@ -619,7 +630,11 @@ module SpecAbduction = struct
       let _ = cstat.Env.consist_list := !(cstat.Env.consist_list) @ [stat_once] in
       match result with
       | PRFIncreaseHyp -> search_hyp (numX + 1)
-      | PRFFinalEnv spec -> CRFinalEnv spec
+      | PRFFinalEnv (spec, nss) ->
+        let names =  List.map (fun (h, _) -> h.name ) holel in
+        let result = spectable_filter_result names spec.vc.spectable in
+        let () = Language.SpecAst.to_murphy benchname result nss in
+        CRFinalEnv (spec, nss)
       | PRFCex cexs -> CRCex cexs
     in
     let result = search_hyp startX in
@@ -933,11 +948,6 @@ module SpecAbduction = struct
     let res = List.map (fun flow -> verify_flow ctx vc flow) vc.Env.multi_pre in
     List.for_all (fun x -> x) res
 
-  let spectable_filter_result names spectable =
-    List.fold_left (fun m name ->
-        let spec = StrMap.find "spectable_filter_result" spectable name in
-        StrMap.add name spec m) StrMap.empty names
-
   let save_result name preds names vc =
     let result = spectable_filter_result names vc.Env.spectable in
     (* let _ = StrMap.iter (fun name spec ->
@@ -1154,7 +1164,7 @@ module SpecAbduction = struct
                ) (StrMap.to_kv_list m))
         ) ms in
       Cex ms
-    | CRFinalEnv env ->
+    | CRFinalEnv (env, _) ->
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"
             name (List.length env.fset) (pow 2 (List.length env.fset))
