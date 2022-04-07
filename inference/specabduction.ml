@@ -76,7 +76,7 @@ module SpecAbduction = struct
       | _ -> None, List.rev @@ List.tl @@ List.rev hole.args
 
   type sample_version = SV1 of int | SV2 of int
-  let sver = ref (SV2 200)
+  let sver = ref (SV2 50)
 
   let handle_snum snum =
     match snum with None -> () | Some i -> sver := SV2 i
@@ -502,6 +502,7 @@ module SpecAbduction = struct
         let env = update_env_spectable env in
         neg_refine_loop env
     in
+    let pos_counter = ref 0 in
     let rec pos_refine_loop env =
       let _ = addadd cstat_once.Env.num_pos_refine in
       let total_pos_num = ref 0 in
@@ -512,7 +513,9 @@ module SpecAbduction = struct
           let imp = StrMap.find "pos_refine_loop" env.imps specname in
           let ss, murphy_inp, pos_num = sampling hole imp spec_env in
           let pos_sample_num = List.length ss in
-          let _ = murphy_inps := murphy_inp :: (!murphy_inps) in
+          let _ = if !pos_counter == 1
+                  then
+                  murphy_inps := murphy_inp :: (!murphy_inps) else () in
           let _ = total_pos_num := !total_pos_num + pos_num in
           let _ = total_sample_pos_num := !total_sample_pos_num + pos_sample_num in
           let spec_env = learn_in_spec_env spec_env in
@@ -530,7 +533,11 @@ module SpecAbduction = struct
         let res = neg_refine_loop env in
         match res with
         | NRFCex cexs -> PRFCex cexs
-        | NRFNewEnv env -> PRFFinalEnv (env, !murphy_inps)
+        | NRFNewEnv env ->
+          if !pos_counter >= 1
+          then PRFFinalEnv (env, !murphy_inps)
+          else
+            let () = pos_counter := !pos_counter + 1 in pos_refine_loop env
 (* Murphy *)
 (* pos_refine_loop env *)
         | NRFIncreaseHyp -> PRFIncreaseHyp
