@@ -4,84 +4,40 @@
 (release (flags (:standard -w +a-4-9-40-41-42-44-45-48-27-32-26-6))))
 
 (copy_files# utils/*.ml{,i})
+(copy_files# file_formats/*.ml{,i})
 (copy_files# parsing/*.ml{,i})
 (copy_files# typing/*.ml{,i})
 (copy_files# driver/*.ml{,i})
 
 (library
-(name frontend)
-(wrapped false)
+(name ocaml_parser)
+(wrapped true)
 (flags (:standard -principal))
 (modules_without_implementation
 annot asttypes outcometree parsetree)
 (modules
 ;; UTILS
-arg_helper
-ccomp
-clflags
 config
-consistbl
-identifiable
-misc
-numbers
-strongly_connected_components
-tbl
-terminfo
-timings
-warnings
+  build_path_prefix_map misc identifiable numbers arg_helper clflags
+profile terminfo ccomp warnings consistbl strongly_connected_components
+targetint load_path int_replace_polymorphic_compare binutils local_store
 
 ;; TYPING
-btype
-cmi_format
-cmt_format
-ctype
-datarepr
-env
-envaux
-ident
-includeclass
-includecore
-includemod
-mtype
-oprint
-parmatch
-path
-predef
-primitive
-printtyp
-printtyped
-stypes
-subst
-tast_mapper
-typeclass
+ident path primitive types btype oprint subst predef datarepr
+cmi_format persistent_env env type_immediacy
+typedtree printtyped ctype printtyp includeclass mtype envaux includecore
+tast_iterator tast_mapper cmt_format untypeast includemod
+typetexp patterns printpat parmatch stypes typedecl rec_check
 typecore
-typedecl
-typedtree
-typedtreeIter
-typedtreeMap
-typemod
-types
-typetexp
-untypeast
+typeclass typemod typedecl_variance typedecl_properties typedecl_immediacy
+typedecl_unboxed typedecl_separability cmt2annot
 ; manual update: mli only files
 annot outcometree
 
 ;; PARSING
-ast_helper
-ast_invariants
-ast_iterator
-ast_mapper
-attr_helper
-builtin_attributes
-docstrings
-lexer
-location
-longident
-parse
-parser
-pprintast
-printast
-syntaxerr
+location longident docstrings syntaxerr ast_helper camlinternalMenhirLib
+parser lexer parse printast pprintast ast_mapper ast_iterator attr_helper
+builtin_attributes ast_invariants depend
 ; manual update: mli only files
 asttypes parsetree
 

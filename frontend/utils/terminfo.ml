@@ -2,9 +2,9 @@
 (*                                                                        *)
 (*                                 OCaml                                  *)
 (*                                                                        *)
-(*             Xavier Leroy, projet Cristal, INRIA Rocquencourt           *)
+(*             Xavier Leroy, projet Gallium, INRIA Paris                  *)
 (*                                                                        *)
-(*   Copyright 1996 Institut National de Recherche en Informatique et     *)
+(*   Copyright 2017 Institut National de Recherche en Informatique et     *)
 (*     en Automatique.                                                    *)
 (*                                                                        *)
 (*   All rights reserved.  This file is distributed under the terms of    *)
@@ -12,19 +12,6 @@
 (*   special exception on linking described in the file LICENSE.          *)
 (*                                                                        *)
 (**************************************************************************)
-
-(* Basic interface to the terminfo database *)
-
-(* type status =
- *   | Uninitialised
- *   | Bad_term
- *   | Good_term of int
- * ;;
- * external setup : out_channel -> status = "caml_terminfo_setup";;
- * external backup : int -> unit = "caml_terminfo_backup";;
- * external standout : bool -> unit = "caml_terminfo_standout";;
- * external resume : int -> unit = "caml_terminfo_resume";; *)
-
 
 open Printf
 
@@ -46,7 +33,7 @@ let setup oc =
 let num_lines oc =
   let rows = terminfo_rows oc in
   if rows > 0 then rows else 24
-(* 24 is a reasonable default for an ANSI-style terminal *)
+    (* 24 is a reasonable default for an ANSI-style terminal *)
 
 let backup oc n =
   if n >= 1 then fprintf oc "\027[%dA%!" n
