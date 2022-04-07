@@ -1,4 +1,5 @@
 (library
  (name pred)
  (libraries utils z3 tp)
+ (preprocess (pps ppx_optcomp ppx_compare ppx_sexp_conv))
 )
