@@ -10,6 +10,7 @@ module type AstTree = sig
     | Iff of t * t
     | SpecApply of string * E.SE.t list
   type spec = (Tp.Tp.tpedvar list) * E.forallformula
+  type murphy_inp = {mname: string; mspec: spec; mss: Pred.Value.t list list}
   type let_binding = t option * Tp.Tp.tpedvar list
   val layout: t -> string
   val vc_layout: t -> string
@@ -35,7 +36,7 @@ module type AstTree = sig
   val spec_num_atom: spec -> int
   val count_apps: t -> string list -> int
   val get_uvars: t -> Tp.Tp.tpedvar list
-  val to_murphy: string -> spec Utils.StrMap.t -> (string * Pred.Value.t list list) list -> unit
+  val to_murphy: string -> murphy_inp list -> unit
   val from_murphy: string -> (string * Pred.Value.t list list) list
 end
 
@@ -57,6 +58,7 @@ module AstTree (E: Epr.Epr) : AstTree
     | Iff of t * t
     | SpecApply of string * E.SE.t list
   type spec = (Tp.Tp.tpedvar list) * E.forallformula
+  type murphy_inp = {mname: string; mspec: spec; mss: Pred.Value.t list list}
 
   let rec layout = function
     | ForAll ff -> E.layout_forallformula ff
@@ -405,8 +407,13 @@ module AstTree (E: Epr.Epr) : AstTree
 
   let spec_num_atom (_, (_, body)) = E.num_atom body
 
-  let to_murphy benchname spectable samples =
+
+  let to_murphy benchname murphy_inps =
     let benchname = List.nth (String.split_on_char '/' benchname) 0 in
+    let spectable = List.fold_left (fun m murphy_inp -> StrMap.add murphy_inp.mname murphy_inp.mspec m)
+        StrMap.empty murphy_inps in
+    let samples = List.map (fun murphy_inp -> (murphy_inp.mname, murphy_inp.mss))
+        murphy_inps in
     let () = Sexplib.Sexp.save (sprintf ".elrond.%s.alpha" benchname) @@ Pred.Value.sexp_of_nss samples in
     let () = Yojson.Basic.to_file (sprintf ".elrond.%s.spectable_encode" benchname) @@
       (`Assoc ["benchname",`String benchname; "spectab", spectable_encode spectable ])       in
