@@ -108,6 +108,7 @@ module SpecAbduction = struct
         | None -> None
     ) samples in
     let c = count_tested_sample env hole samples in
+    let murphy_inp = Language.SpecAst.{mname = hole.name; mspec= (hole.args, env.abduciable); mss = c} in
     let samples = List.map (fun (a, b) -> a @ b) samples in
     let s =
       match !sver with
@@ -175,7 +176,7 @@ module SpecAbduction = struct
           Hashtbl.add env.fvtab fv MultiPos
       ) fvs in
     let _ = printf "sampling [%s] len(fvs) = %i\n" hole.name (!counter) in
-    c, List.length fvs
+    c, murphy_inp, List.length fvs
 
   let gather_neg_fvec_to_tab ctx hole env applied_args qvrange model query =
     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
@@ -467,7 +468,7 @@ module SpecAbduction = struct
   type pos_refine_result =
     | PRFCex of (V.t StrMap.t) list
     | PRFIncreaseHyp
-    | PRFFinalEnv of multi_spec_env * ((string * V.t list list) list)
+    | PRFFinalEnv of multi_spec_env * (Language.SpecAst.murphy_inp list)
 
   let refinement_loop ctx env cstat_once =
     let _ = printf "refinement_loop\n" in
@@ -505,13 +506,13 @@ module SpecAbduction = struct
       let _ = addadd cstat_once.Env.num_pos_refine in
       let total_pos_num = ref 0 in
       let total_sample_pos_num = ref 0 in
-      let name_samples = ref [] in
+      let murphy_inps = ref [] in
       let spec_envs'= StrMap.mapi (fun specname spec_env ->
           let hole = StrMap.find "pos_refine_loop" env.holes specname in
           let imp = StrMap.find "pos_refine_loop" env.imps specname in
-          let ss, pos_num = sampling hole imp spec_env in
+          let ss, murphy_inp, pos_num = sampling hole imp spec_env in
           let pos_sample_num = List.length ss in
-          let _ = name_samples := (specname, ss) :: (!name_samples) in
+          let _ = murphy_inps := murphy_inp :: (!murphy_inps) in
           let _ = total_pos_num := !total_pos_num + pos_num in
           let _ = total_sample_pos_num := !total_sample_pos_num + pos_sample_num in
           let spec_env = learn_in_spec_env spec_env in
@@ -529,12 +530,12 @@ module SpecAbduction = struct
         let res = neg_refine_loop env in
         match res with
         | NRFCex cexs -> PRFCex cexs
-        | NRFNewEnv env -> PRFFinalEnv (env, !name_samples)
+        | NRFNewEnv env -> PRFFinalEnv (env, !murphy_inps)
 (* Murphy *)
 (* pos_refine_loop env *)
         | NRFIncreaseHyp -> PRFIncreaseHyp
       else
-        PRFFinalEnv (env, !name_samples)
+        PRFFinalEnv (env, !murphy_inps)
     in
     pos_refine_loop env
 
@@ -598,7 +599,7 @@ module SpecAbduction = struct
 
   type consistent_result =
     | CRCex of (V.t StrMap.t) list
-    | CRFinalEnv of (multi_spec_env * (string * V.t list list) list)
+    | CRFinalEnv of multi_spec_env
 
   let max_qv = 4
 
@@ -630,11 +631,9 @@ module SpecAbduction = struct
       let _ = cstat.Env.consist_list := !(cstat.Env.consist_list) @ [stat_once] in
       match result with
       | PRFIncreaseHyp -> search_hyp (numX + 1)
-      | PRFFinalEnv (spec, nss) ->
-        let names =  List.map (fun (h, _) -> h.name ) holel in
-        let result = spectable_filter_result names spec.vc.spectable in
-        let () = Language.SpecAst.to_murphy benchname result nss in
-        CRFinalEnv (spec, nss)
+      | PRFFinalEnv (spec, murphy_inps) ->
+        let () = Language.SpecAst.to_murphy benchname murphy_inps in
+        CRFinalEnv spec
       | PRFCex cexs -> CRCex cexs
     in
     let result = search_hyp startX in
@@ -1164,7 +1163,7 @@ module SpecAbduction = struct
                ) (StrMap.to_kv_list m))
         ) ms in
       Cex ms
-    | CRFinalEnv (env, _) ->
+    | CRFinalEnv env ->
       let _ = StrMap.iter (fun name env ->
           printf "[%s] space: 2^%i = %i\n"
             name (List.length env.fset) (pow 2 (List.length env.fset))
