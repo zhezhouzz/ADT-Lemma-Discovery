@@ -15,7 +15,7 @@ open Language.Helper
 let tool_name = "ocamlc"
 let ppf = Format.err_formatter
 let parse sourcefile =
-  let structure = Pparse.parse_implementation ~tool_name Format.err_formatter sourcefile in
+  let structure = Pparse.parse_implementation ~tool_name sourcefile in
   (* let _ = Printast.structure 0 Format.std_formatter structure in *)
   structure
 

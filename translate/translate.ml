@@ -533,9 +533,9 @@ let body_vc_gen client_name (init_tenv: TenvEngine.t) asst expr =
         let to_se arg tp tenv =
           match arg.pexp_desc with
           | Pexp_ident _ -> Some (expr_to_se tenv arg)
-          | Pexp_constant (Pconst_string ("true", None)) ->
+          | Pexp_constant (Pconst_string ("true", _, None)) ->
             Some ([], SE.Literal (T.Bool, SE.L.Bool true), tenv)
-          | Pexp_constant (Pconst_string ("false", None)) ->
+          | Pexp_constant (Pconst_string ("false",_,  None)) ->
             Some ([], SE.Literal (T.Bool, SE.L.Bool false), tenv)
           | Pexp_constant (Pconst_integer (istr, None)) ->
             Some ([], SE.Literal (T.Int, SE.L.Int (int_of_string istr)), tenv)
@@ -774,8 +774,8 @@ let parse_propositional_term tenv expr =
     | _ -> raise @@ InterExn (sprintf "wrong assertion format: %s" func)
   and aux expr =
     match expr.pexp_desc with
-    | Pexp_constant (Pconst_string ("true", None)) -> E.True
-    | Pexp_constant (Pconst_string ("false", None)) -> E.Not E.True
+    | Pexp_constant (Pconst_string ("true", _, None)) -> E.True
+    | Pexp_constant (Pconst_string ("false",_, None)) -> E.Not E.True
     | Pexp_constant _ -> raise @@ InterExn "do not support complicate literal"
     | Pexp_apply (func, args) ->
       let funcname = expr_to_name func in
@@ -800,7 +800,7 @@ let parse_assertion client_name init_tenv argtps asts =
        | Pexp_array es ->
          List.map (fun e ->
              match e.pexp_desc with
-             | Pexp_constant (Pconst_string (c, None)) -> c
+             | Pexp_constant (Pconst_string (c, _, None)) -> c
              | _ -> raise @@ InterExn "parse_assertion::get_preds"
            ) es
        | _ -> raise @@ InterExn "parse_assertion::get_preds")

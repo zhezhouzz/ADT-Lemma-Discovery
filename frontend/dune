@@ -10,8 +10,8 @@
 (copy_files# driver/*.ml{,i})
 
 (library
-(name ocaml_parser)
-(wrapped true)
+(name frontend)
+(wrapped false)
 (flags (:standard -principal))
 (modules_without_implementation
 annot asttypes outcometree parsetree)
