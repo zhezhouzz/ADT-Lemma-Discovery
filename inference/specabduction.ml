@@ -76,7 +76,7 @@ module SpecAbduction = struct
       | _ -> None, List.rev @@ List.tl @@ List.rev hole.args
 
   type sample_version = SV1 of int | SV2 of int
-  let sver = ref (SV2 50)
+  let sver = ref (SV2 200)
 
   let handle_snum snum =
     match snum with None -> () | Some i -> sver := SV2 i
@@ -505,23 +505,23 @@ module SpecAbduction = struct
         let env = update_env_spectable env in
         neg_refine_loop env
     in
-    let pos_counter = ref 0 in
+    let murphy_inps = Hashtbl.create 10 in
+    let add_murphy_inps name x = match Hashtbl.find_opt murphy_inps name with
+      | None -> Hashtbl.add murphy_inps name x
+      | Some _ -> Hashtbl.replace murphy_inps name x in
     let rec pos_refine_loop env =
       let _ = addadd cstat_once.Env.num_pos_refine in
       let total_pos_num = ref 0 in
       let total_sample_pos_num = ref 0 in
-      let murphy_inps = ref [] in
       let spec_envs'= StrMap.mapi (fun specname spec_env ->
           let hole = StrMap.find "pos_refine_loop" env.holes specname in
           let imp = StrMap.find "pos_refine_loop" env.imps specname in
           let ss, murphy_inp, pos_num = sampling hole imp spec_env in
           let pos_sample_num = List.length ss in
-          let _ = if !pos_counter == 1
-                  then
-                  murphy_inps := murphy_inp :: (!murphy_inps) else () in
           let _ = total_pos_num := !total_pos_num + pos_num in
           let _ = total_sample_pos_num := !total_sample_pos_num + pos_sample_num in
           let spec_env = learn_in_spec_env spec_env in
+          let _ = if List.length ss == 0 then () else add_murphy_inps specname murphy_inp.mss in
           spec_env
         ) env.spec_envs
       in
@@ -537,15 +537,24 @@ module SpecAbduction = struct
         match res with
         | NRFCex cexs -> PRFCex cexs
         | NRFNewEnv env ->
-          if !pos_counter >= 1
-          then PRFFinalEnv (env, !murphy_inps)
-          else
-            let () = pos_counter := !pos_counter + 1 in pos_refine_loop env
+          (* if !pos_counter >= 1 *)
+          (* then PRFFinalEnv (env, !murphy_inps) *)
+          (* else *)
+          (* let () = pos_counter := !pos_counter + 1 in *)
+                    pos_refine_loop env
 (* Murphy *)
 (* pos_refine_loop env *)
         | NRFIncreaseHyp -> PRFIncreaseHyp
       else
-        PRFFinalEnv (env, !murphy_inps)
+        PRFFinalEnv (env,
+                     List.map (fun (specname, mss) ->
+                         let hole = StrMap.find "pos_refine_loop" env.holes specname in
+                         let spec_env = StrMap.find "pos_refine_loop" env.spec_envs specname in
+                         Language.SpecAst.{mname = specname;
+                                           mspec = (hole.args, spec_env.abduciable);
+                                           mss = mss}
+                     ) @@
+List.of_seq @@ Hashtbl.to_seq murphy_inps)
     in
     pos_refine_loop env
 
@@ -589,7 +598,7 @@ module SpecAbduction = struct
               let () = first_pos := false in
           let alpha = match List.find_opt (fun (n, _) -> String.equal n specname) murphy_alpha with
             | None -> []
-            | Some (_, a) -> a in              
+            | Some (_, a) -> a in
                  sampling_with alpha hole imp spec_env
               else   sampling hole imp spec_env       in
           let pos_sample_num = List.length ss in
