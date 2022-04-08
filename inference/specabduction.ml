@@ -92,7 +92,7 @@ module SpecAbduction = struct
     ) [] inpts_outputs in
     c
 
-  let sampling hole imp env =
+  let sampling_with default hole imp env =
     let _, current_epr = env.abduciable in
     let _, inputs = get_inputs hole in
     (* let _ = printf "args = %s\n" (List.to_string T.layouttvar hole.args) in
@@ -101,6 +101,7 @@ module SpecAbduction = struct
     let num = match !sver with SV1 num -> num | SV2 num -> num in
     let samples = R.gens ~chooses:default_range ~num:num
         ~tps:inputtps ~bound: samplebound in
+    let samples = default @ samples in
     let samples = List.filter_map (fun input ->
         let output = imp input in
         match output with
@@ -177,6 +178,8 @@ module SpecAbduction = struct
       ) fvs in
     let _ = printf "sampling [%s] len(fvs) = %i\n" hole.name (!counter) in
     c, murphy_inp, List.length fvs
+
+  let sampling hole imp env = sampling_with [] hole imp env
 
   let gather_neg_fvec_to_tab ctx hole env applied_args qvrange model query =
     let se_range = List.map (fun x -> SE.Literal (T.Int, SE.L.Int x)) qvrange in
@@ -546,6 +549,75 @@ module SpecAbduction = struct
     in
     pos_refine_loop env
 
+  let refinement_loop_from_murphy ctx env cstat_once murphy_alpha =
+    let _ = printf "refinement_loop\n" in
+    let rec neg_refine_loop env =
+      let _ = loop_counter := !loop_counter + 1 in
+      let res = List.map (fun flow ->
+          inplace_verify_and_gather_fv ctx env flow cstat_once
+        ) env.vc.Env.multi_pre in
+      if List.for_all is_verified res
+      then NRFNewEnv env
+      else if List.exists is_real_cex res
+      then
+        let cexs = List.find_all is_real_cex res in
+        let cexs = List.flatten @@ List.map (fun res ->
+            match res with
+            | RealCex ms -> ms
+            | _ -> raise @@ InterExn "refinement_loop"
+          ) cexs in
+        NRFCex cexs
+      else if List.exists is_cannot_gather res
+      then NRFIncreaseHyp
+      else
+        let _ = negcache_to_neg env in
+        let spec_envs' = StrMap.map learn_in_spec_env env.spec_envs in
+        let env = {env with spec_envs = spec_envs'} in
+        let env = update_env_spectable env in
+        neg_refine_loop env
+    in
+    let first_pos = ref true in
+    let rec pos_refine_loop env =
+      let _ = addadd cstat_once.Env.num_pos_refine in
+      let total_pos_num = ref 0 in
+      let total_sample_pos_num = ref 0 in
+      let spec_envs'= StrMap.mapi (fun specname spec_env ->
+          let hole = StrMap.find "pos_refine_loop" env.holes specname in
+          let imp = StrMap.find "pos_refine_loop" env.imps specname in
+          let ss, _, pos_num =
+            if !first_pos then
+              let () = first_pos := false in
+          let alpha = match List.find_opt (fun (n, _) -> String.equal n specname) murphy_alpha with
+            | None -> []
+            | Some (_, a) -> a in              
+                 sampling_with alpha hole imp spec_env
+              else   sampling hole imp spec_env       in
+          let pos_sample_num = List.length ss in
+          let _ = total_pos_num := !total_pos_num + pos_num in
+          let _ = total_sample_pos_num := !total_sample_pos_num + pos_sample_num in
+          let spec_env = learn_in_spec_env spec_env in
+          spec_env
+        ) env.spec_envs
+      in
+      let _ = cstat_once.Env.num_fv_of_samples :=
+          !total_pos_num + !(cstat_once.Env.num_fv_of_samples) in
+      let _ = cstat_once.Env.num_pos_sample_violate_spec :=
+          !total_sample_pos_num + !(cstat_once.Env.num_pos_sample_violate_spec) in
+      if !total_pos_num > 0
+      then
+        let env = {env with spec_envs = spec_envs'} in
+        let env = update_env_spectable env in
+        let res = neg_refine_loop env in
+        match res with
+        | NRFCex cexs -> PRFCex cexs
+        | NRFNewEnv env ->
+          pos_refine_loop env
+        | NRFIncreaseHyp -> PRFIncreaseHyp
+      else
+        PRFFinalEnv (env, [])
+    in
+    pos_refine_loop env
+
   let init_unknown_fv fset =
     List.init (List.length fset) (fun i -> T.Bool, Printf.sprintf "_fv!%i" i)
 
@@ -640,6 +712,28 @@ module SpecAbduction = struct
       | PRFIncreaseHyp -> search_hyp (numX + 1)
       | PRFFinalEnv (spec, murphy_inps) ->
         let () = Language.SpecAst.to_murphy benchname murphy_inps in
+        CRFinalEnv spec
+      | PRFCex cexs -> CRCex cexs
+    in
+    let result = search_hyp startX in
+    let _ = Env.save_consistent_stat benchname cstat in
+    result
+
+  let consistent_solution_from_murphy ctx benchname mii pres spectable holel preds startX murphy_alpha _=
+    let cstat = Env.init_consistent_stat () in
+    let rec search_hyp numX =
+      if numX >= max_qv then
+        let _ = Env.save_consistent_stat benchname cstat in
+        CRCex []
+      else
+      let env = init_env mii pres spectable preds numX holel in
+      let stat_once = Env.init_consistent_stat_once numX in
+      let result, delta_time = time (fun _ -> refinement_loop_from_murphy ctx env stat_once murphy_alpha) in
+      let _ = stat_once.run_time := delta_time in
+      let _ = cstat.Env.consist_list := !(cstat.Env.consist_list) @ [stat_once] in
+      match result with
+      | PRFIncreaseHyp -> search_hyp (numX + 1)
+      | PRFFinalEnv (spec, _) ->
         CRFinalEnv spec
       | PRFCex cexs -> CRCex cexs
     in
@@ -1160,6 +1254,51 @@ module SpecAbduction = struct
     (* let _ = raise @@ InterExn "end" in *)
     let env = consistent_solution ctx benchname
         mii pres spectable holel preds startX in
+    match env with
+    | CRCex ms ->
+      let _ = printf "CEX:\n" in
+      let _ = List.iter (fun m ->
+          printf "%s\n"
+            (List.to_string (fun (name, value) ->
+                 sprintf "%s -> %s" name (V.layout value)
+               ) (StrMap.to_kv_list m))
+        ) ms in
+      Cex ms
+    | CRFinalEnv env ->
+      let _ = StrMap.iter (fun name env ->
+          printf "[%s] space: 2^%i = %i\n"
+            name (List.length env.fset) (pow 2 (List.length env.fset))
+        ) env.spec_envs in
+      let _ = save_result (benchname ^ "_consistent.json") preds names env.vc in
+      (* let _ = raise @@ InterExn "end" in *)
+      let single_envs = List.map (fun specname ->
+          let target_hole = StrMap.find "multi_infer" env.holes specname in
+          let spec_env = StrMap.find "multi_infer" env.spec_envs specname in
+          let single_env =
+            make_single_abd_env env.vc spec_env target_hole preds uniform_qv_num
+          in
+          single_env
+        ) names in
+      let midfile = benchname ^ "_" ^ "beforeweakening.json" in
+      let _ = Yojson.Basic.to_file midfile
+          (Env.encode_weakening (env.vc, single_envs)) in
+      let result = spectable_filter_result names env.vc.Env.spectable in
+      Result result
+
+let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
+      benchname ctx mii pre spectable holel preds startX murphy_alpha_file tmpsepc =
+    let benchname = "_" ^ benchname ^ "/" in
+    let _ = make_dir benchname in
+    let _ = handle_snum snum in
+    let names = List.map (fun (hole, _) -> hole.name) holel in
+    let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
+    let pres = List.sort (fun a b ->
+        compare (Ast.conj_length b) (Ast.conj_length a)
+    ) pres in
+    let murphy_alphas = Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp murphy_alpha_file in
+    let tmp_spectab = Language.SpecAst.decode @@ Yojson.Basic.Util.member "spectab" @@ Yojson.Basic.from_file tmpsepc in    
+    let env = consistent_solution_from_murphy ctx benchname
+        mii pres spectable holel preds startX murphy_alphas tmp_spectab in
     match env with
     | CRCex ms ->
       let _ = printf "CEX:\n" in
