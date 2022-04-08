@@ -69,6 +69,32 @@ let start action sourcefile assertionfile outputdir sampling_bound timebound =
         | InferWeakening -> "Weakening") in
     eprintf "%s inference Succeeded in %f(s)!\n" mode_str delta_time
 
+let start_with_murphy action sourcefile assertionfile tmpspecfile alphafile outputdir sampling_bound timebound =
+  let ctx = init () in
+  let source = parse sourcefile in
+  let assertion = parse assertionfile in
+  (* let () = raise @@ InterExn "end" in *)
+  let mii, vc, holes, preds, spectab, basic_info = Translate.trans (source, assertion) in
+  let () = Core.Unix.mkdir_p (Printf.sprintf "_%s" outputdir) in
+  let basic_info_filename = Printf.sprintf "_%s/_basic_info.json" outputdir in
+  let () = Yojson.Basic.to_file basic_info_filename basic_info in
+  let r () =
+    match action, sampling_bound with
+    | InferConsistent, Some snum ->
+      SpecAbd.do_consistent_from_murphy ~snum:(Some snum) ~uniform_qv_num:1
+        outputdir
+        ctx mii vc spectab holes preds 1 alphafile tmpspecfile
+    | _, _ -> raise @@ InterExn "never happen"
+  in
+  match time r with
+  | SpecAbd.Cex _, delta_time-> eprintf "Failed with Cex in %f(s)!\n" delta_time
+  | _ , delta_time ->
+    let mode_str = (match action with
+        | InferFull -> "Full"
+        | InferConsistent -> "Consistent"
+        | InferWeakening -> "Weakening") in
+    eprintf "%s inference Succeeded in %f(s)!\n" mode_str delta_time
+
 let time_d sourcefile assertionfile outputdir =
   let ctx = init () in
   let source = parse sourcefile in
@@ -213,6 +239,23 @@ let common_parser doc cont =
       cont sourcefile assertionfile assertionfile outputdir sampling_bound time_bound
     )
 
+let common_parser_with_murphy doc cont =
+  Command.basic
+    ~summary:doc
+    Command.Let_syntax.(
+      let%map_open sourcefile = anon ("sourcefile" %: regular_file)
+      and assertionfile = anon ("assertionfile" %: regular_file)
+      and tmpspecfile = anon ("tmpspecfile" %: regular_file)
+      and alphafile = anon ("alphafile" %: regular_file)
+      and outputdir = anon ("outputdir" %: string)
+      and sampling_bound = flag "-sb" (optional int)
+          ~doc:"the sampling number bound"
+      and time_bound = flag "-tb" (optional float)
+          ~doc:"the time bound"
+      in
+      cont sourcefile assertionfile tmpspecfile alphafile outputdir sampling_bound time_bound
+    )
+
 let infer =
   Command.group ~summary:"inference"
     [ "consistent",
@@ -220,6 +263,11 @@ let infer =
         (fun sourcefile assertionfile assertionfile outputdir sampling_bound timebound ->
            fun () ->
              start InferConsistent sourcefile assertionfile outputdir sampling_bound timebound);
+      "consistent_with_murphy",
+      common_parser_with_murphy "infer consistent specification mapping"
+        (fun sourcefile assertionfile specfile alphafile outputdir sampling_bound timebound ->
+           fun () ->
+             start_with_murphy InferConsistent sourcefile assertionfile specfile alphafile outputdir sampling_bound timebound);
       "full",
       common_parser "infer consistent specification mapping, then do weakening"
         (fun sourcefile assertionfile assertionfile outputdir sampling_bound timebound ->
