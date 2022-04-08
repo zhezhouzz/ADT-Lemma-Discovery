@@ -1296,7 +1296,9 @@ let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_nu
         compare (Ast.conj_length b) (Ast.conj_length a)
     ) pres in
     let murphy_alphas = Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp murphy_alpha_file in
-    let tmp_spectab = Language.SpecAst.decode @@ Yojson.Basic.Util.member "spectab" @@ Yojson.Basic.from_file tmpsepc in    
+    let tmp_spectab =
+      try Language.SpecAst.spectable_decode @@ Yojson.Basic.Util.member "spectab" @@ Yojson.Basic.from_file tmpsepc with
+      | _ -> StrMap.empty in
     let env = consistent_solution_from_murphy ctx benchname
         mii pres spectable holel preds startX murphy_alphas tmp_spectab in
     match env with
