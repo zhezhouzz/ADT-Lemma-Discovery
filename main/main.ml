@@ -84,6 +84,10 @@ let start_with_murphy action sourcefile assertionfile tmpspecfile alphafile outp
       SpecAbd.do_consistent_from_murphy ~snum:(Some snum) ~uniform_qv_num:1
         outputdir
         ctx mii vc spectab holes preds 1 alphafile tmpspecfile
+    | InferConsistent, None ->
+      SpecAbd.do_consistent_from_murphy
+        outputdir
+        ctx mii vc spectab holes preds 1 alphafile tmpspecfile
     | _, _ -> raise @@ InterExn "never happen"
   in
   match time r with
