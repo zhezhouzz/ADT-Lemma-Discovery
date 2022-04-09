@@ -22,7 +22,7 @@ let parse sourcefile =
 let init () =
   let _ : unit = Random.init 0 in
   let ctx =
-    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "999")] in
+    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "199")] in
   ctx
 ;;
 

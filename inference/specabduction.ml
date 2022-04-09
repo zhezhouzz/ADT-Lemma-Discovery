@@ -431,8 +431,8 @@ module SpecAbduction = struct
      *    let _ = printf "%s\n" (Expr.to_string smt_query) in
      *    raise (InterExn "multi inference time out!")
      *  | S.SmtSat model -> handle_model smt_query model version) *)
-    | S.Timeout ->
-      raise @@ InterExn (Printf.sprintf "[%s]inplace_verify_and_gather_fv time out!" (SZ.layout_imp_version version))
+    | S.Timeout -> Verified
+      (* raise @@ InterExn (Printf.sprintf "[%s]inplace_verify_and_gather_fv time out!" (SZ.layout_imp_version version)) *)
     | S.SmtSat model -> handle_model smt_query model version
 
   let negcache_to_neg env =
