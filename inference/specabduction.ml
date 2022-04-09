@@ -129,12 +129,6 @@ module SpecAbduction = struct
      *                       (List.to_string V.layout s1)
      *                       (List.to_string V.layout s2)) s in *)
     let extract_fv (args_value, qv_value) =
-      (* let _ = printf "{%s},{%s}]\n"
-       *     (List.to_string V.layout args_value)
-       *     (List.to_string V.layout qv_value) in
-       * let _ = printf "{%s},{%s}]\n"
-       *     (List.to_string T.layouttvar hole.args)
-       *     (List.to_string T.layouttvar env.qv) in *)
       let m = StrMap.empty in
       let m = List.fold_left (fun m ((_, name), v) ->
           StrMap.add name v m
@@ -146,19 +140,6 @@ module SpecAbduction = struct
       then None
       else
         let fv = (List.map (fun feature -> F.exec feature m) env.fset) in
-        (* let _ =
-         *   if List.eq (fun x y -> x == y) fv [false;false;true;false;false;false;false;false;false;true;true;false;true;false;false;true;true;false;false;false;true] then
-         *     let _ =
-         *       List.iter (fun (feature, value) ->
-         *           printf "feature:%s --> %b\n" (F.layout feature) value
-         *         ) (List.combine env.fset fv)
-         *     in
-         *     let _ = raise @@ InterExn "bad pos" in
-         *     ()
-         *   else
-         *     ()
-         * in *)
-        (* let _  = printf "add pos %s\n" (boollist_to_string fv) in *)
         Some fv
     in
     let fvs = List.filter_map extract_fv s in
@@ -1075,6 +1056,79 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     | Cex of (V.t StrMap.t) list
     | Result of (Ast.spec StrMap.t)
 
+  let update_single_env args (spec_env: spec_env) imp alphas =
+    let samples = List.filter_map (fun input ->
+        let output = imp input in
+        match output with
+        | Some output -> Some (input @ output)
+        | None -> None
+    ) alphas in
+    let qv_v = [ -2; -1; 0; 1; 2; 3; 4; 5; 6 ] in
+    let qv_space = List.map (List.map (fun x -> Pred.Value.I x)) @@ List.choose_n qv_v 2 in
+    let mm = List.map (fun qv_value ->
+        let m = StrMap.empty in
+        let m = List.fold_left (fun m ((_, name), v) ->
+            StrMap.add name v m
+        ) m (List.combine spec_env.qv qv_value) in
+        m
+    ) qv_space in
+    let add args_value m =
+      let m = List.fold_left (fun m ((_, name), v) ->
+          StrMap.add name v m
+      ) m (List.combine args args_value) in
+      let fv = (List.map (fun feature -> F.exec feature m) spec_env.fset) in
+      match Hashtbl.find_opt spec_env.fvtab fv with
+| None ->
+        Hashtbl.add spec_env.fvtab fv MultiPos      
+      | Some MultiMayNeg ->
+        Hashtbl.replace spec_env.fvtab fv MultiPos
+| Some _ -> ()      
+      
+    in
+    let () = List.iter (fun args_value -> List.iter (fun m -> add args_value m) mm) samples in
+    spec_env
+
+  let update_multi_env ctx (env: multi_spec_env) alphas =
+    let cstat_once = Env.init_consistent_stat_once 2 in
+    let m =
+      StrMap.mapi (fun specname spec_env ->
+          let hole = StrMap.find "pos_refine_loop" env.holes specname in
+          let imp = StrMap.find "pos_refine_loop" env.imps specname in
+          let alpha = StrMap.find "pos_refine_loop" alphas specname in
+          update_single_env hole.args spec_env imp alpha
+        ) env.spec_envs in
+    let env = {env with spec_envs = m} in
+    let env = update_env_spectable env in
+    let rec neg_refine_loop env =
+      let _ = loop_counter := !loop_counter + 1 in
+      let res = List.map (fun flow ->
+          inplace_verify_and_gather_fv ctx env flow cstat_once
+        ) env.vc.Env.multi_pre in
+      if List.for_all is_verified res
+      then NRFNewEnv env
+      else if List.exists is_real_cex res
+      then
+        let cexs = List.find_all is_real_cex res in
+        let cexs = List.flatten @@ List.map (fun res ->
+            match res with
+            | RealCex ms -> ms
+            | _ -> raise @@ InterExn "refinement_loop"
+          ) cexs in
+        NRFCex cexs
+      else if List.exists is_cannot_gather res
+      then NRFIncreaseHyp
+      else
+        let _ = negcache_to_neg env in
+        let spec_envs' = StrMap.map learn_in_spec_env env.spec_envs in
+        let env = {env with spec_envs = spec_envs'} in
+        let env = update_env_spectable env in
+        neg_refine_loop env
+    in
+    match neg_refine_loop env with
+| NRFNewEnv env -> env    
+      |  _ -> failwith "die"
+
+
   let weakening ctx benchname vc single_envs time_bound =
     let names = List.map (fun e -> e.Env.hole.name) single_envs in
     let single_envs_arr = Array.of_list single_envs in
@@ -1295,7 +1349,7 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
       Result result
 
 let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
-      benchname ctx mii pre spectable holel preds startX murphy_alpha_file tmpsepc =
+      benchname ctx mii pre spectable holel preds _ murphy_alpha_file _ =
     let benchname = "_" ^ benchname ^ "/" in
     let _ = make_dir benchname in
     let _ = handle_snum snum in
@@ -1304,44 +1358,46 @@ let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_nu
     let pres = List.sort (fun a b ->
         compare (Ast.conj_length b) (Ast.conj_length a)
     ) pres in
-    let murphy_alphas = Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp murphy_alpha_file in
-    let tmp_spectab =
-      try Language.SpecAst.spectable_decode @@ Yojson.Basic.Util.member "spectab" @@ Yojson.Basic.from_file tmpsepc with
-      | _ -> StrMap.empty in
-    let env = consistent_solution_from_murphy ctx benchname
-        mii pres spectable holel preds startX murphy_alphas tmp_spectab in
-    match env with
-    | CRCex ms ->
-      let _ = printf "CEX:\n" in
-      let _ = List.iter (fun m ->
-          printf "%s\n"
-            (List.to_string (fun (name, value) ->
-                 sprintf "%s -> %s" name (V.layout value)
-               ) (StrMap.to_kv_list m))
-        ) ms in
-      Cex ms
-    | CRFinalEnv env ->
-      let _ = StrMap.iter (fun name env ->
-          printf "[%s] space: 2^%i = %i\n"
-            name (List.length env.fset) (pow 2 (List.length env.fset))
-        ) env.spec_envs in
-      let _ = save_result (benchname ^ "_consistent.json") preds names env.vc in
-      (* let _ = raise @@ InterExn "end" in *)
-      let single_envs = List.map (fun specname ->
-          let target_hole = StrMap.find "multi_infer" env.holes specname in
-          let spec_env = StrMap.find "multi_infer" env.spec_envs specname in
-          let single_env =
-            make_single_abd_env env.vc spec_env target_hole preds uniform_qv_num
-          in
-          single_env
-        ) names in
-      let midfile = benchname ^ "_" ^ "beforeweakening.json" in
-      let _ = Yojson.Basic.to_file midfile
-          (Env.encode_weakening (env.vc, single_envs)) in
-      let result = spectable_filter_result names env.vc.Env.spectable in
-      Result result
+    let murphy_alphas = StrMap.of_seq @@ List.to_seq @@ Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp murphy_alpha_file in
+    let midfile = benchname ^ "_" ^ "beforeweakening.json" in
+    let _, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
+    let env = init_env mii pres spectable preds 2 holel in
+    let () = List.iter (fun spec_env ->
+        let e = match StrMap.find_opt env.spec_envs spec_env.Env.hole.name with
+          | None -> failwith "die"
+          | Some e -> e in
+        let _ = Hashtbl.iter (fun vec label ->
+            match label with
+          | D.Pos -> Hashtbl.add e.fvtab vec MultiPos
+          | D.MayNeg -> Hashtbl.add e.fvtab vec MultiMayNeg
+          | _ -> raise @@ InterExn "never happen in make_single_abd_env rev"
+          ) spec_env.Env.fvtab in
+        ()
+      ) single_envs in
+    let env = update_multi_env ctx env murphy_alphas in
+    let stat_once = Env.init_consistent_stat_once 2 in
+    let result = refinement_loop ctx env stat_once in
+    let env =
+      match result with
+      | PRFIncreaseHyp -> raise @@ failwith "die"
+      | PRFCex _ ->  raise @@ failwith "die"
+      | PRFFinalEnv (env, _) -> env in
+    let _ = save_result (benchname ^ "_consistent.json") preds names env.vc in
+    let single_envs = List.map (fun specname ->
+            let target_hole = StrMap.find "multi_infer" env.holes specname in
+            let spec_env = StrMap.find "multi_infer" env.spec_envs specname in
+            let single_env =
+              make_single_abd_env env.vc spec_env target_hole preds uniform_qv_num
+            in
+            single_env
+    ) names in
+    let midfile = benchname ^ "_" ^ "beforeweakening.json" in
+    let _ = Yojson.Basic.to_file midfile
+            (Env.encode_weakening (env.vc, single_envs)) in
+    let result = spectable_filter_result names env.vc.Env.spectable in
+    Result result
 
-  let do_weakening ctx benchname time_bound =
+let do_weakening ctx benchname time_bound =
     let benchname = "_" ^ benchname ^ "/" in
     let midfile = benchname ^ "_" ^ "beforeweakening.json" in
     let _ = printf "before decode(%s)\n" midfile in
