@@ -1072,6 +1072,7 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         ) m (List.combine spec_env.qv qv_value) in
         m
     ) qv_space in
+    let _ = Printf.printf "from murphy(%s): num:%i len(qvspace):%i\n" name (List.length samples) (List.length mm) in
     let new_pos = ref 0 in
     let add args_value m =
       let m = List.fold_left (fun m ((_, name), v) ->
