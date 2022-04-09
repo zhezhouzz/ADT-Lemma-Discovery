@@ -1135,7 +1135,8 @@ module SpecAbduction = struct
       StrMap.mapi (fun specname spec_env ->
           let hole = StrMap.find "pos_refine_loop" env.holes specname in
           let imp = StrMap.find "pos_refine_loop" env.imps specname in
-          let alpha = StrMap.find "pos_refine_loop" alphas specname in
+          let alpha = try StrMap.find "pos_refine_loop" alphas specname with
+            | _ -> []          in
           update_single_env hole.name hole.args spec_env imp alpha
         ) env.spec_envs in
     let env = {env with spec_envs = m} in
