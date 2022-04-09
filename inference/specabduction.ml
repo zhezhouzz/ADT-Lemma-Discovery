@@ -1463,7 +1463,7 @@ module SpecAbduction = struct
             specname !posnum !negnum in
         single_env
     ) names in
-  let ctx = Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "799")] in
+  let ctx = Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "699")] in
   let result, delta_time = time (fun _ -> weakening ctx benchname total_env single_envs None) in
   let _ = Printf.printf "<<murphy do_weakening: %f>>\n" delta_time in
   result
