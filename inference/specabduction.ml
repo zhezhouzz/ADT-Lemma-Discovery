@@ -1452,7 +1452,9 @@ module SpecAbduction = struct
             specname !posnum !negnum in
         single_env
       ) names in
-    weakening ctx benchname total_env single_envs None
+  let result, delta_time = time (fun _ -> weakening ctx benchname total_env single_envs None) in
+  let _ = Printf.printf "<<murphy do_weakening: %f>>\n" delta_time in
+  result
 
 let do_weakening ctx benchname time_bound =
   let benchname = "_" ^ benchname ^ "/" in
@@ -1461,7 +1463,9 @@ let do_weakening ctx benchname time_bound =
   let total_env, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
   let _ = printf "flow\n" in
   let _ = List.map (fun fl -> printf "flow:%s\n" (Ast.layout fl.Env.pre_flow)) total_env.multi_pre in
-  weakening ctx benchname total_env single_envs time_bound
+  let result, delta_time = time (fun _ -> weakening ctx benchname total_env single_envs time_bound) in
+  let _ = Printf.printf "<<do_weakening: %f>>\n" delta_time in
+result
 
 let multi_infer ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
     benchname ctx mii pre spectable holel preds startX =
