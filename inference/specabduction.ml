@@ -1167,7 +1167,7 @@ module SpecAbduction = struct
         neg_refine_loop env
     in
     match neg_refine_loop env with
-    | NRFNewEnv env -> env    
+    | NRFNewEnv env -> env
     |  _ -> failwith "die"
 
 
@@ -1442,16 +1442,27 @@ module SpecAbduction = struct
         in
         let posnum = ref 0 in
         let negnum = ref 0 in
+        let _ = Hashtbl.iter (fun v label ->
+            match Hashtbl.find_opt single_env.Env.fvtab v with
+            | None -> (match label with
+                | MultiMayNeg -> Hashtbl.add single_env.Env.fvtab v D.Neg
+| MultiPos -> Hashtbl.add single_env.Env.fvtab v D.Pos
+                | _ -> ()            )
+            | Some D.Pos -> ()
+            | _ -> (match label with
+                | MultiMayNeg -> Hashtbl.replace single_env.Env.fvtab v D.Neg
+                | _ -> ()            )
+        ) spec_env.fvtab in
         let _ = Hashtbl.iter (fun _ label ->
             match label with
             | D.Pos -> (posnum := !posnum + 1)
-            | D.MayNeg -> (negnum := !negnum + 1)
+            | D.Neg -> (negnum := !negnum + 1)
             | _ -> raise @@ InterExn "never happen in make_single_abd_env rev"
         ) single_env.Env.fvtab in
         let _ = Printf.printf "final(%s): pos:%i neg:%i\n"
             specname !posnum !negnum in
         single_env
-      ) names in
+    ) names in
   let result, delta_time = time (fun _ -> weakening ctx benchname total_env single_envs None) in
   let _ = Printf.printf "<<murphy do_weakening: %f>>\n" delta_time in
   result

@@ -22,7 +22,7 @@ let parse sourcefile =
 let init () =
   let _ : unit = Random.init 0 in
   let ctx =
-    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "199")] in
+    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "29999")] in
   ctx
 ;;
 
@@ -70,7 +70,8 @@ let start action sourcefile assertionfile outputdir sampling_bound timebound =
     eprintf "%s inference Succeeded in %f(s)!\n" mode_str delta_time
 
 let start_with_murphy action sourcefile assertionfile tmpspecfile alphafile outputdir sampling_bound timebound =
-  let ctx = init () in
+  let ctx =
+    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "999")] in
   let source = parse sourcefile in
   let assertion = parse assertionfile in
   (* let () = raise @@ InterExn "end" in *)
