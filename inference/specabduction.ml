@@ -1115,18 +1115,17 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
       | None ->
         let () = new_pos := !new_pos + 1 in
         Hashtbl.add spec_env.fvtab fv MultiPos
-      | Some MultiMayNeg ->
+      | Some _ ->
         Hashtbl.replace spec_env.fvtab fv MultiPos
-      | Some _ -> ()
     in
     let () = List.iter (fun args_value -> List.iter (fun m -> add args_value m) mm) samples in
     let _ = Printf.printf "from murphy(%s): new pos:%i\n" name !new_pos in
-    let rec loop engine =
-      if ll_engine_next engine
-      then (List.iter (fun m -> add (Array.to_list @@ ll_engine_current engine) m) mm; loop engine)
-      else ()
-    in
-    let () = loop en in
+    (* let rec loop engine = *)
+    (*   if ll_engine_next engine *)
+    (*   then (List.iter (fun m -> add (Array.to_list @@ ll_engine_current engine) m) mm; loop engine) *)
+    (*   else () *)
+    (* in *)
+    (* let () = loop en in *)
     let _ = Printf.printf "from murphy(%s): new pos:%i\n" name !new_pos in
     spec_env
 
@@ -1404,22 +1403,28 @@ let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_nu
     let midfile = benchname ^ "_" ^ "beforeweakening.json" in
     let _, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
     let env = init_env mii pres spectable preds 2 holel in
+    let env = update_multi_env ctx env murphy_alphas in
     let () = List.iter (fun spec_env ->
         let e = match StrMap.find_opt env.spec_envs spec_env.Env.hole.name with
           | None -> failwith "die"
           | Some e -> e in
         let posnum = ref 0 in
         let negnum = ref 0 in
+        let negnum_omitted = ref 0 in
         let _ = Hashtbl.iter (fun vec label ->
             match label with
           | D.Pos -> (posnum := !posnum + 1; Hashtbl.add e.fvtab vec MultiPos)
-          | D.MayNeg -> (negnum := !negnum + 1; Hashtbl.add e.fvtab vec MultiMayNeg)
+          | D.MayNeg ->
+            (match Hashtbl.find_opt e.fvtab vec with
+             | None -> (negnum := !negnum + 1; Hashtbl.add e.fvtab vec MultiMayNeg)
+             | Some MultiPos -> (negnum_omitted := !negnum_omitted + 1)
+             | Some _ -> failwith "die")
           | _ -> raise @@ InterExn "never happen in make_single_abd_env rev"
         ) spec_env.Env.fvtab in
-        let _ = Printf.printf "continue(%s): pos:%i neg:%i\n" spec_env.Env.hole.name !posnum !negnum in
+        let _ = Printf.printf "continue(%s): pos:%i neg:%i negnum_omitted:%i\n"
+            spec_env.Env.hole.name !posnum !negnum !negnum_omitted in
         ()
       ) single_envs in
-    let env = update_multi_env ctx env murphy_alphas in
     let stat_once = Env.init_consistent_stat_once 2 in
     let result = refinement_loop ctx env stat_once in
     let env =
