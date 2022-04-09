@@ -1056,6 +1056,38 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     | Cex of (V.t StrMap.t) list
     | Result of (Ast.spec StrMap.t)
 
+  let ll_engine_init ll =
+    let ll = Array.of_list @@ List.map Array.of_list ll in
+    let bounds = Array.map (fun l -> Array.length l) ll in
+    let idxs = Array.init (Array.length ll) (fun _ -> 0) in
+    (ll, bounds, idxs)
+  let ll_engine_next (_, bounds, idxs) =
+    let rec aux i =
+      if i >= Array.length bounds then false else
+      if idxs.(i) == bounds.(i) - 1 then (idxs.(i) <- 0; aux (i + 1)) else
+        (idxs.(i) <- idxs.(i) + 1; true)
+    in
+    aux 0
+  let ll_engine_current (ll, _, idxs) = Array.mapi (fun i j -> ll.(i).(j)) idxs
+  let ll_engine_all ll =
+    let engine = ll_engine_init ll in
+    let res = [ll_engine_current engine] in
+    let rec loop engine res =
+      if ll_engine_next engine
+      then loop engine ((ll_engine_current engine) :: res)
+      else res
+    in
+    loop engine res
+  let all_qv = [ -1; 0; 1; 2; 3; 4 ]
+  let all_e = [ 0; 1; 2; 3; ]
+  let all_list = List.map Array.to_list @@ ll_engine_all (List.init 4 (fun _ -> all_e))
+  let l_from_tp = function
+    | T.Int -> List.map (fun x -> V.I x) all_qv
+    | T.IntList -> List.map (fun x -> V.L x) all_list
+    | T.Bool -> List.map (fun x -> V.B x) [true; false]
+    | _ -> failwith "die"
+  let engine_from_tps tps = ll_engine_init @@ List.map l_from_tp  tps
+
   let update_single_env name args (spec_env: spec_env) imp alphas =
     let samples = List.filter_map (fun input ->
         let output = imp input in
@@ -1063,8 +1095,7 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         | Some output -> Some (input @ output)
         | None -> None
     ) alphas in
-    let qv_v = [ -2; -1; 0; 1; 2; 3; 4; 5; 6 ] in
-    let qv_space = List.map (List.map (fun x -> Pred.Value.I x)) @@ List.choose_n qv_v 2 in
+    let qv_space = List.map (List.map (fun x -> Pred.Value.I x)) @@ List.choose_n all_qv 2 in
     let mm = List.map (fun qv_value ->
         let m = StrMap.empty in
         let m = List.fold_left (fun m ((_, name), v) ->
@@ -1073,6 +1104,7 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         m
     ) qv_space in
     let _ = Printf.printf "from murphy(%s): num:%i len(qvspace):%i\n" name (List.length samples) (List.length mm) in
+    let en = engine_from_tps @@ List.map fst args in
     let new_pos = ref 0 in
     let add args_value m =
       let m = List.fold_left (fun m ((_, name), v) ->
@@ -1088,6 +1120,13 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
       | Some _ -> ()
     in
     let () = List.iter (fun args_value -> List.iter (fun m -> add args_value m) mm) samples in
+    let _ = Printf.printf "from murphy(%s): new pos:%i\n" name !new_pos in
+    let rec loop engine =
+      if ll_engine_next engine
+      then (List.iter (fun m -> add (Array.to_list @@ ll_engine_current engine) m) mm; loop engine)
+      else ()
+    in
+    let () = loop en in
     let _ = Printf.printf "from murphy(%s): new pos:%i\n" name !new_pos in
     spec_env
 
