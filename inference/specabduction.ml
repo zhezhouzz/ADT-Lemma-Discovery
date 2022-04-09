@@ -1056,7 +1056,7 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     | Cex of (V.t StrMap.t) list
     | Result of (Ast.spec StrMap.t)
 
-  let update_single_env args (spec_env: spec_env) imp alphas =
+  let update_single_env name args (spec_env: spec_env) imp alphas =
     let samples = List.filter_map (fun input ->
         let output = imp input in
         match output with
@@ -1072,20 +1072,22 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         ) m (List.combine spec_env.qv qv_value) in
         m
     ) qv_space in
+    let new_pos = ref 0 in
     let add args_value m =
       let m = List.fold_left (fun m ((_, name), v) ->
           StrMap.add name v m
       ) m (List.combine args args_value) in
       let fv = (List.map (fun feature -> F.exec feature m) spec_env.fset) in
       match Hashtbl.find_opt spec_env.fvtab fv with
-| None ->
-        Hashtbl.add spec_env.fvtab fv MultiPos      
+      | None ->
+        let () = new_pos := !new_pos + 1 in
+        Hashtbl.add spec_env.fvtab fv MultiPos
       | Some MultiMayNeg ->
         Hashtbl.replace spec_env.fvtab fv MultiPos
-| Some _ -> ()      
-      
+      | Some _ -> ()
     in
     let () = List.iter (fun args_value -> List.iter (fun m -> add args_value m) mm) samples in
+    let _ = Printf.printf "from murphy(%s): new pos:%i\n" name !new_pos in
     spec_env
 
   let update_multi_env ctx (env: multi_spec_env) alphas =
@@ -1095,7 +1097,7 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
           let hole = StrMap.find "pos_refine_loop" env.holes specname in
           let imp = StrMap.find "pos_refine_loop" env.imps specname in
           let alpha = StrMap.find "pos_refine_loop" alphas specname in
-          update_single_env hole.args spec_env imp alpha
+          update_single_env hole.name hole.args spec_env imp alpha
         ) env.spec_envs in
     let env = {env with spec_envs = m} in
     let env = update_env_spectable env in
@@ -1366,12 +1368,15 @@ let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_nu
         let e = match StrMap.find_opt env.spec_envs spec_env.Env.hole.name with
           | None -> failwith "die"
           | Some e -> e in
+        let posnum = ref 0 in
+        let negnum = ref 0 in
         let _ = Hashtbl.iter (fun vec label ->
             match label with
-          | D.Pos -> Hashtbl.add e.fvtab vec MultiPos
-          | D.MayNeg -> Hashtbl.add e.fvtab vec MultiMayNeg
+          | D.Pos -> (posnum := !posnum + 1; Hashtbl.add e.fvtab vec MultiPos)
+          | D.MayNeg -> (negnum := !negnum + 1; Hashtbl.add e.fvtab vec MultiMayNeg)
           | _ -> raise @@ InterExn "never happen in make_single_abd_env rev"
-          ) spec_env.Env.fvtab in
+        ) spec_env.Env.fvtab in
+        let _ = Printf.printf "continue(%s): pos:%i neg:%i\n" spec_env.Env.hole.name !posnum !negnum in
         ()
       ) single_envs in
     let env = update_multi_env ctx env murphy_alphas in
