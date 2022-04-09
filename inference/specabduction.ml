@@ -1120,12 +1120,12 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     in
     let () = List.iter (fun args_value -> List.iter (fun m -> add args_value m) mm) samples in
     let _ = Printf.printf "from murphy(%s): new pos:%i\n" name !new_pos in
-    (* let rec loop engine = *)
-    (*   if ll_engine_next engine *)
-    (*   then (List.iter (fun m -> add (Array.to_list @@ ll_engine_current engine) m) mm; loop engine) *)
-    (*   else () *)
-    (* in *)
-    (* let () = loop en in *)
+    let rec loop engine =
+      if ll_engine_next engine
+      then (List.iter (fun m -> add (Array.to_list @@ ll_engine_current engine) m) mm; loop engine)
+      else ()
+    in
+    let () = loop en in
     let _ = Printf.printf "from murphy(%s): new pos:%i\n" name !new_pos in
     spec_env
 
