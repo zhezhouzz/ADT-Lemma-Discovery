@@ -267,7 +267,7 @@ let infer =
         (fun sourcefile assertionfile assertionfile outputdir sampling_bound timebound ->
            fun () ->
              start InferConsistent sourcefile assertionfile outputdir sampling_bound timebound);
-      "consistent-with-murphy",
+      "weakening-murphy",
       common_parser_with_murphy "infer consistent specification mapping"
         (fun sourcefile assertionfile specfile alphafile outputdir sampling_bound timebound ->
            fun () ->

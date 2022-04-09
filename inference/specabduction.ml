@@ -89,7 +89,7 @@ module SpecAbduction = struct
         if Epr.forallformula_exec env.abduciable m
         then c
         else alpha :: c
-    ) [] inpts_outputs in
+      ) [] inpts_outputs in
     c
 
   let sampling_with default hole imp env =
@@ -107,7 +107,7 @@ module SpecAbduction = struct
         match output with
         | Some output -> Some (input, output)
         | None -> None
-    ) samples in
+      ) samples in
     let c = count_tested_sample env hole samples in
     let murphy_inp = Language.SpecAst.{mname = hole.name; mspec= (hole.args, env.abduciable); mss = c} in
     let samples = List.map (fun (a, b) -> a @ b) samples in
@@ -235,7 +235,7 @@ module SpecAbduction = struct
     let multi_pre =
       List.map (fun pre ->
           let applied_args_map = StrMap.mapi (fun name _ ->
-             Ast.get_app_args pre name
+              Ast.get_app_args pre name
             ) holes in
           let applied_args_map = StrMap.filter (fun _ r ->
               match r with
@@ -334,7 +334,7 @@ module SpecAbduction = struct
       let dtse = SE.from_tpedvar (tp, name) in
       let info = P.find_pred_info_by_name pred in
       let args = List.map (List.map (fun i -> SE.Literal (T.Int, SE.L.Int i))) @@
-          List.choose_n qvrange info.P.num_int in
+        List.choose_n qvrange info.P.num_int in
       let atoms = List.map (fun args ->
           Epr.Atom (SE.Op (T.Bool, pred, dtse :: args))) args in
       let constr = Epr.And (List.map (fun e ->
@@ -421,19 +421,19 @@ module SpecAbduction = struct
     in
     let version = S.Z3aux.V1 in
     let smt_query = build_smt_query version in
-      match S.check ctx smt_query with
-      | S.SmtUnsat -> Verified
-        (* let version = S.Z3aux.V2 in
-         * let smt_query = build_smt_query version in
-         * (match S.check ctx smt_query with
-         *  | S.SmtUnsat -> Verified
-         *  | S.Timeout ->
-         *    let _ = printf "%s\n" (Expr.to_string smt_query) in
-         *    raise (InterExn "multi inference time out!")
-         *  | S.SmtSat model -> handle_model smt_query model version) *)
-      | S.Timeout ->
-        raise @@ InterExn (Printf.sprintf "[%s]inplace_verify_and_gather_fv time out!" (SZ.layout_imp_version version))
-      | S.SmtSat model -> handle_model smt_query model version
+    match S.check ctx smt_query with
+    | S.SmtUnsat -> Verified
+    (* let version = S.Z3aux.V2 in
+     * let smt_query = build_smt_query version in
+     * (match S.check ctx smt_query with
+     *  | S.SmtUnsat -> Verified
+     *  | S.Timeout ->
+     *    let _ = printf "%s\n" (Expr.to_string smt_query) in
+     *    raise (InterExn "multi inference time out!")
+     *  | S.SmtSat model -> handle_model smt_query model version) *)
+    | S.Timeout ->
+      raise @@ InterExn (Printf.sprintf "[%s]inplace_verify_and_gather_fv time out!" (SZ.layout_imp_version version))
+    | S.SmtSat model -> handle_model smt_query model version
 
   let negcache_to_neg env =
     StrMap.iter (fun _ spec_env ->
@@ -522,9 +522,9 @@ module SpecAbduction = struct
           (* then PRFFinalEnv (env, !murphy_inps) *)
           (* else *)
           (* let () = pos_counter := !pos_counter + 1 in *)
-                    pos_refine_loop env
-(* Murphy *)
-(* pos_refine_loop env *)
+          pos_refine_loop env
+        (* Murphy *)
+        (* pos_refine_loop env *)
         | NRFIncreaseHyp -> PRFIncreaseHyp
       else
         PRFFinalEnv (env,
@@ -534,8 +534,8 @@ module SpecAbduction = struct
                          Language.SpecAst.{mname = specname;
                                            mspec = (hole.args, spec_env.abduciable);
                                            mss = mss}
-                     ) @@
-List.of_seq @@ Hashtbl.to_seq murphy_inps)
+                       ) @@
+                     List.of_seq @@ Hashtbl.to_seq murphy_inps)
     in
     pos_refine_loop env
 
@@ -577,11 +577,11 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
           let ss, _, pos_num =
             if !first_pos then
               let () = first_pos := false in
-          let alpha = match List.find_opt (fun (n, _) -> String.equal n specname) murphy_alpha with
-            | None -> []
-            | Some (_, a) -> a in
-                 sampling_with alpha hole imp spec_env
-              else   sampling hole imp spec_env       in
+              let alpha = match List.find_opt (fun (n, _) -> String.equal n specname) murphy_alpha with
+                | None -> []
+                | Some (_, a) -> a in
+              sampling_with alpha hole imp spec_env
+            else   sampling hole imp spec_env       in
           let pos_sample_num = List.length ss in
           let _ = total_pos_num := !total_pos_num + pos_num in
           let _ = total_sample_pos_num := !total_sample_pos_num + pos_sample_num in
@@ -630,10 +630,10 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     let current =
       if List.length spec_env.qv == List.length qv then
         let _ = Hashtbl.iter (fun vec label ->
-        match label with
-          | MultiPos -> Hashtbl.add fvtab' vec D.Pos
-          | MultiMayNeg -> Hashtbl.add fvtab' vec D.MayNeg
-          | MultiMayNegCache -> raise @@ InterExn "never happen in make_single_abd_env"
+            match label with
+            | MultiPos -> Hashtbl.add fvtab' vec D.Pos
+            | MultiMayNeg -> Hashtbl.add fvtab' vec D.MayNeg
+            | MultiMayNegCache -> raise @@ InterExn "never happen in make_single_abd_env"
           ) spec_env.fvtab in
         {Env.init_spec = spec;
          Env.init_dt = dt;
@@ -685,25 +685,25 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         (* let _ = Printf.printf "Cannot find consistent solutoin. The client code is wrong but cannot find concrete Cex.\n" in *)
         CRCex []
       else
-      (* let _ = if numX >= max_qv then
-       *     let _ = Env.save_consistent_stat benchname cstat in
-       *     raise @@ InterExn "Cannot find consistent solutoin. The client code is wrong but cannot find concrete Cex."
-       *   else () in *)
-      let env = init_env mii pres spectable preds numX holel in
-      let _ = StrMap.iter (fun name env ->
-          printf "[%s] space: 2^%i = %i\n"
-            name (List.length env.fset) (pow 2 (List.length env.fset))
-        ) env.spec_envs in
-      let stat_once = Env.init_consistent_stat_once numX in
-      let result, delta_time = time (fun _ -> refinement_loop ctx env stat_once) in
-      let _ = stat_once.run_time := delta_time in
-      let _ = cstat.Env.consist_list := !(cstat.Env.consist_list) @ [stat_once] in
-      match result with
-      | PRFIncreaseHyp -> search_hyp (numX + 1)
-      | PRFFinalEnv (spec, murphy_inps) ->
-        let () = Language.SpecAst.to_murphy benchname murphy_inps in
-        CRFinalEnv spec
-      | PRFCex cexs -> CRCex cexs
+        (* let _ = if numX >= max_qv then
+         *     let _ = Env.save_consistent_stat benchname cstat in
+         *     raise @@ InterExn "Cannot find consistent solutoin. The client code is wrong but cannot find concrete Cex."
+         *   else () in *)
+        let env = init_env mii pres spectable preds numX holel in
+        let _ = StrMap.iter (fun name env ->
+            printf "[%s] space: 2^%i = %i\n"
+              name (List.length env.fset) (pow 2 (List.length env.fset))
+          ) env.spec_envs in
+        let stat_once = Env.init_consistent_stat_once numX in
+        let result, delta_time = time (fun _ -> refinement_loop ctx env stat_once) in
+        let _ = stat_once.run_time := delta_time in
+        let _ = cstat.Env.consist_list := !(cstat.Env.consist_list) @ [stat_once] in
+        match result with
+        | PRFIncreaseHyp -> search_hyp (numX + 1)
+        | PRFFinalEnv (spec, murphy_inps) ->
+          let () = Language.SpecAst.to_murphy benchname murphy_inps in
+          CRFinalEnv spec
+        | PRFCex cexs -> CRCex cexs
     in
     let result = search_hyp startX in
     let _ = Env.save_consistent_stat benchname cstat in
@@ -716,16 +716,16 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         let _ = Env.save_consistent_stat benchname cstat in
         CRCex []
       else
-      let env = init_env mii pres spectable preds numX holel in
-      let stat_once = Env.init_consistent_stat_once numX in
-      let result, delta_time = time (fun _ -> refinement_loop_from_murphy ctx env stat_once murphy_alpha) in
-      let _ = stat_once.run_time := delta_time in
-      let _ = cstat.Env.consist_list := !(cstat.Env.consist_list) @ [stat_once] in
-      match result with
-      | PRFIncreaseHyp -> search_hyp (numX + 1)
-      | PRFFinalEnv (spec, _) ->
-        CRFinalEnv spec
-      | PRFCex cexs -> CRCex cexs
+        let env = init_env mii pres spectable preds numX holel in
+        let stat_once = Env.init_consistent_stat_once numX in
+        let result, delta_time = time (fun _ -> refinement_loop_from_murphy ctx env stat_once murphy_alpha) in
+        let _ = stat_once.run_time := delta_time in
+        let _ = cstat.Env.consist_list := !(cstat.Env.consist_list) @ [stat_once] in
+        match result with
+        | PRFIncreaseHyp -> search_hyp (numX + 1)
+        | PRFFinalEnv (spec, _) ->
+          CRFinalEnv spec
+        | PRFCex cexs -> CRCex cexs
     in
     let result = search_hyp startX in
     let _ = Env.save_consistent_stat benchname cstat in
@@ -887,8 +887,8 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
       match init_qv with
       | [] -> raise @@ InterExn "pos_gather"
       | [u] ->
-      Epr.And (List.map (fun u' ->
-        Epr.subst init_body [snd u] [SE.from_tpedvar u']
+        Epr.And (List.map (fun u' ->
+            Epr.subst init_body [snd u] [SE.from_tpedvar u']
           ) addition_qv)
       | [_;_] -> init_body
       | _ -> raise @@ InterExn "pos_gather"
@@ -896,14 +896,14 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     let gather posq fvtab =
       let (_, _, result) = learn fvtab in
       let q =
-          (if posq
-           then
-             Epr.And [Epr.Or [raw_init_body; addition_body];
-                      Epr.Not result;]
-           else
-             Epr.And [Epr.Not (Epr.Or [raw_init_body; addition_body]);
-                      result;]
-          )
+        (if posq
+         then
+           Epr.And [Epr.Or [raw_init_body; addition_body];
+                    Epr.Not result;]
+         else
+           Epr.And [Epr.Not (Epr.Or [raw_init_body; addition_body]);
+                    result;]
+        )
       in
       (* let _ = printf "%b:\n%s\n" posq (Epr.pretty_layout_epr q) in *)
       let q = Epr.to_z3 ctx q in
@@ -994,8 +994,8 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     let _ = printf "p:%i n:%i\n" p n in
     let _, dtidx =
       if Hashtbl.length t_env.fvtab == 0
-          then D.T, D.T
-          else D.classify_hash t_env.fset t_env.fvtab D.is_pos in
+      then D.T, D.T
+      else D.classify_hash t_env.fset t_env.fvtab D.is_pos in
     let c = D.count (List.length t_env.fset) dtidx in
     let _ = printf "count: %i\n" c in
     ()
@@ -1094,22 +1094,22 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         match output with
         | Some output -> Some (input @ output)
         | None -> None
-    ) alphas in
+      ) alphas in
     let qv_space = List.map (List.map (fun x -> Pred.Value.I x)) @@ List.choose_n all_qv 2 in
     let mm = List.map (fun qv_value ->
         let m = StrMap.empty in
         let m = List.fold_left (fun m ((_, name), v) ->
             StrMap.add name v m
-        ) m (List.combine spec_env.qv qv_value) in
+          ) m (List.combine spec_env.qv qv_value) in
         m
-    ) qv_space in
+      ) qv_space in
     let _ = Printf.printf "from murphy(%s): num:%i len(qvspace):%i\n" name (List.length samples) (List.length mm) in
-    let en = engine_from_tps @@ List.map fst args in
+    (* let en = engine_from_tps @@ List.map fst args in *)
     let new_pos = ref 0 in
     let add args_value m =
       let m = List.fold_left (fun m ((_, name), v) ->
           StrMap.add name v m
-      ) m (List.combine args args_value) in
+        ) m (List.combine args args_value) in
       let fv = (List.map (fun feature -> F.exec feature m) spec_env.fset) in
       match Hashtbl.find_opt spec_env.fvtab fv with
       | None ->
@@ -1166,8 +1166,8 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
         neg_refine_loop env
     in
     match neg_refine_loop env with
-| NRFNewEnv env -> env    
-      |  _ -> failwith "die"
+    | NRFNewEnv env -> env    
+    |  _ -> failwith "die"
 
 
   let weakening ctx benchname vc single_envs time_bound =
@@ -1252,14 +1252,14 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
     match consistent_result with
     | None ->
       ()
-      (* printf "\tNone\n" *)
+    (* printf "\tNone\n" *)
     | Some r ->
       (* let _ = printf "%s\n" consistent_file in *)
       let _, consistent_spectable = Env.decode_infer_result r in
       match bound_result with
       | None ->
         ()
-        (* printf "%s: do not find weakening result\n" benchname *)
+      (* printf "%s: do not find weakening result\n" benchname *)
       | Some r ->
         (* let _ = printf "%s\n" bound_file in *)
         let _, bound_spectable = Env.decode_infer_result r in
@@ -1279,10 +1279,10 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
             (union_table true consistent_spectable
                (union_table false bound_spectable spectable))
             version mii.uvars
-          (* Ast.to_z3 ctx
-           *   (Ast.And [Ast.Or pres; mii.upost])
-           *   ((union_table false bound_spectable spectable))
-           *   version mii.uvars *)
+            (* Ast.to_z3 ctx
+             *   (Ast.And [Ast.Or pres; mii.upost])
+             *   ((union_table false bound_spectable spectable))
+             *   version mii.uvars *)
         in
         let version = S.Z3aux.V2 in
         let smt_query = build_smt_query version in
@@ -1389,7 +1389,7 @@ List.of_seq @@ Hashtbl.to_seq murphy_inps)
       let result = spectable_filter_result names env.vc.Env.spectable in
       Result result
 
-let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
+  let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
       benchname ctx mii pre spectable holel preds _ murphy_alpha_file _ =
     let benchname = "_" ^ benchname ^ "/" in
     let _ = make_dir benchname in
@@ -1398,10 +1398,10 @@ let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_nu
     let pres = List.map Ast.merge_and @@ Ast.to_dnf @@ Ast.eliminate_cond_one pre in
     let pres = List.sort (fun a b ->
         compare (Ast.conj_length b) (Ast.conj_length a)
-    ) pres in
+      ) pres in
     let murphy_alphas = StrMap.of_seq @@ List.to_seq @@ Pred.Value.nss_of_sexp @@ Sexplib.Sexp.load_sexp murphy_alpha_file in
     let midfile = benchname ^ "_" ^ "beforeweakening.json" in
-    let _, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
+    let total_env, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
     let env = init_env mii pres spectable preds 2 holel in
     let env = update_multi_env ctx env murphy_alphas in
     let () = List.iter (fun spec_env ->
@@ -1413,14 +1413,14 @@ let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_nu
         let negnum_omitted = ref 0 in
         let _ = Hashtbl.iter (fun vec label ->
             match label with
-          | D.Pos -> (posnum := !posnum + 1; Hashtbl.add e.fvtab vec MultiPos)
-          | D.MayNeg ->
-            (match Hashtbl.find_opt e.fvtab vec with
-             | None -> (negnum := !negnum + 1; Hashtbl.add e.fvtab vec MultiMayNeg)
-             | Some MultiPos -> (negnum_omitted := !negnum_omitted + 1)
-             | Some _ -> failwith "die")
-          | _ -> raise @@ InterExn "never happen in make_single_abd_env rev"
-        ) spec_env.Env.fvtab in
+            | D.Pos -> (posnum := !posnum + 1; Hashtbl.add e.fvtab vec MultiPos)
+            | D.MayNeg ->
+              (match Hashtbl.find_opt e.fvtab vec with
+               | None -> (negnum := !negnum + 1; Hashtbl.add e.fvtab vec MultiMayNeg)
+               | Some MultiPos -> (negnum_omitted := !negnum_omitted + 1)
+               | Some _ -> failwith "die")
+            | _ -> raise @@ InterExn "never happen in make_single_abd_env rev"
+          ) spec_env.Env.fvtab in
         let _ = Printf.printf "continue(%s): pos:%i neg:%i negnum_omitted:%i\n"
             spec_env.Env.hole.name !posnum !negnum !negnum_omitted in
         ()
@@ -1434,66 +1434,72 @@ let do_consistent_from_murphy ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_nu
       | PRFFinalEnv (env, _) -> env in
     let _ = save_result (benchname ^ "_consistent.json") preds names env.vc in
     let single_envs = List.map (fun specname ->
-            let target_hole = StrMap.find "multi_infer" env.holes specname in
-            let spec_env = StrMap.find "multi_infer" env.spec_envs specname in
-            let single_env =
-              make_single_abd_env env.vc spec_env target_hole preds uniform_qv_num
-            in
-            single_env
-    ) names in
-    let midfile = benchname ^ "_" ^ "beforeweakening.json" in
-    let _ = Yojson.Basic.to_file midfile
-            (Env.encode_weakening (env.vc, single_envs)) in
-    let result = spectable_filter_result names env.vc.Env.spectable in
-    Result result
+        let target_hole = StrMap.find "multi_infer" env.holes specname in
+        let spec_env = StrMap.find "multi_infer" env.spec_envs specname in
+        let single_env =
+          make_single_abd_env env.vc spec_env target_hole preds uniform_qv_num
+        in
+        let posnum = ref 0 in
+        let negnum = ref 0 in
+        let _ = Hashtbl.iter (fun _ label ->
+            match label with
+            | D.Pos -> (posnum := !posnum + 1)
+            | D.MayNeg -> (negnum := !negnum + 1)
+            | _ -> raise @@ InterExn "never happen in make_single_abd_env rev"
+        ) single_env.Env.fvtab in
+        let _ = Printf.printf "final(%s): pos:%i neg:%i\n"
+            specname !posnum !negnum in
+        single_env
+      ) names in
+    weakening ctx benchname total_env single_envs None
 
 let do_weakening ctx benchname time_bound =
-    let benchname = "_" ^ benchname ^ "/" in
-    let midfile = benchname ^ "_" ^ "beforeweakening.json" in
-    let _ = printf "before decode(%s)\n" midfile in
-    let total_env, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
-    let _ = printf "flow\n" in
-    let _ = List.map (fun fl -> printf "flow:%s\n" (Ast.layout fl.Env.pre_flow)) total_env.multi_pre in
-    weakening ctx benchname total_env single_envs time_bound
+  let benchname = "_" ^ benchname ^ "/" in
+  let midfile = benchname ^ "_" ^ "beforeweakening.json" in
+  let _ = printf "before decode(%s)\n" midfile in
+  let total_env, single_envs = Env.decode_weakening @@ Yojson.Basic.from_file midfile in
+  let _ = printf "flow\n" in
+  let _ = List.map (fun fl -> printf "flow:%s\n" (Ast.layout fl.Env.pre_flow)) total_env.multi_pre in
+  weakening ctx benchname total_env single_envs time_bound
 
- let multi_infer ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
-     benchname ctx mii pre spectable holel preds startX =
-   let _ = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
-       ctx mii pre spectable holel preds startX in
-   do_weakening ctx benchname
-      (* weakening ctx benchname env.vc single_envs time_bound *)
-      (* let single_envs_arr = Array.of_list single_envs in
-       * let rec aux total_env idx =
-       *   if idx >= Array.length single_envs_arr
-       *   then total_env
-       *   else
-       *     let single_env = single_envs_arr.(idx) in
-       *     let single_result, delta_time =
-       *       time (fun _ -> Single_abd.infer ctx total_env single_env time_bound) in
-       *     let _ = printf "time: single: %s: %fs\n" single_env.Env.hole.name delta_time in
-       *     match single_result with
-       *     | Env.AlreadyMaxed -> aux total_env (idx + 1)
-       *     | Env.MayAlreadyMaxed -> aux total_env (idx + 1)
-       *     | Env.NewMaxed (total_env, single_env') ->
-       *       let _ = Array.set single_envs_arr idx single_env' in
-       *       aux total_env (idx + 1)
-       *     | Env.Weaker (total_env, single_env') ->
-       *       let _ = Array.set single_envs_arr idx single_env' in
-       *       aux total_env (idx + 1)
-       * in
-       * let total_env = aux env.vc 0 in
-       * let result = spectable_filter_result names total_env.spectable in
-       * let _ = Yojson.Basic.to_file (name ^ "_" ^ "maximal.json")
-       *     (Ast.spectable_encode result) in
-       * result *)
+let multi_infer ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
+    benchname ctx mii pre spectable holel preds startX =
+  let _ = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
+      ctx mii pre spectable holel preds startX in
+  do_weakening ctx benchname
+(* weakening ctx benchname env.vc single_envs time_bound *)
+(* let single_envs_arr = Array.of_list single_envs in
+ * let rec aux total_env idx =
+ *   if idx >= Array.length single_envs_arr
+ *   then total_env
+ *   else
+ *     let single_env = single_envs_arr.(idx) in
+ *     let single_result, delta_time =
+ *       time (fun _ -> Single_abd.infer ctx total_env single_env time_bound) in
+ *     let _ = printf "time: single: %s: %fs\n" single_env.Env.hole.name delta_time in
+ *     match single_result with
+ *     | Env.AlreadyMaxed -> aux total_env (idx + 1)
+ *     | Env.MayAlreadyMaxed -> aux total_env (idx + 1)
+ *     | Env.NewMaxed (total_env, single_env') ->
+ *       let _ = Array.set single_envs_arr idx single_env' in
+ *       aux total_env (idx + 1)
+ *     | Env.Weaker (total_env, single_env') ->
+ *       let _ = Array.set single_envs_arr idx single_env' in
+ *       aux total_env (idx + 1)
+ * in
+ * let total_env = aux env.vc 0 in
+ * let result = spectable_filter_result names total_env.spectable in
+ * let _ = Yojson.Basic.to_file (name ^ "_" ^ "maximal.json")
+ *     (Ast.spectable_encode result) in
+ * result *)
 
- let do_full ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
-     benchname ctx mii pre spectable holel preds startX time_bound =
-   let e = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
-       ctx mii pre spectable holel preds startX in
-   match e with
-   | Cex _ -> e
-   | _ ->
-     do_weakening ctx benchname time_bound
+let do_full ?snum:(snum = None) ?uniform_qv_num:(uniform_qv_num = 2)
+    benchname ctx mii pre spectable holel preds startX time_bound =
+  let e = do_consistent ~snum:snum ~uniform_qv_num:uniform_qv_num benchname
+      ctx mii pre spectable holel preds startX in
+  match e with
+  | Cex _ -> e
+  | _ ->
+    do_weakening ctx benchname time_bound
 
 end
