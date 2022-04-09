@@ -70,18 +70,17 @@ let start action sourcefile assertionfile outputdir sampling_bound timebound =
     eprintf "%s inference Succeeded in %f(s)!\n" mode_str delta_time
 
 let start_with_murphy action sourcefile assertionfile tmpspecfile alphafile outputdir sampling_bound timebound =
-  let ctx =
-    Z3.mk_context [("model", "true"); ("proof", "false"); ("timeout", "999")] in
+    let ctx = init () in
   let source = parse sourcefile in
-  let assertion = parse assertionfile in
-  (* let () = raise @@ InterExn "end" in *)
-  let mii, vc, holes, preds, spectab, basic_info = Translate.trans (source, assertion) in
-  let () = Core.Unix.mkdir_p (Printf.sprintf "_%s" outputdir) in
+    let assertion = parse assertionfile in
+    (* let () = raise @@ InterExn "end" in *)
+    let mii, vc, holes, preds, spectab, basic_info = Translate.trans (source, assertion) in
+    let () = Core.Unix.mkdir_p (Printf.sprintf "_%s" outputdir) in
   let basic_info_filename = Printf.sprintf "_%s/_basic_info.json" outputdir in
-  let () = Yojson.Basic.to_file basic_info_filename basic_info in
-  let r () =
+    let () = Yojson.Basic.to_file basic_info_filename basic_info in
+    let r () =
     match action, sampling_bound with
-    | InferConsistent, Some snum ->
+      | InferConsistent, Some snum ->
       SpecAbd.do_consistent_from_murphy ~snum:(Some snum) ~uniform_qv_num:1
         outputdir
         ctx mii vc spectab holes preds 1 alphafile tmpspecfile
@@ -118,7 +117,7 @@ let fallback_load outputdir =
   | _ -> try
       let preds, spectab = Env.decode_infer_result (Yojson.Basic.from_file bound_max_file) in
       true, preds, spectab
-    with
+  with
     | _ -> raise @@ Failure "cannot find weakened result!"
 
 let count_phi dir funcname =
@@ -138,10 +137,10 @@ let count_phi dir funcname =
     (try
        let (_, spectable) = Env.decode_infer_result @@ from_file oraclefile in
        aux preds spectable "oracle"
-       with
+    with
        | _ ->
          aux preds result "bound"
-      )
+    )
   with
   | _ -> printf "cannot find %s\n" resultfile
 
@@ -192,7 +191,7 @@ let to_coq resultfile funcname =
   let horns = List.map (fun body -> args, (qv, body)) (Ast.E.to_horns body) in
   let () = List.iteri (fun idx horn ->
       printf "%s\n" (spec_to_coq_string funcname idx horn)
-    ) horns in
+  ) horns in
   ()
 ;;
 
@@ -212,7 +211,7 @@ let infer_action =
       | "full" -> InferFull
       | "weakening" -> InferWeakening
       | _ -> failwith "unknown inference action"
-    )
+  )
 
 let infer_weakening =
   Command.basic
@@ -293,7 +292,7 @@ let show_consistent =
            let _, spectab = Env.decode_infer_result (Yojson.Basic.from_file consistent_file) in
            let () = Ast.print_spectable spectab in
            ()
-         with
+        with
          | _ -> failwith "cannot find consistent result!")
     )
 
