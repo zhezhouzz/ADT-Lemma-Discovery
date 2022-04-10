@@ -5,6 +5,7 @@ num=$2
 if [ "$3" = "to-murphy" ]; then
 	dune exec -- main/main.exe infer consistent data/$name.ml data/${name}_assertion$num.ml $name$num.elrond
 	cp _$name$num.elrond/_beforeweakening.json $host_dir/$name$num.elrond_beforeweakening.json
+	cp _$name$num.elrond/_consistent_stat.json $host_dir/$name$num.elrond_consistent_stat.json
 fi
 
 if [ "$3" = "weakening" ]; then
