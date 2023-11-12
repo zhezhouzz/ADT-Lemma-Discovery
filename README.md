@@ -393,9 +393,9 @@ The assertion file is formatted as follows:
 let preds = [| PRED; ...|]
 
 (* Precondtion (optional) *)
-let pre VAR (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
+let pre (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
 (* Postcondtion *)
-let post VAR (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
+let post (IVAR: ARG_TP) ... (OVAR: ARG_TP) ... (QVAE: ARG_TP) ... = ASSERTION
 ```
 
 where the all-caps placeholders are filled according to the following
