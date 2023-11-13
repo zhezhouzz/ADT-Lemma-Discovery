@@ -414,10 +414,11 @@ PRED := "mem" | "hd" | "ord" | "once" | "left" | "right" | "para" | "ance" | "ro
 OP := "==" | "!=" | "<=" | ">=" | "<" | ">"
 
 ASSERTION :=
+| "true"
 | PRED VAR ...
 | VAR OP VAR
-| implies ASSERTION ASSERTION
-| iff ASSERTION ASSERTION
+| "implies" ASSERTION ASSERTION
+| "iff" ASSERTION ASSERTION
 | ASSERTION "&&" ASSERTION
 | ASSERTION "||" ASSERTION
 | NOT ASSERTION
