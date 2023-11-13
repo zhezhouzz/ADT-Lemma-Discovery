@@ -421,6 +421,7 @@ ASSERTION :=
 | ASSERTION "&&" ASSERTION
 | ASSERTION "||" ASSERTION
 | NOT ASSERTION
+| "(" ASSERTION ")"
 ```
 
 Currently, implementations of libraries and predicates are fixed; users can define
